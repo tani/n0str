@@ -72,12 +72,11 @@ describe("NIP-45 Event Counts", () => {
         };
       });
 
-      // @ts-expect-error - response is unknown
-      expect(response[0]).toBe("COUNT");
-      // @ts-expect-error - response is unknown
-      expect(response[1]).toBe(subId);
-      // @ts-expect-error - response is unknown
-      expect(response[2].count).toBe(3);
+      const res = response as [string, string, { count: number }];
+
+      expect(res[0]).toBe("COUNT");
+      expect(res[1]).toBe(subId);
+      expect(res[2].count).toBe(3);
 
       ws.close();
     });

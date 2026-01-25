@@ -21,8 +21,8 @@ export function handleEvent(
     const rawEvent = payload[0];
     const eventParse = EventSchema.safeParse(rawEvent);
     if (!eventParse.success) {
-      // @ts-expect-error - rawEvent is unknown but likely an object with id if partially valid
-      yield* Effect.sync(() => ws.send(JSON.stringify(["OK", rawEvent?.id ?? "unknown", false, "error: malformed event"])));
+      const eventId = (rawEvent as { id?: string })?.id ?? "unknown";
+      yield* Effect.sync(() => ws.send(JSON.stringify(["OK", eventId, false, "error: malformed event"])));
       return;
     }
     const event = eventParse.data;
