@@ -19,12 +19,12 @@ export function countLeadingZeros(hex: string): number {
 // Zod Schemas
 export const EventSchema = z.object({
   id: z.string(),
-  pubkey: z.string(),
-  created_at: z.number(),
-  kind: z.number(),
+  pubkey: z.string().length(64),
+  created_at: z.number().int(),
+  kind: z.number().int(),
   content: z.string(),
   tags: z.array(z.array(z.string())),
-  sig: z.string(),
+  sig: z.string().length(128),
 });
 
 export const FilterSchema = z

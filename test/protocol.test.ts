@@ -59,7 +59,7 @@ describe("Protocol", () => {
       kind: 1,
       content: "test",
       tags: [["nonce", "1", "20"]],
-      sig: "sig",
+      sig: "a".repeat(128),
     } as any;
 
     // We skip signature verification for these since we just want to test PoW logic
