@@ -1,6 +1,7 @@
 import { type } from "arktype";
 import * as fs from "node:fs";
 
+/** Default relay configuration following NIP-11 specification. */
 export const defaultRelayInfo = {
   name: "Nostra Relay",
   description: "A simple, reliable, and extensively tested Nostr relay.",
@@ -27,7 +28,7 @@ export const defaultRelayInfo = {
   },
 };
 
-// ArkType schemas for runtime validation
+/** ArkType schema for validating relay information. */
 export const RelayInfoSchema = type({
   "name?": "string",
   "description?": "string",
@@ -51,10 +52,18 @@ export const RelayInfoSchema = type({
   },
 });
 
+/** Schema for parsing and validating relay information from a JSON string. */
 export const RelayInfoFileSchema = type("string.json.parse").to(RelayInfoSchema);
 
+/** Type definition for relay information inferred from the schema. */
 export type RelayInfo = typeof RelayInfoSchema.infer;
 
+/**
+ * Loads relay information from a configuration file.
+ * @param configPath - Path to the configuration file (default: "nostra.json").
+ * @param logger - Logger instance for reporting status and errors.
+ * @returns Combined relay information from default and loaded configuration.
+ */
 export function loadRelayInfo(configPath: string = "nostra.json", logger = console) {
   let loadedRelayInfo = defaultRelayInfo;
 
@@ -78,4 +87,5 @@ export function loadRelayInfo(configPath: string = "nostra.json", logger = conso
   return loadedRelayInfo;
 }
 
+/** Global relay configuration instance. */
 export const relayInfo = loadRelayInfo();

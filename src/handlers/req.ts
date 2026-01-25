@@ -4,6 +4,12 @@ import type { Filter } from "nostr-tools";
 import { queryEvents } from "../repository";
 import { relayInfo } from "../config";
 
+/**
+ * Handles NIP-01 REQ messages.
+ * Registers a subscription, fetches historical events, and sends them to the client.
+ * @param ws - The WebSocket connection.
+ * @param payload - The REQ message payload (subscription ID and filters).
+ */
 export async function handleReq(ws: ServerWebSocket<ClientData>, payload: any[]) {
   const [subId, ...filters] = payload as [string, ...Filter[]];
 

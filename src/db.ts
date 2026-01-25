@@ -1,6 +1,11 @@
 import { SQL } from "bun";
 
 const dbPath = process.env.DATABASE_PATH || "nostra.db";
+
+/**
+ * Database instance using Bun's SQL client with SQLite.
+ * Initializes the schema and FTS5 search capability on load.
+ */
 export const db = new SQL({
   adapter: "sqlite",
   filename: dbPath,

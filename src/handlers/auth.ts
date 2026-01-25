@@ -3,6 +3,11 @@ import type { ClientData } from "../types";
 import type { Event } from "nostr-tools";
 import { validateAuthEvent } from "../nostr";
 
+/**
+ * Handles NIP-42 AUTH messages.
+ * @param ws - The WebSocket connection.
+ * @param payload - The AUTH message payload (the event).
+ */
 export async function handleAuth(ws: ServerWebSocket<ClientData>, payload: any[]) {
   const authEvent = payload[0] as Event;
   const result = await validateAuthEvent(authEvent, ws.data.challenge, ws.data.relayUrl);

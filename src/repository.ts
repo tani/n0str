@@ -59,6 +59,10 @@ function finalizeConditions(conditions: SqlCondition[]) {
   };
 }
 
+/**
+ * Computes a SQL WHERE clause and parameters from a Nostr filter.
+ * @param filter - The Nostr filter to convert.
+ */
 function buildWhereClause(filter: Filter) {
   const now = Math.floor(Date.now() / 1000);
 
@@ -91,6 +95,11 @@ function buildWhereClause(filter: Filter) {
   return finalizeConditions(rawConditions.flatMap(toSqlCondition));
 }
 
+/**
+ * Checks if a candidate event is older than an existing one based on created_at and id.
+ * @param candidate - The event being evaluated.
+ * @param existing - The existing event in the database.
+ */
 function isOlderEvent(candidate: Event, existing: ExistingRow) {
   return (
     candidate.created_at < existing.created_at ||
@@ -98,6 +107,11 @@ function isOlderEvent(candidate: Event, existing: ExistingRow) {
   );
 }
 
+/**
+ * Finds an existing replaceable or addressable event in the database.
+ * @param tx - Database transaction or client.
+ * @param event - The event to find a replacement for.
+ */
 async function findExisting(tx: typeof db, event: Event): Promise<ExistingRow | undefined> {
   if (isReplaceable(event.kind)) {
     return (
@@ -121,12 +135,20 @@ async function findExisting(tx: typeof db, event: Event): Promise<ExistingRow | 
   }
 }
 
+/**
+ * Transforms event tags into database row format.
+ * @param event - The Nostr event.
+ */
 function buildTagRows(event: Event): TagRow[] {
   return event.tags.flatMap(([name, value]) =>
     name && value ? [{ event_id: event.id, name, value }] : [],
   );
 }
 
+/**
+ * Saves a Nostr event to the database, handling replacement/addressable logic and NIP-01 triggers.
+ * @param event - The event to save.
+ */
 export async function saveEvent(event: Event) {
   await db.begin(async (tx) => {
     const existing = await findExisting(tx, event);
@@ -147,6 +169,13 @@ export async function saveEvent(event: Event) {
   });
 }
 
+/**
+ * Deletes events based on NIP-09 deletion requests.
+ * @param pubkey - The author of the deletion request.
+ * @param eventIds - IDs of events to delete.
+ * @param identifiers - NIP-33 addressable identifiers (a-tags) to delete.
+ * @param until - Only delete events created before this timestamp.
+ */
 export async function deleteEvents(
   pubkey: string,
   eventIds: string[],
@@ -182,6 +211,9 @@ export async function deleteEvents(
   });
 }
 
+/**
+ * Removes expired events (NIP-40) from the database.
+ */
 export async function cleanupExpiredEvents() {
   const now = Math.floor(Date.now() / 1000);
   await db.begin(async (tx) => {
@@ -197,6 +229,11 @@ export async function cleanupExpiredEvents() {
   });
 }
 
+/**
+ * Counts events matching the given filters (NIP-45).
+ * @param filters - Lists of Nostr filters.
+ * @returns Total count of matching events across all filters.
+ */
 export async function countEvents(filters: Filter[]): Promise<number> {
   let totalCount = 0;
   for (const filter of filters) {
@@ -208,6 +245,11 @@ export async function countEvents(filters: Filter[]): Promise<number> {
   return totalCount;
 }
 
+/**
+ * Queries events matching a single filter and includes their tags.
+ * @param filter - The Nostr filter.
+ * @returns Array of matching events.
+ */
 export async function queryEvents(filter: Filter): Promise<Event[]> {
   const { clause, params } = buildWhereClause(filter);
   let baseQuery = `SELECT id, pubkey, created_at, kind, content, sig FROM events ${clause} ORDER BY created_at DESC`;

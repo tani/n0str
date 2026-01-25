@@ -6,6 +6,14 @@ import { saveEvent, deleteEvents } from "../repository";
 
 const MIN_DIFFICULTY = 0;
 
+/**
+ * Handles NIP-01 EVENT messages.
+ * Validates, saves, and broadcasts the event to matching subscriptions.
+ * Also handles NIP-09 deletion requests and NIP-40 expiration.
+ * @param ws - The WebSocket connection of the sender.
+ * @param payload - The EVENT message payload (the event).
+ * @param clients - The set of all connected WebSocket clients for broadcasting.
+ */
 export async function handleEvent(
   ws: ServerWebSocket<ClientData>,
   payload: any[],

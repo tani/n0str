@@ -14,6 +14,9 @@ import { handleAuth } from "./handlers/auth.ts";
 
 const clients = new Set<ServerWebSocket<ClientData>>();
 
+/**
+ * Performs a periodic cleanup of expired events from the repository.
+ */
 export async function runCleanupTick() {
   await cleanupExpiredEvents().catch(console.error);
 }
@@ -21,6 +24,9 @@ export async function runCleanupTick() {
 // Periodic cleanup
 setInterval(runCleanupTick, 60 * 60 * 1000); // Hourly
 
+/**
+ * Bun.serve compatible relay object containing fetch and websocket handlers.
+ */
 export const relay = {
   port: 3000,
   fetch(req: Request, server: any) {

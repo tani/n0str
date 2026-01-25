@@ -2,6 +2,11 @@ import { type } from "arktype";
 import type { Event, Filter } from "nostr-tools";
 import { verifyEvent } from "nostr-tools";
 
+/**
+ * Counts the number of leading zero bits in a hex string (NIP-13 PoW).
+ * @param hex - The hex string to check.
+ * @returns The number of leading zero bits.
+ */
 export function countLeadingZeros(hex: string): number {
   let count = 0;
   for (let i = 0; i < hex.length; i++) {
@@ -16,7 +21,7 @@ export function countLeadingZeros(hex: string): number {
   return count;
 }
 
-// ArkType Schemas
+/** ArkType schema for a Nostr event. */
 export const EventSchema = type({
   id: "string",
   pubkey: "string==64",
@@ -27,6 +32,7 @@ export const EventSchema = type({
   sig: "string==128",
 });
 
+/** ArkType schema for a Nostr filter. */
 export const FilterSchema = type({
   "ids?": "string[]",
   "authors?": "string[]",
@@ -38,14 +44,26 @@ export const FilterSchema = type({
   "[string]": "unknown", // Support #... tag filters loosely
 });
 
+/**
+ * Checks if a Nostr event kind is replaceable (NIP-01, NIP-02, NIP-16).
+ * @param kind - The event kind to check.
+ */
 export function isReplaceable(kind: number): boolean {
   return kind === 0 || kind === 3 || (kind >= 10000 && kind < 20000);
 }
 
+/**
+ * Checks if a Nostr event kind is ephemeral (NIP-01, NIP-16).
+ * @param kind - The event kind to check.
+ */
 export function isEphemeral(kind: number): boolean {
   return kind >= 20000 && kind < 30000;
 }
 
+/**
+ * Checks if a Nostr event kind is parameterized replaceable (addressable) (NIP-01, NIP-33).
+ * @param kind - The event kind to check.
+ */
 export function isAddressable(kind: number): boolean {
   return kind >= 30000 && kind < 40000;
 }
@@ -61,16 +79,25 @@ const $ = type.scope({
   ClientMessage: "EventMsg | ReqMsg | CountMsg | AuthMsg | CloseMsg",
 });
 
+/** Schema for parsing and validating Nostr client messages. */
 export const ClientMessageSchema = type("string.json.parse").to($.type("ClientMessage"));
 
+/** Type of message sent by a client to the relay. */
 export type ClientMessage = typeof ClientMessageSchema.infer;
 
+/** Type of message sent by the relay to a client. */
 export type RelayMessage =
   | ["EVENT", string, Event]
   | ["OK", string, boolean, string]
   | ["EOSE", string]
   | ["NOTICE", string];
 
+/**
+ * Validates a Nostr event for schema correctness, PoW (NIP-13), and signature.
+ * @param event - The event object to validate.
+ * @param minDifficulty - Minimum PoW difficulty required.
+ * @returns Object indicating if validation was successful and an optional reason.
+ */
 export async function validateEvent(
   event: any,
   minDifficulty: number = 0,
@@ -115,6 +142,12 @@ export async function validateEvent(
   return { ok: true };
 }
 
+/**
+ * Validates a NIP-42 AUTH event.
+ * @param event - The AUTH event.
+ * @param challenge - The expected challenge string.
+ * @param relayUrl - The expected relay URL.
+ */
 export async function validateAuthEvent(
   event: any,
   challenge: string,
@@ -159,6 +192,10 @@ export async function validateAuthEvent(
   return { ok: true };
 }
 
+/**
+ * Validates NIP-22 created_at limits.
+ * @param createdAt - The unix timestamp.
+ */
 export async function validateCreatedAt(createdAt: number): Promise<{
   ok: boolean;
   reason?: string;
@@ -176,6 +213,11 @@ export async function validateCreatedAt(createdAt: number): Promise<{
   return { ok: true };
 }
 
+/**
+ * Checks if an event matches a single filter.
+ * @param filter - The filter to check.
+ * @param event - The event to check.
+ */
 export function matchFilter(filter: Filter, event: Event): boolean {
   if (filter.ids && !filter.ids.includes(event.id)) return false;
   if (filter.authors && !filter.authors.includes(event.pubkey)) return false;
@@ -194,6 +236,11 @@ export function matchFilter(filter: Filter, event: Event): boolean {
   return true;
 }
 
+/**
+ * Checks if an event matches any of the given filters.
+ * @param filters - Lists of filters.
+ * @param event - The event to check.
+ */
 export function matchFilters(filters: Filter[], event: Event): boolean {
   return filters.some((f) => matchFilter(f, event));
 }
