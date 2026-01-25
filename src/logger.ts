@@ -9,9 +9,13 @@ export async function setupLogger() {
       }),
     },
     loggers: [
-      { category: "app", sinks: ["console"], lowestLevel: "trace" },
-      { category: "nostr", sinks: ["console"], lowestLevel: "trace" },
-      { category: "logtape", sinks: ["console"], lowestLevel: "warning" },
+      { category: ["app"], sinks: ["console"], lowestLevel: "trace" },
+      { category: ["nostr"], sinks: ["console"], lowestLevel: "trace" },
+      {
+        category: ["logtape", "meta"],
+        sinks: ["console"],
+        lowestLevel: "warning",
+      },
     ],
   });
 }
