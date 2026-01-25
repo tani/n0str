@@ -20,11 +20,20 @@
 - [x] NIP-09: Event Deletion
 - [x] NIP-40: Expiration
 - [x] NIP-13: Proof of Work
-- [x] NIP-01: Event Treatment (Ephemeral, Replaceable, Addressable)
-- [x] NIP-45: Event Counts
-- [x] NIP-42: Authentication
-- [x] NIP-50: Search Capability
+- [x] NIP-01: Basic protocol flow description
+- [x] NIP-02: Follow List
+- [x] NIP-03: OpenTimestamps Attestations for Events
+- [x] NIP-04: Encrypted Direct Message
+- [x] NIP-05: Mapping Nostr keys to DNS-based internet identifiers
+- [x] NIP-09: Event Deletion Request
+- [x] NIP-10: Text Notes and Threads
+- [x] NIP-11: Relay Information Document
+- [x] NIP-13: Proof of Work
 - [x] NIP-22: Event Created_at Limits
+- [x] NIP-40: Expiration Timestamp
+- [x] NIP-42: Authentication of clients to relays
+- [x] NIP-45: Counting results
+- [x] NIP-50: Search Capability
 - [x] Testing (One file per NIP, coverage boosters expanded, Integration tests passing)
 
 ## NIP-11 Implementation Details
