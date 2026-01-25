@@ -126,6 +126,13 @@ n0str is configured via a `n0str.json` file in the root directory. If this file 
 
 See the default configuration in `src/relay.ts` for all available options.
 
+### Environment Variables
+
+You can also configure the relay using environment variables:
+
+- `PORT`: The port to listen on (default: 3000).
+- `LOG_LEVEL`: The logging level (default: info). Available levels: `trace`, `debug`, `info`, `warn`, `error`.
+
 ## License
 
 AGPLv3. See [LICENSE](LICENSE) for details.
