@@ -4,6 +4,7 @@ import {
   validateEvent,
   matchFilter,
   countLeadingZeros,
+  validateAuthEvent,
 } from "../src/protocol.ts";
 import { generateSecretKey, getPublicKey, finalizeEvent } from "nostr-tools";
 
@@ -96,5 +97,70 @@ describe("Protocol", () => {
     expect(matchFilter({ "#t": ["other"] }, event)).toBe(false);
     expect(matchFilter({ "#p": ["alice"] }, event)).toBe(true);
     expect(matchFilter({ "#p": ["bob"], "#t": ["nostr"] }, event)).toBe(false);
+  });
+
+  describe("validateAuthEvent branches", () => {
+    test("invalid signature", () => {
+      const event = finalizeEvent(
+        {
+          kind: 22242,
+          created_at: Math.floor(Date.now() / 1000),
+          tags: [],
+          content: "",
+        },
+        sk,
+      );
+      const tampered = { ...event, sig: "0".repeat(128) };
+      const res = validateAuthEvent(tampered, "challenge", "ws://localhost");
+      expect(res.ok).toBe(false);
+      expect(res.reason).toContain("signature verification failed");
+    });
+
+    test("wrong kind", () => {
+      const event = finalizeEvent(
+        {
+          kind: 1,
+          created_at: Math.floor(Date.now() / 1000),
+          tags: [],
+          content: "",
+        },
+        sk,
+      );
+      const res = validateAuthEvent(event, "challenge", "ws://localhost");
+      expect(res.ok).toBe(false);
+      expect(res.reason).toBe("invalid: kind must be 22242");
+    });
+
+    test("created_at too far", () => {
+      const event = finalizeEvent(
+        {
+          kind: 22242,
+          created_at: Math.floor(Date.now() / 1000) - 1000,
+          tags: [],
+          content: "",
+        },
+        sk,
+      );
+      const res = validateAuthEvent(event, "challenge", "ws://localhost");
+      expect(res.ok).toBe(false);
+      expect(res.reason).toBe(
+        "invalid: created_at is too far from current time",
+      );
+    });
+
+    test("missing relay tag", () => {
+      const event = finalizeEvent(
+        {
+          kind: 22242,
+          created_at: Math.floor(Date.now() / 1000),
+          tags: [["challenge", "challenge"]],
+          content: "",
+        },
+        sk,
+      );
+      const res = validateAuthEvent(event, "challenge", "ws://localhost");
+      expect(res.ok).toBe(false);
+      expect(res.reason).toBe("invalid: missing relay tag");
+    });
   });
 });

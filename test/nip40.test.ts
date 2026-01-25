@@ -8,8 +8,8 @@ import {
   afterEach,
 } from "bun:test";
 import { relay } from "../src/relay.ts";
-import { db, queryEvents } from "../src/db.ts";
-import { generateSecretKey, getPublicKey, finalizeEvent } from "nostr-tools";
+import { db } from "../src/db.ts";
+import { generateSecretKey, finalizeEvent } from "nostr-tools";
 import { sql } from "drizzle-orm";
 
 async function consumeAuth(ws: WebSocket) {
@@ -21,8 +21,8 @@ async function consumeAuth(ws: WebSocket) {
   });
 }
 
-describe("NIP-40 Expiration and NIP-13 PoW", () => {
-  const dbPath = "nostra.nip40_13.test.db";
+describe("NIP-40 Expiration", () => {
+  const dbPath = "nostra.nip40.test.db";
   let server: any;
   let url: string;
 
@@ -109,15 +109,12 @@ describe("NIP-40 Expiration and NIP-13 PoW", () => {
       sk,
     );
 
-    // 2. Save it
     ws.send(JSON.stringify(["EVENT", event]));
     const ok = await nextMsg();
     expect(ok[0]).toBe("OK");
 
-    // 3. Wait for it to expire (wait 3s to be safe)
     await new Promise((resolve) => setTimeout(resolve, 3000));
 
-    // 4. Request events
     ws.send(JSON.stringify(["REQ", "sub1", {}]));
 
     const msgs: any[] = [];
@@ -127,19 +124,8 @@ describe("NIP-40 Expiration and NIP-13 PoW", () => {
       if (msg[0] === "EOSE") break;
     }
 
-    // Should only have EOSE, no EVENT
     expect(msgs.some((m) => m[0] === "EVENT")).toBe(false);
 
     ws.close();
-  });
-
-  test("NIP-13: PoW difficulty enforcement", async () => {
-    // Note: To test this, we should really set MIN_DIFFICULTY > 0.
-    // However, since relay.ts has MIN_DIFFICULTY = 0 currently,
-    // we'll just test that valid PoW is accepted and the calculation works.
-    // For mining, we'd need a loop, but we can just use a pre-mined event
-    // or trust the unit test for countLeadingZeros and focus on the check.
-    // If we want to test REJECTION, we'd need to modify relay.ts for the test.
-    // Instead, I'll trust the protocol.test.ts for logic and relay.test.ts for flow.
   });
 });

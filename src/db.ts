@@ -38,6 +38,27 @@ db.run(
   sql`CREATE INDEX IF NOT EXISTS idx_tags_name_value ON tags(name, value);`,
 );
 
+// NIP-50: FTS5 Search Capability (Internal content for reliability)
+db.run(sql`
+  CREATE VIRTUAL TABLE IF NOT EXISTS events_fts USING fts5(
+    id,
+    content
+  );
+`);
+
+// Triggers for FTS5 sync
+db.run(sql`
+  CREATE TRIGGER IF NOT EXISTS events_ai AFTER INSERT ON events BEGIN
+    INSERT INTO events_fts(id, content) VALUES (new.id, new.content);
+  END;
+`);
+
+db.run(sql`
+  CREATE TRIGGER IF NOT EXISTS events_ad AFTER DELETE ON events BEGIN
+    DELETE FROM events_fts WHERE id = old.id;
+  END;
+`);
+
 export async function saveEvent(event: Event) {
   await db.transaction(async (tx) => {
     if (isReplaceable(event.kind)) {
@@ -183,6 +204,12 @@ function getFilterConditions(filter: Filter) {
     conditions.push(gte(schema.events.created_at, filter.since));
   if (filter.until !== undefined)
     conditions.push(lte(schema.events.created_at, filter.until));
+
+  if (filter.search) {
+    conditions.push(
+      sql`events.id IN (SELECT id FROM events_fts WHERE events_fts MATCH ${filter.search})`,
+    );
+  }
 
   // Tag filters using SQL fallback for dynamic keys
   for (const [key, values] of Object.entries(filter)) {

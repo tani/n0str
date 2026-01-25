@@ -11,6 +11,7 @@ import {
   matchFilters,
   isEphemeral,
   validateAuthEvent,
+  validateCreatedAt,
 } from "./protocol.ts";
 import type { Event, Filter } from "nostr-tools";
 import type { ServerWebSocket } from "bun";
@@ -35,7 +36,8 @@ const relayInfo = {
     "A fast and lightweight Nostr relay built with Bun, SQLite, and Drizzle.",
   pubkey: "bf2bee5281149c7c350f5d12ae32f514c7864ff10805182f4178538c2c421007", // Placeholder or configurable
   contact: "hi@example.com",
-  supported_nips: [1, 9, 11, 13, 40, 42, 45],
+  supported_nips: [1, 9, 11, 13, 22, 40, 42, 45, 50],
+
   software: "https://github.com/tani/nostra",
 
   version: "0.1.0",
@@ -121,6 +123,13 @@ export const relay = {
           const result = validateEvent(event, MIN_DIFFICULTY);
           if (!result.ok) {
             ws.send(JSON.stringify(["OK", event.id, false, result.reason]));
+            return;
+          }
+
+          // NIP-22: Check created_at limits
+          const timeResult = validateCreatedAt(event.created_at);
+          if (!timeResult.ok) {
+            ws.send(JSON.stringify(["OK", event.id, false, timeResult.reason]));
             return;
           }
 

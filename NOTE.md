@@ -23,7 +23,9 @@
 - [x] NIP-01: Event Treatment (Ephemeral, Replaceable, Addressable)
 - [x] NIP-45: Event Counts
 - [x] NIP-42: Authentication
-- [x] Testing (Integration tests passing)
+- [x] NIP-50: Search Capability
+- [x] NIP-22: Event Created_at Limits
+- [x] Testing (One file per NIP, coverage boosters expanded, Integration tests passing)
 
 ## NIP-11 Implementation Details
 

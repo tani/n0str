@@ -35,6 +35,7 @@ export const FilterSchema = z
     since: z.number().optional(),
     until: z.number().optional(),
     limit: z.number().optional(),
+    search: z.string().optional(),
   })
   .catchall(z.array(z.string())); // Support #... tag filters
 
@@ -161,6 +162,23 @@ export function validateAuthEvent(
     };
   }
 
+  return { ok: true };
+}
+
+export function validateCreatedAt(createdAt: number): {
+  ok: boolean;
+  reason?: string;
+} {
+  const now = Math.floor(Date.now() / 1000);
+  const oneYearAgo = now - 60 * 60 * 24 * 365;
+  const oneHourAhead = now + 60 * 60;
+
+  if (createdAt < oneYearAgo) {
+    return { ok: false, reason: "error: event is too old" };
+  }
+  if (createdAt > oneHourAhead) {
+    return { ok: false, reason: "error: event is too far in the future" };
+  }
   return { ok: true };
 }
 

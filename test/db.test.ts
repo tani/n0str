@@ -1,5 +1,6 @@
 import { expect, test, describe, beforeEach, afterEach } from "bun:test";
-import { saveEvent, queryEvents, db } from "../src/db.ts";
+import { saveEvent, queryEvents, cleanupExpiredEvents, db } from "../src/db.ts";
+import { generateSecretKey, finalizeEvent } from "nostr-tools";
 import type { Event } from "nostr-tools";
 import { unlinkSync, existsSync } from "fs";
 import { sql } from "drizzle-orm";
@@ -86,5 +87,76 @@ describe("Database", () => {
     await saveEvent(sampleEvent);
     await saveEvent(sampleEvent);
     expect(await queryEvents({})).toHaveLength(1);
+  });
+
+  test("Ignore older addressable event", async () => {
+    const sk = generateSecretKey();
+    const now = Math.floor(Date.now() / 1000);
+
+    // 1. Save a new event
+    const eventNew = finalizeEvent(
+      {
+        kind: 30000,
+        created_at: now,
+        tags: [["d", "test"]],
+        content: "new",
+      },
+      sk,
+    );
+    await saveEvent(eventNew);
+
+    // 2. Try to save an older event
+    const eventOld = finalizeEvent(
+      {
+        kind: 30000,
+        created_at: now - 10,
+        tags: [["d", "test"]],
+        content: "old",
+      },
+      sk,
+    );
+    await saveEvent(eventOld);
+
+    // 3. Verify only the newer one exists
+    const stored = await queryEvents({ kinds: [30000] });
+    expect(stored).toHaveLength(1);
+    expect(stored[0]!.id).toBe(eventNew.id);
+  });
+
+  test("cleanupExpiredEvents works", async () => {
+    const sk = generateSecretKey();
+    const now = Math.floor(Date.now() / 1000);
+
+    // 1. Insert an expired event manually
+    const eventExpired = finalizeEvent(
+      {
+        kind: 1,
+        created_at: now - 100,
+        tags: [["expiration", (now - 50).toString()]],
+        content: "expired",
+      },
+      sk,
+    );
+    await saveEvent(eventExpired);
+
+    // 2. Insert a valid event
+    const eventValid = finalizeEvent(
+      {
+        kind: 1,
+        created_at: now,
+        tags: [["expiration", (now + 50).toString()]],
+        content: "valid",
+      },
+      sk,
+    );
+    await saveEvent(eventValid);
+
+    // 3. Run cleanup
+    await cleanupExpiredEvents();
+
+    // 4. Verify original event is gone but valid remains
+    const stored = await queryEvents({ kinds: [1] });
+    expect(stored).toHaveLength(1);
+    expect(stored[0]?.id).toBe(eventValid.id);
   });
 });

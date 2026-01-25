@@ -10,7 +10,6 @@ import {
 import { relay } from "../src/relay.ts";
 import { db } from "../src/db.ts";
 import { generateSecretKey, getPublicKey, finalizeEvent } from "nostr-tools";
-import { unlinkSync, existsSync } from "fs";
 import { sql } from "drizzle-orm";
 
 async function consumeAuth(ws: WebSocket) {
@@ -22,8 +21,8 @@ async function consumeAuth(ws: WebSocket) {
   });
 }
 
-describe("Relay Integration", () => {
-  const dbPath = "nostra.relay.test.db";
+describe("NIP-01 Core Relay", () => {
+  const dbPath = "nostra.nip01.test.db";
   let server: any;
   let url: string;
 
@@ -32,10 +31,8 @@ describe("Relay Integration", () => {
   });
 
   beforeEach(async () => {
-    // Clear the database tables before each test
     await db.run(sql`DELETE FROM events`);
     await db.run(sql`DELETE FROM tags`);
-
     server = Bun.serve({ ...relay, port: 0 });
     url = `ws://localhost:${server.port}`;
   });
@@ -62,7 +59,6 @@ describe("Relay Integration", () => {
       sk,
     );
 
-    // Send EVENT
     ws.send(JSON.stringify(["EVENT", event]));
 
     const okResponse = await new Promise<any>((resolve) => {
@@ -73,7 +69,6 @@ describe("Relay Integration", () => {
     });
     expect(okResponse).toEqual(["OK", event.id, true, ""]);
 
-    // Send REQ
     const subId = "test-sub";
     ws.send(JSON.stringify(["REQ", subId, { authors: [pk] }]));
 
@@ -107,7 +102,6 @@ describe("Relay Integration", () => {
     const subId = "sub2";
     ws2.send(JSON.stringify(["REQ", subId, { kinds: [1] }]));
 
-    // Wait for EOSE from ws2 (ignoring AUTH)
     await new Promise(
       (resolve) =>
         (ws2.onmessage = (e) => {
@@ -139,36 +133,13 @@ describe("Relay Integration", () => {
     ws2.close();
   });
 
-  test("NIP-11 Information Document", async () => {
-    const res = await fetch(url.replace("ws://", "http://"), {
-      headers: { Accept: "application/nostr+json" },
-    });
-    expect(res.status).toBe(200);
-    const info = (await res.json()) as any;
-    expect(info.name).toBe("Nostra Relay");
-    expect(info.supported_nips).toContain(11);
-  });
-
-  test("Default HTTP Response", async () => {
-    const res = await fetch(url.replace("ws://", "http://"));
-    expect(res.status).toBe(200);
-    const text = await res.text();
-    expect(text).toContain("Nostra Relay");
-  });
-
   test("Invalid WebSocket Message", async () => {
     const ws = new WebSocket(url);
     await new Promise((resolve) => (ws.onopen = resolve));
 
-    // Send invalid JSON - should trigger safe return in message handler
     ws.send("not json");
-
-    // Send valid JSON but not a valid Nostr message
     ws.send(JSON.stringify(["INVALID"]));
-
-    // We expect no crash and no response (relay silently ignores)
     await new Promise((resolve) => setTimeout(resolve, 100));
-
     ws.close();
   });
 
@@ -186,7 +157,6 @@ describe("Relay Integration", () => {
     );
 
     ws.send(JSON.stringify(["CLOSE", subId]));
-    // No response expected, just verifying it doesn't crash and line is hit
     await new Promise((resolve) => setTimeout(resolve, 50));
     ws.close();
   });
@@ -205,9 +175,7 @@ describe("Relay Integration", () => {
       sk,
     );
 
-    // Tamper with content to invalidate signature
     const tamperedEvent = { ...event, content: "tampered" };
-
     ws.send(JSON.stringify(["EVENT", tamperedEvent]));
 
     const response = await new Promise<any>((resolve) => {
@@ -223,40 +191,14 @@ describe("Relay Integration", () => {
     ws.close();
   });
 
-  test("NIP-45: COUNT message", async () => {
-    const ws = new WebSocket(url);
-    await new Promise((resolve) => (ws.onopen = resolve));
-
-    // 1. Publish some events
-    for (let i = 0; i < 3; i++) {
-      const event = finalizeEvent(
-        {
-          kind: 1,
-          created_at: Math.floor(Date.now() / 1000),
-          tags: [],
-          content: `test ${i}`,
-        },
-        sk,
-      );
-      ws.send(JSON.stringify(["EVENT", event]));
-      await new Promise((resolve) => (ws.onmessage = resolve));
-    }
-
-    // 2. Count them
-    const subId = "count-sub";
-    ws.send(JSON.stringify(["COUNT", subId, { kinds: [1] }]));
-
-    const response = await new Promise<any>((resolve) => {
-      ws.onmessage = (e) => {
-        const msg = JSON.parse(e.data);
-        if (msg[0] === "COUNT") resolve(msg);
-      };
+  test("Upgrade failed branch", async () => {
+    // We fake a server where upgrade returns false
+    const fakeServer = { upgrade: () => false };
+    const req = new Request("http://localhost", {
+      headers: { Upgrade: "websocket" },
     });
-
-    expect(response[0]).toBe("COUNT");
-    expect(response[1]).toBe(subId);
-    expect(response[2].count).toBe(3);
-
-    ws.close();
+    const res = relay.fetch(req, fakeServer);
+    expect(res?.status).toBe(400);
+    expect(await res?.text()).toBe("Upgrade failed");
   });
 });
