@@ -1,5 +1,5 @@
 import type { Event, Filter } from "nostr-tools";
-import { isReplaceable, isAddressable } from "./protocol.ts";
+import { isAddressable, isReplaceable } from "./protocol.ts";
 import { db } from "./init";
 
 export { db };
@@ -21,102 +21,136 @@ type TagRow = {
   value: string;
 };
 
-function buildWhereClause(filter: Filter) {
-  const clauses: string[] = [];
-  const params: unknown[] = [];
+type EventWithTagRow = EventRow & {
+  tag_name: string | null;
+  tag_value: string | null;
+};
 
-  const add = (clause: string, values: readonly unknown[] = []) => {
+class WhereBuilder {
+  private clauses: string[] = [];
+  private params: unknown[] = [];
+
+  add(clause: string, values: readonly unknown[] = []) {
     let built = clause;
     for (const value of values) {
-      const placeholder = `$${params.length + 1}`;
+      const placeholder = `$${this.params.length + 1}`;
       built = built.replace("?", placeholder);
-      params.push(value);
+      this.params.push(value);
     }
-    clauses.push(built);
-  };
+    this.clauses.push(built);
+  }
 
-  const addIn = (column: string, values?: readonly unknown[]) => {
+  addIn(column: string, values?: readonly unknown[]) {
     if (!values || values.length === 0) return;
-    const placeholders = values.map((_, idx) => `$${params.length + idx + 1}`).join(", ");
-    params.push(...values);
-    clauses.push(`${column} IN (${placeholders})`);
-  };
+    const placeholders = values.map((_, idx) => `$${this.params.length + idx + 1}`).join(", ");
+    this.params.push(...values);
+    this.clauses.push(`${column} IN (${placeholders})`);
+  }
 
+  addTagFilter(tagName: string, values: readonly string[]) {
+    const tagNameIndex = this.params.length + 1;
+    this.params.push(tagName);
+    const placeholders = values.map((_, idx) => `$${this.params.length + idx + 1}`).join(", ");
+    this.params.push(...values);
+    this.clauses.push(
+      `events.id IN (SELECT event_id FROM tags WHERE name = $${tagNameIndex} AND value IN (${placeholders}))`,
+    );
+  }
+
+  build() {
+    return {
+      clause: this.clauses.length > 0 ? `WHERE ${this.clauses.join(" AND ")}` : "",
+      params: this.params,
+    };
+  }
+}
+
+function buildWhereClause(filter: Filter) {
+  const builder = new WhereBuilder();
   const now = Math.floor(Date.now() / 1000);
-  add(
+
+  builder.add(
     "events.id NOT IN (SELECT event_id FROM tags WHERE name = 'expiration' AND CAST(value AS INTEGER) < ?)",
     [now],
   );
+  builder.addIn("events.id", filter.ids);
+  builder.addIn("events.pubkey", filter.authors);
+  builder.addIn("events.kind", filter.kinds);
 
-  if (filter.ids) addIn("events.id", filter.ids);
-  if (filter.authors) addIn("events.pubkey", filter.authors);
-  if (filter.kinds) addIn("events.kind", filter.kinds);
-  if (filter.since !== undefined) add("events.created_at >= ?", [filter.since]);
-  if (filter.until !== undefined) add("events.created_at <= ?", [filter.until]);
+  if (filter.since !== undefined) builder.add("events.created_at >= ?", [filter.since]);
+  if (filter.until !== undefined) builder.add("events.created_at <= ?", [filter.until]);
 
   if (filter.search) {
-    add("events.id IN (SELECT id FROM events_fts WHERE events_fts MATCH ?)", [filter.search]);
+    builder.add("events.id IN (SELECT id FROM events_fts WHERE events_fts MATCH ?)", [filter.search]);
   }
 
   for (const [key, values] of Object.entries(filter)) {
     if (key.startsWith("#") && Array.isArray(values) && values.length > 0) {
-      const tagNameIndex = params.length + 1;
-      params.push(key.slice(1));
-      const placeholders = values.map((_, idx) => `$${params.length + idx + 1}`).join(", ");
-      params.push(...values);
-      clauses.push(
-        `events.id IN (SELECT event_id FROM tags WHERE name = $${tagNameIndex} AND value IN (${placeholders}))`,
-      );
+      builder.addTagFilter(key.slice(1), values as string[]);
     }
   }
 
-  return {
-    clause: clauses.length > 0 ? `WHERE ${clauses.join(" AND ")}` : "",
-    params,
-  };
+  return builder.build();
+}
+
+function isOlderEvent(candidate: Event, existing: ExistingRow) {
+  return (
+    candidate.created_at < existing.created_at ||
+    (candidate.created_at === existing.created_at && candidate.id > existing.id)
+  );
+}
+
+async function findReplaceableEvent(tx: typeof db, event: Event) {
+  const rows = await tx<ExistingRow[]>`
+    SELECT id, created_at
+    FROM events
+    WHERE kind = ${event.kind} AND pubkey = ${event.pubkey}
+    ORDER BY created_at DESC, id DESC
+    LIMIT 1
+  `;
+  return rows[0];
+}
+
+async function findAddressableEvent(tx: typeof db, event: Event, dTag: string) {
+  const rows = await tx<ExistingRow[]>`
+    SELECT id, created_at
+    FROM events
+    WHERE kind = ${event.kind}
+      AND pubkey = ${event.pubkey}
+      AND id IN (SELECT event_id FROM tags WHERE name = 'd' AND value = ${dTag})
+    ORDER BY created_at DESC, id DESC
+    LIMIT 1
+  `;
+  return rows[0];
+}
+
+function buildTagRows(event: Event): TagRow[] {
+  return event.tags
+    .filter((tag) => tag[0] !== undefined && tag[1] !== undefined)
+    .map((tag) => ({
+      event_id: event.id,
+      name: tag[0] as string,
+      value: tag[1] as string,
+    }));
+}
+
+async function insertTags(tx: typeof db, event: Event) {
+  const tagRows = buildTagRows(event);
+  if (tagRows.length === 0) return;
+  await tx`INSERT INTO tags ${tx(tagRows)}`;
 }
 
 export async function saveEvent(event: Event) {
   await db.begin(async (tx) => {
     if (isReplaceable(event.kind)) {
-      const existingRows = await tx<ExistingRow[]>`
-        SELECT id, created_at
-        FROM events
-        WHERE kind = ${event.kind} AND pubkey = ${event.pubkey}
-        ORDER BY created_at DESC, id DESC
-        LIMIT 1
-      `;
-      const existing = existingRows[0];
-      if (existing) {
-        if (
-          event.created_at < existing.created_at ||
-          (event.created_at === existing.created_at && event.id > existing.id)
-        ) {
-          return;
-        }
-        await tx`DELETE FROM events WHERE id = ${existing.id}`;
-      }
+      const existing = await findReplaceableEvent(tx, event);
+      if (existing && isOlderEvent(event, existing)) return;
+      if (existing) await tx`DELETE FROM events WHERE id = ${existing.id}`;
     } else if (isAddressable(event.kind)) {
       const dTag = event.tags.find((t) => t[0] === "d")?.[1] || "";
-      const existingRows = await tx<ExistingRow[]>`
-        SELECT id, created_at
-        FROM events
-        WHERE kind = ${event.kind}
-          AND pubkey = ${event.pubkey}
-          AND id IN (SELECT event_id FROM tags WHERE name = 'd' AND value = ${dTag})
-        ORDER BY created_at DESC, id DESC
-        LIMIT 1
-      `;
-      const existing = existingRows[0];
-      if (existing) {
-        if (
-          event.created_at < existing.created_at ||
-          (event.created_at === existing.created_at && event.id > existing.id)
-        ) {
-          return;
-        }
-        await tx`DELETE FROM events WHERE id = ${existing.id}`;
-      }
+      const existing = await findAddressableEvent(tx, event, dTag);
+      if (existing && isOlderEvent(event, existing)) return;
+      if (existing) await tx`DELETE FROM events WHERE id = ${existing.id}`;
     }
 
     await tx`
@@ -132,17 +166,7 @@ export async function saveEvent(event: Event) {
       ON CONFLICT DO NOTHING
     `;
 
-    const tagRows = event.tags
-      .filter((tag) => tag[0] !== undefined && tag[1] !== undefined)
-      .map((tag) => ({
-        event_id: event.id,
-        name: tag[0] as string,
-        value: tag[1] as string,
-      }));
-
-    if (tagRows.length > 0) {
-      await tx`INSERT INTO tags ${tx(tagRows)}`;
-    }
+    await insertTags(tx, event);
   });
 }
 
@@ -153,7 +177,6 @@ export async function deleteEvents(
   until: number = Infinity,
 ) {
   await db.begin(async (tx) => {
-    // Delete by event IDs (e tags)
     if (eventIds.length > 0) {
       await tx`
         DELETE FROM events
@@ -162,7 +185,6 @@ export async function deleteEvents(
       `;
     }
 
-    // Delete by identifiers (a tags: kind:pubkey:d-identifier)
     for (const addr of identifiers) {
       const parts = addr.split(":");
       if (parts.length < 3) continue;
@@ -170,10 +192,8 @@ export async function deleteEvents(
       const pk = parts[1]!;
       const dTag = parts[2]!;
 
-      // Only delete if the pubkey matches the author of the deletion request
       if (pk !== pubkey) continue;
 
-      // Find events with matching kind, pubkey, and d-tag (using subquery for d-tag)
       await tx`
         DELETE FROM events
         WHERE kind = ${kind}
@@ -213,36 +233,50 @@ export async function countEvents(filters: Filter[]): Promise<number> {
 
 export async function queryEvents(filter: Filter): Promise<Event[]> {
   const { clause, params } = buildWhereClause(filter);
-  let query = `SELECT id, pubkey, created_at, kind, content, sig FROM events ${clause} ORDER BY created_at DESC`;
+  let baseQuery = `SELECT id, pubkey, created_at, kind, content, sig FROM events ${clause} ORDER BY created_at DESC`;
   if (filter.limit !== undefined) {
-    query += ` LIMIT $${params.length + 1}`;
+    baseQuery += ` LIMIT $${params.length + 1}`;
     params.push(filter.limit);
   }
 
-  const rows = await db.unsafe<EventRow[]>(query, params);
+  const query = `
+    SELECT
+      e.id,
+      e.pubkey,
+      e.created_at,
+      e.kind,
+      e.content,
+      e.sig,
+      t.name AS tag_name,
+      t.value AS tag_value
+    FROM (${baseQuery}) e
+    LEFT JOIN tags t ON t.event_id = e.id
+    ORDER BY e.created_at DESC, t.id ASC
+  `;
+
+  const rows = await db.unsafe<EventWithTagRow[]>(query, params);
   if (rows.length === 0) return [];
 
-  const eventIds = rows.map((row) => row.id);
-  const placeholders = eventIds.map((_, idx) => `$${idx + 1}`).join(", ");
-  const tagRows = await db.unsafe<TagRow[]>(
-    `SELECT event_id, name, value FROM tags WHERE event_id IN (${placeholders})`,
-    eventIds,
-  );
+  const events = new Map<string, Event>();
+  for (const row of rows) {
+    let event = events.get(row.id);
+    if (!event) {
+      event = {
+        id: row.id,
+        pubkey: row.pubkey,
+        created_at: row.created_at,
+        kind: row.kind,
+        content: row.content,
+        sig: row.sig,
+        tags: [],
+      };
+      events.set(row.id, event);
+    }
 
-  const tagsByEvent = new Map<string, [string, string][]>();
-  for (const tag of tagRows) {
-    const list = tagsByEvent.get(tag.event_id) ?? [];
-    list.push([tag.name, tag.value]);
-    tagsByEvent.set(tag.event_id, list);
+    if (row.tag_name !== null && row.tag_value !== null) {
+      event.tags.push([row.tag_name, row.tag_value]);
+    }
   }
 
-  return rows.map((row) => ({
-    id: row.id,
-    pubkey: row.pubkey,
-    created_at: row.created_at,
-    kind: row.kind,
-    content: row.content,
-    sig: row.sig,
-    tags: tagsByEvent.get(row.id) ?? [],
-  }));
+  return Array.from(events.values());
 }
