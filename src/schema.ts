@@ -1,10 +1,4 @@
-import {
-  sqliteTable,
-  text,
-  integer,
-  index,
-  primaryKey,
-} from "drizzle-orm/sqlite-core";
+import { sqliteTable, text, integer, index } from "drizzle-orm/sqlite-core";
 import { relations } from "drizzle-orm";
 
 export const events = sqliteTable(
@@ -17,11 +11,11 @@ export const events = sqliteTable(
     content: text("content").notNull(),
     sig: text("sig").notNull(),
   },
-  (table) => ({
-    pubkeyIdx: index("idx_events_pubkey").on(table.pubkey),
-    createdAtIdx: index("idx_events_created_at").on(table.created_at),
-    kindIdx: index("idx_events_kind").on(table.kind),
-  }),
+  (table) => [
+    index("idx_events_pubkey").on(table.pubkey),
+    index("idx_events_created_at").on(table.created_at),
+    index("idx_events_kind").on(table.kind),
+  ],
 );
 
 export const tags = sqliteTable(
@@ -34,9 +28,7 @@ export const tags = sqliteTable(
     name: text("name").notNull(),
     value: text("value").notNull(),
   },
-  (table) => ({
-    nameValueIdx: index("idx_tags_name_value").on(table.name, table.value),
-  }),
+  (table) => [index("idx_tags_name_value").on(table.name, table.value)],
 );
 
 export const eventsRelations = relations(events, ({ many }) => ({

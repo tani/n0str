@@ -1,4 +1,4 @@
-import { saveEvent, queryEvents } from "./db.ts";
+import { saveEvent, queryEvents, deleteEvents } from "./db.ts";
 import { parseMessage, validateEvent, matchFilters } from "./protocol.ts";
 import type { Event, Filter } from "nostr-tools";
 import type { ServerWebSocket } from "bun";
@@ -14,13 +14,39 @@ type ClientData = {
 
 const clients = new Set<ServerWebSocket<ClientData>>();
 
+const relayInfo = {
+  name: "Nostra Relay",
+  description:
+    "A fast and lightweight Nostr relay built with Bun, SQLite, and Drizzle.",
+  pubkey: "bf2bee5281149c7c350f5d12ae32f514c7864ff10805182f4178538c2c421007", // Placeholder or configurable
+  contact: "hi@example.com",
+  supported_nips: [1, 9, 11],
+  software: "https://github.com/tani/nostra",
+  version: "0.1.0",
+};
+
 export const relay = {
   port: 3000,
   fetch(req: Request, server: any) {
-    if (server.upgrade(req, { data: { subscriptions: new Map() } })) {
-      return;
+    if (req.headers.get("Upgrade")?.toLowerCase() === "websocket") {
+      if (server.upgrade(req, { data: { subscriptions: new Map() } })) {
+        return;
+      }
+      return new Response("Upgrade failed", { status: 400 });
     }
-    return new Response("Upgrade failed", { status: 400 });
+
+    if (req.headers.get("Accept") === "application/nostr+json") {
+      return new Response(JSON.stringify(relayInfo), {
+        headers: {
+          "Content-Type": "application/nostr+json",
+          "Access-Control-Allow-Origin": "*",
+          "Access-Control-Allow-Headers": "*",
+          "Access-Control-Allow-Methods": "GET, OPTIONS",
+        },
+      });
+    }
+
+    return new Response("Nostra Relay (ws://localhost:3000)");
   },
   websocket: {
     open(ws: ServerWebSocket<ClientData>) {
@@ -45,6 +71,28 @@ export const relay = {
 
           await saveEvent(event);
           ws.send(JSON.stringify(["OK", event.id, true, ""]));
+
+          // NIP-09: Handle Deletion Request (kind 5)
+          if (event.kind === 5) {
+            const eventIds = event.tags
+              .filter((t) => t[0] === "e")
+              .map((t) => t[1])
+              .filter((id): id is string => typeof id === "string");
+
+            const identifiers = event.tags
+              .filter((t) => t[0] === "a")
+              .map((t) => t[1])
+              .filter((id): id is string => typeof id === "string");
+
+            if (eventIds.length > 0 || identifiers.length > 0) {
+              await deleteEvents(
+                event.pubkey,
+                eventIds,
+                identifiers,
+                event.created_at,
+              );
+            }
+          }
 
           // Broadcast to matching subscriptions
           for (const client of clients) {

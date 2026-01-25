@@ -123,4 +123,85 @@ describe("Relay Integration", () => {
     ws1.close();
     ws2.close();
   });
+
+  test("NIP-11 Information Document", async () => {
+    const res = await fetch(url.replace("ws://", "http://"), {
+      headers: { Accept: "application/nostr+json" },
+    });
+    expect(res.status).toBe(200);
+    const info = (await res.json()) as any;
+    expect(info.name).toBe("Nostra Relay");
+    expect(info.supported_nips).toContain(11);
+  });
+
+  test("Default HTTP Response", async () => {
+    const res = await fetch(url.replace("ws://", "http://"));
+    expect(res.status).toBe(200);
+    const text = await res.text();
+    expect(text).toContain("Nostra Relay");
+  });
+
+  test("Invalid WebSocket Message", async () => {
+    const ws = new WebSocket(url);
+    await new Promise((resolve) => (ws.onopen = resolve));
+
+    // Send invalid JSON - should trigger safe return in message handler
+    ws.send("not json");
+
+    // Send valid JSON but not a valid Nostr message
+    ws.send(JSON.stringify(["INVALID"]));
+
+    // We expect no crash and no response (relay silently ignores)
+    await new Promise((resolve) => setTimeout(resolve, 100));
+
+    ws.close();
+  });
+
+  test("CLOSE message", async () => {
+    const ws = new WebSocket(url);
+    await new Promise((resolve) => (ws.onopen = resolve));
+
+    const subId = "close-sub";
+    ws.send(JSON.stringify(["REQ", subId, {}]));
+    await new Promise(
+      (resolve) =>
+        (ws.onmessage = (e) => {
+          if (JSON.parse(e.data)[0] === "EOSE") resolve(null);
+        }),
+    );
+
+    ws.send(JSON.stringify(["CLOSE", subId]));
+    // No response expected, just verifying it doesn't crash and line is hit
+    await new Promise((resolve) => setTimeout(resolve, 50));
+    ws.close();
+  });
+
+  test("Invalid EVENT response", async () => {
+    const ws = new WebSocket(url);
+    await new Promise((resolve) => (ws.onopen = resolve));
+
+    const event = finalizeEvent(
+      {
+        kind: 1,
+        created_at: Math.floor(Date.now() / 1000),
+        tags: [],
+        content: "original",
+      },
+      sk,
+    );
+
+    // Tamper with content to invalidate signature
+    const tamperedEvent = { ...event, content: "tampered" };
+
+    ws.send(JSON.stringify(["EVENT", tamperedEvent]));
+
+    const response = await new Promise<any>((resolve) => {
+      ws.onmessage = (e) => resolve(JSON.parse(e.data));
+    });
+    expect(response[0]).toBe("OK");
+    expect(response[2]).toBe(false);
+    expect(response[3]).toContain("signature verification failed");
+
+    ws.close();
+  });
 });

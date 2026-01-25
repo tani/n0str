@@ -1,7 +1,7 @@
 import { Database } from "bun:sqlite";
 import { drizzle } from "drizzle-orm/bun-sqlite";
 import * as schema from "./schema";
-import { and, gte, lte, inArray, sql } from "drizzle-orm";
+import { and, gte, lte, inArray, sql, eq } from "drizzle-orm";
 import type { Event, Filter } from "nostr-tools";
 
 const dbPath = process.env.DATABASE_PATH || "nostra.db";
@@ -59,6 +59,51 @@ export async function saveEvent(event: Event) {
           value: tag[1],
         });
       }
+    }
+  });
+}
+
+export async function deleteEvents(
+  pubkey: string,
+  eventIds: string[],
+  identifiers: string[] = [],
+  until: number = Infinity,
+) {
+  await db.transaction(async (tx) => {
+    // Delete by event IDs (e tags)
+    if (eventIds.length > 0) {
+      await tx
+        .delete(schema.events)
+        .where(
+          and(
+            inArray(schema.events.id, eventIds),
+            eq(schema.events.pubkey, pubkey),
+          ),
+        );
+    }
+
+    // Delete by identifiers (a tags: kind:pubkey:d-identifier)
+    for (const addr of identifiers) {
+      const parts = addr.split(":");
+      if (parts.length < 3) continue;
+      const kind = parseInt(parts[0]!);
+      const pk = parts[1]!;
+      const dTag = parts[2]!;
+
+      // Only delete if the pubkey matches the author of the deletion request
+      if (pk !== pubkey) continue;
+
+      // Find events with matching kind, pubkey, and d-tag (using subquery for d-tag)
+      await tx
+        .delete(schema.events)
+        .where(
+          and(
+            eq(schema.events.kind, kind),
+            eq(schema.events.pubkey, pubkey),
+            lte(schema.events.created_at, until),
+            sql`id IN (SELECT event_id FROM tags WHERE name = 'd' AND value = ${dTag})`,
+          ),
+        );
     }
   });
 }
