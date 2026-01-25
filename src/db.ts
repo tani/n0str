@@ -3,6 +3,7 @@ import { drizzle } from "drizzle-orm/bun-sqlite";
 import * as schema from "./schema";
 import { and, gte, lte, inArray, sql, eq } from "drizzle-orm";
 import type { Event, Filter } from "nostr-tools";
+import { isReplaceable, isAddressable } from "./protocol.ts";
 
 const dbPath = process.env.DATABASE_PATH || "nostra.db";
 const sqlite = new Database(dbPath);
@@ -39,6 +40,52 @@ db.run(
 
 export async function saveEvent(event: Event) {
   await db.transaction(async (tx) => {
+    if (isReplaceable(event.kind)) {
+      const existing = await tx.query.events.findFirst({
+        where: and(
+          eq(schema.events.kind, event.kind),
+          eq(schema.events.pubkey, event.pubkey),
+        ),
+        orderBy: (events, { desc }) => [
+          desc(events.created_at),
+          desc(events.id),
+        ],
+      });
+
+      if (existing) {
+        if (
+          event.created_at < existing.created_at ||
+          (event.created_at === existing.created_at && event.id > existing.id)
+        ) {
+          return;
+        }
+        await tx.delete(schema.events).where(eq(schema.events.id, existing.id));
+      }
+    } else if (isAddressable(event.kind)) {
+      const dTag = event.tags.find((t) => t[0] === "d")?.[1] || "";
+      const existing = await tx.query.events.findFirst({
+        where: and(
+          eq(schema.events.kind, event.kind),
+          eq(schema.events.pubkey, event.pubkey),
+          sql`id IN (SELECT event_id FROM tags WHERE name = 'd' AND value = ${dTag})`,
+        ),
+        orderBy: (events, { desc }) => [
+          desc(events.created_at),
+          desc(events.id),
+        ],
+      });
+
+      if (existing) {
+        if (
+          event.created_at < existing.created_at ||
+          (event.created_at === existing.created_at && event.id > existing.id)
+        ) {
+          return;
+        }
+        await tx.delete(schema.events).where(eq(schema.events.id, existing.id));
+      }
+    }
+
     await tx
       .insert(schema.events)
       .values({

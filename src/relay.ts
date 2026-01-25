@@ -4,7 +4,12 @@ import {
   deleteEvents,
   cleanupExpiredEvents,
 } from "./db.ts";
-import { parseMessage, validateEvent, matchFilters } from "./protocol.ts";
+import {
+  parseMessage,
+  validateEvent,
+  matchFilters,
+  isEphemeral,
+} from "./protocol.ts";
 import type { Event, Filter } from "nostr-tools";
 import type { ServerWebSocket } from "bun";
 
@@ -105,7 +110,9 @@ export const relay = {
             return;
           }
 
-          await saveEvent(event);
+          if (!isEphemeral(event.kind)) {
+            await saveEvent(event);
+          }
           ws.send(JSON.stringify(["OK", event.id, true, ""]));
 
           // NIP-09: Handle Deletion Request (kind 5)

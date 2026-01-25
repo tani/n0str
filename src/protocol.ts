@@ -38,6 +38,18 @@ export const FilterSchema = z
   })
   .catchall(z.array(z.string())); // Support #... tag filters
 
+export function isReplaceable(kind: number): boolean {
+  return kind === 0 || kind === 3 || (kind >= 10000 && kind < 20000);
+}
+
+export function isEphemeral(kind: number): boolean {
+  return kind >= 20000 && kind < 30000;
+}
+
+export function isAddressable(kind: number): boolean {
+  return kind >= 30000 && kind < 40000;
+}
+
 export const ClientMessageSchema = z.union([
   z.tuple([z.literal("EVENT"), EventSchema]),
   z.tuple([z.literal("REQ"), z.string()]).rest(FilterSchema),

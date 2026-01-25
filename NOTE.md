@@ -20,6 +20,7 @@
 - [x] NIP-09: Event Deletion
 - [x] NIP-40: Expiration
 - [x] NIP-13: Proof of Work
+- [x] NIP-01: Event Treatment (Ephemeral, Replaceable, Addressable)
 - [x] Testing (Integration tests passing)
 
 ## NIP-11 Implementation Details
