@@ -1,5 +1,5 @@
 import { expect, test, describe, beforeAll, beforeEach, afterEach } from "bun:test";
-import { generateSecretKey, getPublicKey, finalizeEvent } from "nostr-tools";
+import { generateSecretKey, finalizeEvent } from "nostr-tools";
 import { sql } from "drizzle-orm";
 
 async function consumeAuth(ws: WebSocket) {
@@ -47,7 +47,8 @@ describe("NIP-44: Encrypted Payloads", () => {
 
     // Dummy NIP-44 payload (base64)
     // From NIP-44 spec test vector:
-    const payload = "AgAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAABee0G5VSK0/9YypIObAtDKfYEAjD35uVkHyB0F4DwrcNaCXlCWZKaArsGrY6M9wnuTMxWfp1RTN9Xga8no+kF5Vsb";
+    const payload =
+      "AgAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAABee0G5VSK0/9YypIObAtDKfYEAjD35uVkHyB0F4DwrcNaCXlCWZKaArsGrY6M9wnuTMxWfp1RTN9Xga8no+kF5Vsb";
 
     const event = finalizeEvent(
       {
