@@ -46,17 +46,13 @@ export async function handleEvent(
   }
   ws.send(JSON.stringify(["OK", event.id, true, ""]));
 
-  // NIP-09: Handle Deletion Request (kind 5)
   if (event.kind === 5) {
     const eventIds = event.tags
       .filter((t) => t[0] === "e")
-      .map((t) => t[1])
-      .filter((id): id is string => typeof id === "string");
-
+      .flatMap((t) => (typeof t[1] === "string" ? [t[1]] : []));
     const identifiers = event.tags
       .filter((t) => t[0] === "a")
-      .map((t) => t[1])
-      .filter((id): id is string => typeof id === "string");
+      .flatMap((t) => (typeof t[1] === "string" ? [t[1]] : []));
 
     if (eventIds.length > 0 || identifiers.length > 0) {
       await deleteEvents(event.pubkey, eventIds, identifiers, event.created_at);

@@ -118,73 +118,52 @@ function isOlderEvent(candidate: Event, existing: ExistingRow) {
   );
 }
 
-async function findReplaceableEvent(tx: typeof db, event: Event) {
-  const rows = await tx<ExistingRow[]>`
-    SELECT id, created_at
-    FROM events
-    WHERE kind = ${event.kind} AND pubkey = ${event.pubkey}
-    ORDER BY created_at DESC, id DESC
-    LIMIT 1
-  `;
-  return rows[0];
-}
-
-async function findAddressableEvent(tx: typeof db, event: Event, dTag: string) {
-  const rows = await tx<ExistingRow[]>`
-    SELECT id, created_at
-    FROM events
-    WHERE kind = ${event.kind}
-      AND pubkey = ${event.pubkey}
-      AND id IN (SELECT event_id FROM tags WHERE name = 'd' AND value = ${dTag})
-    ORDER BY created_at DESC, id DESC
-    LIMIT 1
-  `;
-  return rows[0];
+async function findExisting(tx: typeof db, event: Event): Promise<ExistingRow | undefined> {
+  if (isReplaceable(event.kind)) {
+    return (
+      await tx<ExistingRow[]>`
+      SELECT id, created_at FROM events
+      WHERE kind = ${event.kind} AND pubkey = ${event.pubkey}
+      ORDER BY created_at DESC, id DESC LIMIT 1
+    `
+    )[0];
+  }
+  if (isAddressable(event.kind)) {
+    const dTag = event.tags.find((t) => t[0] === "d")?.[1] || "";
+    return (
+      await tx<ExistingRow[]>`
+      SELECT id, created_at FROM events
+      WHERE kind = ${event.kind} AND pubkey = ${event.pubkey}
+        AND id IN (SELECT event_id FROM tags WHERE name = 'd' AND value = ${dTag})
+      ORDER BY created_at DESC, id DESC LIMIT 1
+    `
+    )[0];
+  }
 }
 
 function buildTagRows(event: Event): TagRow[] {
-  return event.tags
-    .filter((tag) => tag[0] !== undefined && tag[1] !== undefined)
-    .map((tag) => ({
-      event_id: event.id,
-      name: tag[0] as string,
-      value: tag[1] as string,
-    }));
-}
-
-async function insertTags(tx: typeof db, event: Event) {
-  const tagRows = buildTagRows(event);
-  if (tagRows.length === 0) return;
-  await tx`INSERT INTO tags ${tx(tagRows)}`;
+  return event.tags.flatMap(([name, value]) =>
+    name && value ? [{ event_id: event.id, name, value }] : [],
+  );
 }
 
 export async function saveEvent(event: Event) {
   await db.begin(async (tx) => {
-    if (isReplaceable(event.kind)) {
-      const existing = await findReplaceableEvent(tx, event);
-      if (existing && isOlderEvent(event, existing)) return;
-      if (existing) await tx`DELETE FROM events WHERE id = ${existing.id}`;
-    } else if (isAddressable(event.kind)) {
-      const dTag = event.tags.find((t) => t[0] === "d")?.[1] || "";
-      const existing = await findAddressableEvent(tx, event, dTag);
-      if (existing && isOlderEvent(event, existing)) return;
-      if (existing) await tx`DELETE FROM events WHERE id = ${existing.id}`;
+    const existing = await findExisting(tx, event);
+    if (existing) {
+      if (isOlderEvent(event, existing)) return;
+      await tx`DELETE FROM events WHERE id = ${existing.id}`;
     }
 
     await tx`
-      INSERT INTO events (id, pubkey, created_at, kind, content, sig)
-      VALUES (
-        ${event.id},
-        ${event.pubkey},
-        ${event.created_at},
-        ${event.kind},
-        ${event.content},
-        ${event.sig}
-      )
+      INSERT INTO events ${tx(event, "id", "pubkey", "created_at", "kind", "content", "sig")}
       ON CONFLICT DO NOTHING
     `;
 
-    await insertTags(tx, event);
+    const tagRows = buildTagRows(event);
+    if (tagRows.length > 0) {
+      await tx`INSERT INTO tags ${tx(tagRows)}`;
+    }
   });
 }
 

@@ -26,8 +26,7 @@ export const relay = {
   fetch(req: Request, server: any) {
     if (req.headers.get("Upgrade")?.toLowerCase() === "websocket") {
       const challenge = crypto.randomUUID();
-      const url = new URL(req.url);
-      const relayUrl = `${url.protocol === "https:" ? "wss:" : "ws:"}//${url.host}`;
+      const relayUrl = req.url.replace(/^http/, "ws");
       if (
         server.upgrade(req, {
           data: { subscriptions: new Map(), challenge, relayUrl },
