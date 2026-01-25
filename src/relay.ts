@@ -1,4 +1,10 @@
-import { saveEvent, queryEvents, deleteEvents, cleanupExpiredEvents, countEvents } from "./db.ts";
+import {
+  saveEvent,
+  queryEvents,
+  deleteEvents,
+  cleanupExpiredEvents,
+  countEvents,
+} from "./db.ts";
 import {
   parseMessage,
   validateEvent,
@@ -11,6 +17,7 @@ import type { Event, Filter } from "nostr-tools";
 import type { ServerWebSocket } from "bun";
 
 import * as fs from "node:fs";
+import { z } from "zod";
 
 type ClientData = {
   subscriptions: Map<string, Filter[]>;
@@ -23,12 +30,12 @@ const clients = new Set<ServerWebSocket<ClientData>>();
 
 const defaultRelayInfo = {
   name: "Nostra Relay",
-  description: "A fast and lightweight Nostr relay built with Bun, SQLite, and Drizzle.",
-  pubkey: "bf2bee5281149c7c350f5d12ae32f514c7864ff10805182f4178538c2c421007", // Placeholder or configurable
+  description: "A simple, reliable, and extensively tested Nostr relay.",
+  pubkey: "bf2bee5281149c7c350f5d12ae32f514c7864ff10805182f4178538c2c421007",
   contact: "hi@example.com",
   supported_nips: [
-    1, 2, 3, 4, 5, 9, 10, 11, 12, 13, 15, 16, 17, 18, 20, 22, 23, 25, 28, 33, 40, 42, 44, 45, 50,
-    51, 57, 65, 78,
+    1, 2, 3, 4, 5, 9, 10, 11, 12, 13, 15, 16, 17, 18, 20, 22, 23, 25, 28, 33,
+    40, 42, 44, 45, 50, 51, 57, 65, 78,
   ],
   software: "https://github.com/tani/nostra",
   version: "0.1.0",
@@ -42,24 +49,68 @@ const defaultRelayInfo = {
     auth_required: false,
     payment_required: false,
     restricted_writes: false,
-    created_at_lower_limit: 31536000, // 1 year
-    created_at_upper_limit: 3600, // 1 hour
+    created_at_lower_limit: 31536000,
+    created_at_upper_limit: 3600,
   },
 };
+
+// Zod schemas for runtime validation
+const RelayInfoSchema = z.object({
+  name: z.string(),
+  description: z.string(),
+  pubkey: z.string().length(64),
+  contact: z.string().email().optional(),
+  supported_nips: z.array(z.number()),
+  software: z.string().url(),
+  version: z.string(),
+  limitation: z.object({
+    max_message_length: z.number().int().positive(),
+    max_subscriptions: z.number().int().positive(),
+    max_filters: z.number().int().positive(),
+    max_limit: z.number().int().positive(),
+    max_subid_length: z.number().int().positive(),
+    min_pow_difficulty: z.number().int().nonnegative(),
+    auth_required: z.boolean(),
+    payment_required: z.boolean(),
+    restricted_writes: z.boolean(),
+    created_at_lower_limit: z.number().int().nonnegative(),
+    created_at_upper_limit: z.number().int().nonnegative(),
+  }),
+});
+
+const EventSchema = z.object({
+  id: z.string(),
+  pubkey: z.string().length(64),
+  created_at: z.number().int(),
+  kind: z.number().int(),
+  tags: z.array(z.array(z.string())),
+  content: z.string(),
+  sig: z.string().length(128),
+});
 
 let relayInfo = defaultRelayInfo;
 
 try {
   if (fs.existsSync("nostra.json")) {
     const fileContent = fs.readFileSync("nostra.json", "utf-8");
-    const config = JSON.parse(fileContent);
-    relayInfo = { ...defaultRelayInfo, ...config };
-    console.log("Loaded configuration from nostra.json");
+    const rawConfig = JSON.parse(fileContent);
+    const parsed = RelayInfoSchema.safeParse(rawConfig);
+    if (!parsed.success) {
+      console.error(
+        "Invalid configuration in nostra.json:",
+        parsed.error.format(),
+      );
+      relayInfo = defaultRelayInfo;
+    } else {
+      relayInfo = { ...defaultRelayInfo, ...parsed.data };
+      console.log("Loaded configuration from nostra.json");
+    }
   } else {
     console.log("nostra.json not found, using default configuration");
   }
 } catch (e) {
   console.error("Failed to load nostra.json:", e);
+  relayInfo = defaultRelayInfo;
 }
 
 const MIN_DIFFICULTY = 0;
@@ -107,8 +158,12 @@ export const relay = {
       clients.add(ws);
       ws.send(JSON.stringify(["AUTH", ws.data.challenge]));
     },
-    async message(ws: ServerWebSocket<ClientData>, rawMessage: string | Buffer) {
-      const messageStr = typeof rawMessage === "string" ? rawMessage : rawMessage.toString();
+    async message(
+      ws: ServerWebSocket<ClientData>,
+      rawMessage: string | Buffer,
+    ) {
+      const messageStr =
+        typeof rawMessage === "string" ? rawMessage : rawMessage.toString();
       if (messageStr.length > relayInfo.limitation.max_message_length) {
         ws.send(JSON.stringify(["NOTICE", "error: message too large"]));
         return;
@@ -117,18 +172,46 @@ export const relay = {
 
       if (!msg) return;
 
-      const [type, ...payload] = msg;
+      // Basic structural validation using Zod
+      const MessageSchema = z.tuple([z.string()]).rest(z.any());
+      const msgParse = MessageSchema.safeParse(msg);
+      if (!msgParse.success) {
+        ws.send(JSON.stringify(["NOTICE", "error: malformed message"]));
+        return;
+      }
+
+      const [type, ...payload] = msgParse.data;
 
       switch (type) {
         case "EVENT": {
-          const event = payload[0] as Event;
+          const rawEvent = payload[0];
+          const eventParse = EventSchema.safeParse(rawEvent);
+          if (!eventParse.success) {
+            ws.send(
+              JSON.stringify([
+                "OK",
+                rawEvent?.id ?? "unknown",
+                false,
+                "error: malformed event",
+              ]),
+            );
+            return;
+          }
+          const event = eventParse.data;
 
           // NIP-40: Check expiration on publish
           const expirationTag = event.tags.find((t) => t[0] === "expiration");
           if (expirationTag && expirationTag[1]) {
             const exp = parseInt(expirationTag[1]);
             if (!isNaN(exp) && exp < Math.floor(Date.now() / 1000)) {
-              ws.send(JSON.stringify(["OK", event.id, false, "error: event has expired"]));
+              ws.send(
+                JSON.stringify([
+                  "OK",
+                  event.id,
+                  false,
+                  "error: event has expired",
+                ]),
+              );
               return;
             }
           }
@@ -164,7 +247,12 @@ export const relay = {
               .filter((id): id is string => typeof id === "string");
 
             if (eventIds.length > 0 || identifiers.length > 0) {
-              await deleteEvents(event.pubkey, eventIds, identifiers, event.created_at);
+              await deleteEvents(
+                event.pubkey,
+                eventIds,
+                identifiers,
+                event.created_at,
+              );
             }
           }
 
@@ -181,8 +269,16 @@ export const relay = {
         case "REQ": {
           const [subId, ...filters] = payload as [string, ...Filter[]];
 
-          if (ws.data.subscriptions.size >= relayInfo.limitation.max_subscriptions) {
-            ws.send(JSON.stringify(["CLOSED", subId, "error: max subscriptions reached"]));
+          if (
+            ws.data.subscriptions.size >= relayInfo.limitation.max_subscriptions
+          ) {
+            ws.send(
+              JSON.stringify([
+                "CLOSED",
+                subId,
+                "error: max subscriptions reached",
+              ]),
+            );
             return;
           }
 
@@ -215,7 +311,11 @@ export const relay = {
         }
         case "AUTH": {
           const authEvent = payload[0] as Event;
-          const result = validateAuthEvent(authEvent, ws.data.challenge, ws.data.relayUrl);
+          const result = validateAuthEvent(
+            authEvent,
+            ws.data.challenge,
+            ws.data.relayUrl,
+          );
 
           if (!result.ok) {
             ws.send(JSON.stringify(["OK", authEvent.id, false, result.reason]));
