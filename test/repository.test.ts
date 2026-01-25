@@ -1,5 +1,5 @@
 import { expect, test, describe, beforeEach, afterEach } from "bun:test";
-import { saveEvent, queryEvents, cleanupExpiredEvents, db } from "../src/db.ts";
+import { saveEvent, queryEvents, cleanupExpiredEvents, db } from "../src/repository.ts";
 import { generateSecretKey, finalizeEvent } from "nostr-tools";
 import type { Event } from "nostr-tools";
 import { existsSync } from "fs";

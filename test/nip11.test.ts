@@ -1,5 +1,5 @@
 import { expect, test, describe, beforeEach, afterEach } from "bun:test";
-import { relay } from "../src/relay.ts";
+import { relay } from "../src/server.ts";
 
 describe("NIP-11 Relay Information Document", () => {
   let server: any;

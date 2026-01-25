@@ -1,5 +1,5 @@
 import { expect, test, describe, beforeEach, afterEach } from "bun:test";
-import { relay } from "../src/relay.ts";
+import { relay } from "../src/server.ts";
 import { finalizeEvent, generateSecretKey } from "nostr-tools";
 
 describe("NIP-42 Authentication", () => {

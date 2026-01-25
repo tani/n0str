@@ -1,13 +1,7 @@
 import type { ServerWebSocket } from "bun";
 import type { ClientData } from "../types";
-import {
-  EventSchema,
-  validateEvent,
-  validateCreatedAt,
-  isEphemeral,
-  matchFilters,
-} from "../protocol";
-import { saveEvent, deleteEvents } from "../db";
+import { EventSchema, validateEvent, validateCreatedAt, isEphemeral, matchFilters } from "../nostr";
+import { saveEvent, deleteEvents } from "../repository";
 
 const MIN_DIFFICULTY = 0;
 

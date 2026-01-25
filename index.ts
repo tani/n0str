@@ -1,4 +1,4 @@
-import { relay } from "./src/relay.ts";
+import { relay } from "./src/server.ts";
 
 const server = Bun.serve(relay);
 

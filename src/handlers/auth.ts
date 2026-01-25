@@ -1,7 +1,7 @@
 import type { ServerWebSocket } from "bun";
 import type { ClientData } from "../types";
 import type { Event } from "nostr-tools";
-import { validateAuthEvent } from "../protocol";
+import { validateAuthEvent } from "../nostr";
 
 export function handleAuth(ws: ServerWebSocket<ClientData>, payload: any[]) {
   const authEvent = payload[0] as Event;

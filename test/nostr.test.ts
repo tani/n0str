@@ -5,7 +5,7 @@ import {
   matchFilter,
   countLeadingZeros,
   validateAuthEvent,
-} from "../src/protocol.ts";
+} from "../src/nostr.ts";
 import { generateSecretKey, getPublicKey, finalizeEvent } from "nostr-tools";
 
 describe("Protocol", () => {

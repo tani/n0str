@@ -1,7 +1,7 @@
 import type { ServerWebSocket } from "bun";
 import type { ClientData } from "../types";
 import type { Filter } from "nostr-tools";
-import { countEvents } from "../db";
+import { countEvents } from "../repository";
 
 export async function handleCount(ws: ServerWebSocket<ClientData>, payload: any[]) {
   const [subId, ...filters] = payload as [string, ...Filter[]];

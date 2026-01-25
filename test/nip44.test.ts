@@ -20,9 +20,9 @@ describe("NIP-44: Encrypted Payloads", () => {
   beforeAll(async () => {
     process.env.DATABASE_PATH = dbPath;
     // Dynamic import to ensure env var is set before DB init
-    const relayModule = await import("../src/relay.ts");
+    const relayModule = await import("../src/server.ts");
     relay = relayModule.relay;
-    const dbModule = await import("../src/db.ts");
+    const dbModule = await import("../src/repository.ts");
     db = dbModule.db;
   });
 

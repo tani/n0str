@@ -1,6 +1,6 @@
 import { expect, test, describe, beforeAll, beforeEach, afterEach } from "bun:test";
-import { relay } from "../src/relay.ts";
-import { db, queryEvents } from "../src/db.ts";
+import { relay } from "../src/server.ts";
+import { db, queryEvents } from "../src/repository.ts";
 import { generateSecretKey, getPublicKey, finalizeEvent } from "nostr-tools";
 
 async function consumeAuth(ws: WebSocket) {

@@ -4,7 +4,7 @@ import { relayInfo } from "../src/config.ts";
 
 describe("relay coverage", () => {
   test("relay fetch branches and websocket message paths", async () => {
-    const { relay, runCleanupTick } = await import("../src/relay.ts");
+    const { relay, runCleanupTick } = await import("../src/server.ts");
     const sent: string[] = [];
     const ws = {
       send: (msg: string) => sent.push(msg),

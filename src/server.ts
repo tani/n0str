@@ -1,5 +1,5 @@
-import { cleanupExpiredEvents } from "./db.ts";
-import { parseMessage } from "./protocol.ts";
+import { cleanupExpiredEvents } from "./repository.ts";
+import { parseMessage } from "./nostr.ts";
 import { relayInfo } from "./config.ts";
 import type { ServerWebSocket } from "bun";
 import type { ClientData } from "./types.ts";

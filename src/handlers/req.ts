@@ -1,7 +1,7 @@
 import type { ServerWebSocket } from "bun";
 import type { ClientData } from "../types";
 import type { Filter } from "nostr-tools";
-import { queryEvents } from "../db";
+import { queryEvents } from "../repository";
 import { relayInfo } from "../config";
 
 export async function handleReq(ws: ServerWebSocket<ClientData>, payload: any[]) {
