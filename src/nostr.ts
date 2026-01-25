@@ -71,11 +71,6 @@ export type RelayMessage =
   | ["EOSE", string]
   | ["NOTICE", string];
 
-export function parseMessage(data: string): ClientMessage | null {
-  const out = ClientMessageSchema(data);
-  return out instanceof type.errors ? null : out;
-}
-
 export async function validateEvent(
   event: any,
   minDifficulty: number = 0,

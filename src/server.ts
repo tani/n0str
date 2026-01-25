@@ -1,5 +1,6 @@
 import { cleanupExpiredEvents } from "./repository.ts";
-import { parseMessage, type ClientMessage } from "./nostr.ts";
+import { ClientMessageSchema, type ClientMessage } from "./nostr.ts";
+import { type } from "arktype";
 import { relayInfo } from "./config.ts";
 import { match } from "arktype";
 import type { ServerWebSocket } from "bun";
@@ -61,9 +62,8 @@ export const relay = {
         ws.send(JSON.stringify(["NOTICE", "error: message too large"]));
         return;
       }
-      const msg = parseMessage(messageStr);
-
-      if (!msg) return;
+      const msg = ClientMessageSchema(messageStr);
+      if (msg instanceof type.errors) return;
 
       await match
         .in<ClientMessage>()

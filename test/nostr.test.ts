@@ -1,24 +1,27 @@
 import { expect, test, describe } from "bun:test";
 import {
-  parseMessage,
+  ClientMessageSchema,
   validateEvent,
   matchFilter,
   countLeadingZeros,
   validateAuthEvent,
 } from "../src/nostr.ts";
 import { generateSecretKey, getPublicKey, finalizeEvent } from "nostr-tools";
+import { type } from "arktype";
 
 describe("Protocol", () => {
   const sk = generateSecretKey();
   const pk = getPublicKey(sk);
 
-  test("parseMessage handles invalid JSON", () => {
-    expect(parseMessage("invalid json")).toBeNull();
+  test("ClientMessageSchema handles invalid JSON", () => {
+    expect(ClientMessageSchema("invalid json") instanceof type.errors).toBe(true);
   });
 
-  test("parseMessage handles schema violations", () => {
-    expect(parseMessage(JSON.stringify(["INVALID", {}]))).toBeNull();
-    expect(parseMessage(JSON.stringify(["EVENT", { id: 123 }]))).toBeNull();
+  test("ClientMessageSchema handles schema violations", () => {
+    expect(ClientMessageSchema(JSON.stringify(["INVALID", {}])) instanceof type.errors).toBe(true);
+    expect(ClientMessageSchema(JSON.stringify(["EVENT", { id: 123 }])) instanceof type.errors).toBe(
+      true,
+    );
   });
 
   test("validateEvent handles ArkType errors", async () => {
