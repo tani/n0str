@@ -23,6 +23,7 @@
   },
   "dependencies": {
     "drizzle-orm": "^0.45.1",
+    "effect": "^3.19.15",
     "nostr-tools": "^2.20.0",
     "zod": "^4.3.6"
   }

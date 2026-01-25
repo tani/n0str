@@ -1,3 +1,4 @@
+import { Effect } from "effect";
 import { cleanupExpiredEvents } from "./db.ts";
 import { parseMessage } from "./protocol.ts";
 import { relayInfo } from "./config.ts";
@@ -69,13 +70,13 @@ export const relay = {
 
       switch (type) {
         case "EVENT":
-          await handleEvent(ws, payload, clients);
+          await Effect.runPromise(handleEvent(ws, payload, clients));
           break;
         case "REQ":
-          await handleReq(ws, payload);
+          await Effect.runPromise(handleReq(ws, payload));
           break;
         case "COUNT":
-          await handleCount(ws, payload);
+          await Effect.runPromise(handleCount(ws, payload));
           break;
         case "CLOSE":
           handleClose(ws, payload);
