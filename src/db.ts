@@ -108,8 +108,26 @@ export async function deleteEvents(
   });
 }
 
+export async function cleanupExpiredEvents() {
+  const now = Math.floor(Date.now() / 1000);
+  await db.transaction(async (tx) => {
+    await tx
+      .delete(schema.events)
+      .where(
+        sql`id IN (SELECT event_id FROM tags WHERE name = 'expiration' AND CAST(value AS INTEGER) < ${now})`,
+      );
+  });
+}
+
 export async function queryEvents(filter: Filter): Promise<Event[]> {
+  const now = Math.floor(Date.now() / 1000);
   const conditions = [];
+
+  // NIP-40: Filter out expired events
+  conditions.push(
+    sql`events.id NOT IN (SELECT event_id FROM tags WHERE name = 'expiration' AND CAST(value AS INTEGER) < ${now})`,
+  );
+
   if (filter.ids) conditions.push(inArray(schema.events.id, filter.ids));
   if (filter.authors)
     conditions.push(inArray(schema.events.pubkey, filter.authors));

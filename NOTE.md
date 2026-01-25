@@ -18,6 +18,8 @@
   - [x] Message handling (Zod validation)
 - [x] NIP-11: Relay Information Document
 - [x] NIP-09: Event Deletion
+- [x] NIP-40: Expiration
+- [x] NIP-13: Proof of Work
 - [x] Testing (Integration tests passing)
 
 ## NIP-11 Implementation Details

@@ -1,4 +1,9 @@
-import { saveEvent, queryEvents, deleteEvents } from "./db.ts";
+import {
+  saveEvent,
+  queryEvents,
+  deleteEvents,
+  cleanupExpiredEvents,
+} from "./db.ts";
 import { parseMessage, validateEvent, matchFilters } from "./protocol.ts";
 import type { Event, Filter } from "nostr-tools";
 import type { ServerWebSocket } from "bun";
@@ -20,10 +25,23 @@ const relayInfo = {
     "A fast and lightweight Nostr relay built with Bun, SQLite, and Drizzle.",
   pubkey: "bf2bee5281149c7c350f5d12ae32f514c7864ff10805182f4178538c2c421007", // Placeholder or configurable
   contact: "hi@example.com",
-  supported_nips: [1, 9, 11],
+  supported_nips: [1, 9, 11, 13, 40],
   software: "https://github.com/tani/nostra",
   version: "0.1.0",
+  limitation: {
+    min_pow_difficulty: 0, // Configurable
+  },
 };
+
+const MIN_DIFFICULTY = 0;
+
+// Periodic cleanup
+setInterval(
+  () => {
+    cleanupExpiredEvents().catch(console.error);
+  },
+  60 * 60 * 1000,
+); // Hourly
 
 export const relay = {
   port: 3000,
@@ -63,7 +81,25 @@ export const relay = {
       switch (type) {
         case "EVENT": {
           const event = payload[0] as Event;
-          const result = validateEvent(event);
+
+          // NIP-40: Check expiration on publish
+          const expirationTag = event.tags.find((t) => t[0] === "expiration");
+          if (expirationTag && expirationTag[1]) {
+            const exp = parseInt(expirationTag[1]);
+            if (!isNaN(exp) && exp < Math.floor(Date.now() / 1000)) {
+              ws.send(
+                JSON.stringify([
+                  "OK",
+                  event.id,
+                  false,
+                  "error: event has expired",
+                ]),
+              );
+              return;
+            }
+          }
+
+          const result = validateEvent(event, MIN_DIFFICULTY);
           if (!result.ok) {
             ws.send(JSON.stringify(["OK", event.id, false, result.reason]));
             return;

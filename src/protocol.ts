@@ -2,6 +2,20 @@ import { z } from "zod";
 import type { Event, Filter } from "nostr-tools";
 import { verifyEvent } from "nostr-tools";
 
+export function countLeadingZeros(hex: string): number {
+  let count = 0;
+  for (let i = 0; i < hex.length; i++) {
+    const nibble = parseInt(hex[i]!, 16);
+    if (nibble === 0) {
+      count += 4;
+    } else {
+      count += Math.clz32(nibble) - 28;
+      break;
+    }
+  }
+  return count;
+}
+
 // Zod Schemas
 export const EventSchema = z.object({
   id: z.string(),
@@ -48,7 +62,10 @@ export function parseMessage(data: string): ClientMessage | null {
   }
 }
 
-export function validateEvent(event: any): { ok: boolean; reason?: string } {
+export function validateEvent(
+  event: any,
+  minDifficulty: number = 0,
+): { ok: boolean; reason?: string } {
   const result = EventSchema.safeParse(event);
   if (!result.success) {
     const error = result.error.issues[0];
@@ -59,6 +76,29 @@ export function validateEvent(event: any): { ok: boolean; reason?: string } {
   }
 
   const validatedEvent = result.data as Event;
+
+  // NIP-13: check difficulty
+  if (minDifficulty > 0) {
+    const difficulty = countLeadingZeros(validatedEvent.id);
+    if (difficulty < minDifficulty) {
+      return {
+        ok: false,
+        reason: `pow: difficulty ${difficulty} is less than ${minDifficulty}`,
+      };
+    }
+
+    const nonceTag = validatedEvent.tags.find((t) => t[0] === "nonce");
+    if (nonceTag && nonceTag[2]) {
+      const target = parseInt(nonceTag[2]);
+      if (!isNaN(target) && target > difficulty) {
+        return {
+          ok: false,
+          reason: `pow: target difficulty ${target} is less than ${difficulty}`,
+        };
+      }
+    }
+  }
+
   if (!verifyEvent(validatedEvent)) {
     return { ok: false, reason: "invalid: signature verification failed" };
   }
