@@ -32,6 +32,7 @@
   ```bash
   bun start
   ```
+
   (Runs `src/index.ts`. Listens on `ws://localhost:3000` by default.)
 
 * **Run Tests:**
@@ -65,7 +66,8 @@
   ```bash
   bun run compile
   ```
-  (Generates single-file executables for Linux (x64/ARM64), macOS (x64/ARM64), and Windows (x64).)
+
+  (Compiles binaries for Linux, macOS, and Windows.)
 
 ## Development Conventions
 
