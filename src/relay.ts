@@ -10,6 +10,7 @@ import {
   validateEvent,
   matchFilters,
   isEphemeral,
+  validateAuthEvent,
 } from "./protocol.ts";
 import type { Event, Filter } from "nostr-tools";
 import type { ServerWebSocket } from "bun";
@@ -21,6 +22,9 @@ type Subscription = {
 
 type ClientData = {
   subscriptions: Map<string, Filter[]>;
+  challenge: string;
+  relayUrl: string;
+  pubkey?: string;
 };
 
 const clients = new Set<ServerWebSocket<ClientData>>();
@@ -31,7 +35,7 @@ const relayInfo = {
     "A fast and lightweight Nostr relay built with Bun, SQLite, and Drizzle.",
   pubkey: "bf2bee5281149c7c350f5d12ae32f514c7864ff10805182f4178538c2c421007", // Placeholder or configurable
   contact: "hi@example.com",
-  supported_nips: [1, 9, 11, 13, 40, 45],
+  supported_nips: [1, 9, 11, 13, 40, 42, 45],
   software: "https://github.com/tani/nostra",
 
   version: "0.1.0",
@@ -54,7 +58,14 @@ export const relay = {
   port: 3000,
   fetch(req: Request, server: any) {
     if (req.headers.get("Upgrade")?.toLowerCase() === "websocket") {
-      if (server.upgrade(req, { data: { subscriptions: new Map() } })) {
+      const challenge = crypto.randomUUID();
+      const url = new URL(req.url);
+      const relayUrl = `${url.protocol === "https:" ? "wss:" : "ws:"}//${url.host}`;
+      if (
+        server.upgrade(req, {
+          data: { subscriptions: new Map(), challenge, relayUrl },
+        })
+      ) {
         return;
       }
       return new Response("Upgrade failed", { status: 400 });
@@ -76,6 +87,7 @@ export const relay = {
   websocket: {
     open(ws: ServerWebSocket<ClientData>) {
       clients.add(ws);
+      ws.send(JSON.stringify(["AUTH", ws.data.challenge]));
     },
     async message(ws: ServerWebSocket<ClientData>, message: string | Buffer) {
       const data = typeof message === "string" ? message : message.toString();
@@ -176,6 +188,22 @@ export const relay = {
         case "CLOSE": {
           const subId = payload[0] as string;
           ws.data.subscriptions.delete(subId);
+          break;
+        }
+        case "AUTH": {
+          const authEvent = payload[0] as Event;
+          const result = validateAuthEvent(
+            authEvent,
+            ws.data.challenge,
+            ws.data.relayUrl,
+          );
+
+          if (!result.ok) {
+            ws.send(JSON.stringify(["OK", authEvent.id, false, result.reason]));
+            return;
+          }
+          ws.data.pubkey = authEvent.pubkey;
+          ws.send(JSON.stringify(["OK", authEvent.id, true, ""]));
           break;
         }
       }

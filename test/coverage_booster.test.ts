@@ -2,6 +2,8 @@ import { expect, test, describe, beforeAll, beforeEach } from "bun:test";
 import { db, saveEvent, queryEvents, cleanupExpiredEvents } from "../src/db.ts";
 import { generateSecretKey, getPublicKey, finalizeEvent } from "nostr-tools";
 import { sql } from "drizzle-orm";
+import { validateAuthEvent } from "../src/protocol.ts";
+import { relay } from "../src/relay.ts";
 
 describe("Coverage Booster", () => {
   const dbPath = "nostra.coverage.test.db";
@@ -85,5 +87,83 @@ describe("Coverage Booster", () => {
     const stored = await queryEvents({ kinds: [1] });
     expect(stored).toHaveLength(1);
     expect(stored[0]?.id).toBe(eventValid.id);
+  });
+
+  describe("protocol.ts: validateAuthEvent branches", () => {
+    test("invalid signature", () => {
+      const event = finalizeEvent(
+        {
+          kind: 22242,
+          created_at: Math.floor(Date.now() / 1000),
+          tags: [],
+          content: "",
+        },
+        sk1,
+      );
+      const tampered = { ...event, sig: "0".repeat(128) };
+      const res = validateAuthEvent(tampered, "challenge", "ws://localhost");
+      expect(res.ok).toBe(false);
+      expect(res.reason).toContain("signature verification failed");
+    });
+
+    test("wrong kind", () => {
+      const event = finalizeEvent(
+        {
+          kind: 1,
+          created_at: Math.floor(Date.now() / 1000),
+          tags: [],
+          content: "",
+        },
+        sk1,
+      );
+      const res = validateAuthEvent(event, "challenge", "ws://localhost");
+      expect(res.ok).toBe(false);
+      expect(res.reason).toBe("invalid: kind must be 22242");
+    });
+
+    test("created_at too far", () => {
+      const event = finalizeEvent(
+        {
+          kind: 22242,
+          created_at: Math.floor(Date.now() / 1000) - 1000,
+          tags: [],
+          content: "",
+        },
+        sk1,
+      );
+      const res = validateAuthEvent(event, "challenge", "ws://localhost");
+      expect(res.ok).toBe(false);
+      expect(res.reason).toBe(
+        "invalid: created_at is too far from current time",
+      );
+    });
+
+    test("missing relay tag", () => {
+      const event = finalizeEvent(
+        {
+          kind: 22242,
+          created_at: Math.floor(Date.now() / 1000),
+          tags: [["challenge", "challenge"]],
+          content: "",
+        },
+        sk1,
+      );
+      const res = validateAuthEvent(event, "challenge", "ws://localhost");
+      expect(res.ok).toBe(false);
+      expect(res.reason).toBe("invalid: missing relay tag");
+    });
+  });
+
+  describe("relay.ts: fetch branches", () => {
+    test("Upgrade failed branch", async () => {
+      // We fake a server where upgrade returns false
+      const fakeServer = { upgrade: () => false };
+      const req = new Request("http://localhost", {
+        headers: { Upgrade: "websocket" },
+      });
+      const res = relay.fetch(req, fakeServer);
+      expect(res?.status).toBe(400);
+      expect(await res?.text()).toBe("Upgrade failed");
+    });
   });
 });

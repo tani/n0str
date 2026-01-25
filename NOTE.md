@@ -22,6 +22,7 @@
 - [x] NIP-13: Proof of Work
 - [x] NIP-01: Event Treatment (Ephemeral, Replaceable, Addressable)
 - [x] NIP-45: Event Counts
+- [x] NIP-42: Authentication
 - [x] Testing (Integration tests passing)
 
 ## NIP-11 Implementation Details

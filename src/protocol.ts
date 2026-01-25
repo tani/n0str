@@ -54,6 +54,7 @@ export const ClientMessageSchema = z.union([
   z.tuple([z.literal("EVENT"), EventSchema]),
   z.tuple([z.literal("REQ"), z.string()]).rest(FilterSchema),
   z.tuple([z.literal("COUNT"), z.string()]).rest(FilterSchema),
+  z.tuple([z.literal("AUTH"), EventSchema]),
   z.tuple([z.literal("CLOSE"), z.string()]),
 ]);
 
@@ -114,6 +115,50 @@ export function validateEvent(
 
   if (!verifyEvent(validatedEvent)) {
     return { ok: false, reason: "invalid: signature verification failed" };
+  }
+
+  return { ok: true };
+}
+
+export function validateAuthEvent(
+  event: any,
+  challenge: string,
+  relayUrl: string,
+): { ok: boolean; reason?: string } {
+  const result = validateEvent(event);
+  if (!result.ok) return result;
+
+  const authEvent = event as Event;
+
+  if (authEvent.kind !== 22242) {
+    return { ok: false, reason: "invalid: kind must be 22242" };
+  }
+
+  const now = Math.floor(Date.now() / 1000);
+  if (Math.abs(authEvent.created_at - now) > 600) {
+    return {
+      ok: false,
+      reason: "invalid: created_at is too far from current time",
+    };
+  }
+
+  const challengeTag = authEvent.tags.find((t) => t[0] === "challenge")?.[1];
+  if (challengeTag !== challenge) {
+    return { ok: false, reason: "invalid: challenge mismatch" };
+  }
+
+  const relayTag = authEvent.tags.find((t) => t[0] === "relay")?.[1];
+  if (!relayTag) {
+    return { ok: false, reason: "invalid: missing relay tag" };
+  }
+
+  // Basic URL comparison (ignoring trailing slash and protocol case)
+  const normalize = (u: string) => u.toLowerCase().replace(/\/$/, "");
+  if (normalize(relayTag) !== normalize(relayUrl)) {
+    return {
+      ok: false,
+      reason: `invalid: relay tag mismatch (expected ${relayUrl}, got ${relayTag})`,
+    };
   }
 
   return { ok: true };

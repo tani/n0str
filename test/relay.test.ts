@@ -13,6 +13,15 @@ import { generateSecretKey, getPublicKey, finalizeEvent } from "nostr-tools";
 import { unlinkSync, existsSync } from "fs";
 import { sql } from "drizzle-orm";
 
+async function consumeAuth(ws: WebSocket) {
+  return new Promise((resolve) => {
+    ws.onmessage = (e) => {
+      const msg = JSON.parse(e.data);
+      if (msg[0] === "AUTH") resolve(msg[1]);
+    };
+  });
+}
+
 describe("Relay Integration", () => {
   const dbPath = "nostra.relay.test.db";
   let server: any;
@@ -40,8 +49,8 @@ describe("Relay Integration", () => {
 
   test("EVENT and REQ flow", async () => {
     const ws = new WebSocket(url);
-
     await new Promise((resolve) => (ws.onopen = resolve));
+    await consumeAuth(ws);
 
     const event = finalizeEvent(
       {
@@ -57,7 +66,10 @@ describe("Relay Integration", () => {
     ws.send(JSON.stringify(["EVENT", event]));
 
     const okResponse = await new Promise<any>((resolve) => {
-      ws.onmessage = (e) => resolve(JSON.parse(e.data));
+      ws.onmessage = (e) => {
+        const msg = JSON.parse(e.data);
+        if (msg[0] === "OK") resolve(msg);
+      };
     });
     expect(okResponse).toEqual(["OK", event.id, true, ""]);
 
@@ -66,7 +78,10 @@ describe("Relay Integration", () => {
     ws.send(JSON.stringify(["REQ", subId, { authors: [pk] }]));
 
     const eventResponse = await new Promise<any>((resolve) => {
-      ws.onmessage = (e) => resolve(JSON.parse(e.data));
+      ws.onmessage = (e) => {
+        const msg = JSON.parse(e.data);
+        if (msg[0] === "EVENT") resolve(msg);
+      };
     });
     expect(eventResponse[0]).toBe("EVENT");
     expect(eventResponse[1]).toBe(subId);
@@ -92,7 +107,7 @@ describe("Relay Integration", () => {
     const subId = "sub2";
     ws2.send(JSON.stringify(["REQ", subId, { kinds: [1] }]));
 
-    // Wait for EOSE from ws2
+    // Wait for EOSE from ws2 (ignoring AUTH)
     await new Promise(
       (resolve) =>
         (ws2.onmessage = (e) => {
@@ -196,7 +211,10 @@ describe("Relay Integration", () => {
     ws.send(JSON.stringify(["EVENT", tamperedEvent]));
 
     const response = await new Promise<any>((resolve) => {
-      ws.onmessage = (e) => resolve(JSON.parse(e.data));
+      ws.onmessage = (e) => {
+        const msg = JSON.parse(e.data);
+        if (msg[0] === "OK") resolve(msg);
+      };
     });
     expect(response[0]).toBe("OK");
     expect(response[2]).toBe(false);
@@ -229,7 +247,10 @@ describe("Relay Integration", () => {
     ws.send(JSON.stringify(["COUNT", subId, { kinds: [1] }]));
 
     const response = await new Promise<any>((resolve) => {
-      ws.onmessage = (e) => resolve(JSON.parse(e.data));
+      ws.onmessage = (e) => {
+        const msg = JSON.parse(e.data);
+        if (msg[0] === "COUNT") resolve(msg);
+      };
     });
 
     expect(response[0]).toBe("COUNT");

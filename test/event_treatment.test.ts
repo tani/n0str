@@ -12,6 +12,15 @@ import { db, queryEvents } from "../src/db.ts";
 import { generateSecretKey, getPublicKey, finalizeEvent } from "nostr-tools";
 import { sql } from "drizzle-orm";
 
+async function consumeAuth(ws: WebSocket) {
+  return new Promise((resolve) => {
+    ws.onmessage = (e) => {
+      const msg = JSON.parse(e.data);
+      if (msg[0] === "AUTH") resolve(msg[1]);
+    };
+  });
+}
+
 describe("Event Treatment (NIP-01)", () => {
   const dbPath = "nostra.event_treatment.test.db";
   let server: any;
@@ -38,6 +47,7 @@ describe("Event Treatment (NIP-01)", () => {
   test("Ephemeral events (kind 20000) are not stored", async () => {
     const ws = new WebSocket(url);
     await new Promise((resolve) => (ws.onopen = resolve));
+    await consumeAuth(ws);
 
     const event = finalizeEvent(
       {
@@ -50,7 +60,11 @@ describe("Event Treatment (NIP-01)", () => {
     );
 
     ws.send(JSON.stringify(["EVENT", event]));
-    await new Promise((resolve) => (ws.onmessage = resolve)); // Wait for OK
+    await new Promise((resolve) => {
+      ws.onmessage = (e) => {
+        if (JSON.parse(e.data)[0] === "OK") resolve(null);
+      };
+    }); // Wait for OK
 
     const stored = await queryEvents({ kinds: [20000] });
     expect(stored).toHaveLength(0);
@@ -61,6 +75,7 @@ describe("Event Treatment (NIP-01)", () => {
   test("Replaceable events (kind 0) use replacement logic", async () => {
     const ws = new WebSocket(url);
     await new Promise((resolve) => (ws.onopen = resolve));
+    await consumeAuth(ws);
 
     const now = Math.floor(Date.now() / 1000);
 
@@ -75,7 +90,11 @@ describe("Event Treatment (NIP-01)", () => {
       sk1,
     );
     ws.send(JSON.stringify(["EVENT", event1]));
-    await new Promise((resolve) => (ws.onmessage = resolve));
+    await new Promise((resolve) => {
+      ws.onmessage = (e) => {
+        if (JSON.parse(e.data)[0] === "OK") resolve(null);
+      };
+    });
 
     // 2. Publish newer event
     const event2 = finalizeEvent(
@@ -88,7 +107,11 @@ describe("Event Treatment (NIP-01)", () => {
       sk1,
     );
     ws.send(JSON.stringify(["EVENT", event2]));
-    await new Promise((resolve) => (ws.onmessage = resolve));
+    await new Promise((resolve) => {
+      ws.onmessage = (e) => {
+        if (JSON.parse(e.data)[0] === "OK") resolve(null);
+      };
+    });
 
     // 3. Verify only newer exists
     const stored = await queryEvents({ kinds: [0], authors: [pk1] });
@@ -106,7 +129,11 @@ describe("Event Treatment (NIP-01)", () => {
       sk1,
     );
     ws.send(JSON.stringify(["EVENT", event3]));
-    await new Promise((resolve) => (ws.onmessage = resolve));
+    await new Promise((resolve) => {
+      ws.onmessage = (e) => {
+        if (JSON.parse(e.data)[0] === "OK") resolve(null);
+      };
+    });
 
     const storedAtEnd = await queryEvents({ kinds: [0], authors: [pk1] });
     expect(storedAtEnd).toHaveLength(1);
@@ -118,6 +145,7 @@ describe("Event Treatment (NIP-01)", () => {
   test("Addressable events (kind 30000) use d-tag replacement logic", async () => {
     const ws = new WebSocket(url);
     await new Promise((resolve) => (ws.onopen = resolve));
+    await consumeAuth(ws);
 
     const now = Math.floor(Date.now() / 1000);
 
@@ -132,7 +160,11 @@ describe("Event Treatment (NIP-01)", () => {
       sk1,
     );
     ws.send(JSON.stringify(["EVENT", eventA]));
-    await new Promise((resolve) => (ws.onmessage = resolve));
+    await new Promise((resolve) => {
+      ws.onmessage = (e) => {
+        if (JSON.parse(e.data)[0] === "OK") resolve(null);
+      };
+    });
 
     // 2. Publish event with d=b
     const eventB = finalizeEvent(
@@ -145,7 +177,11 @@ describe("Event Treatment (NIP-01)", () => {
       sk1,
     );
     ws.send(JSON.stringify(["EVENT", eventB]));
-    await new Promise((resolve) => (ws.onmessage = resolve));
+    await new Promise((resolve) => {
+      ws.onmessage = (e) => {
+        if (JSON.parse(e.data)[0] === "OK") resolve(null);
+      };
+    });
 
     // 3. Both should exist
     expect(await queryEvents({ kinds: [30000] })).toHaveLength(2);
@@ -161,7 +197,11 @@ describe("Event Treatment (NIP-01)", () => {
       sk1,
     );
     ws.send(JSON.stringify(["EVENT", eventA2]));
-    await new Promise((resolve) => (ws.onmessage = resolve));
+    await new Promise((resolve) => {
+      ws.onmessage = (e) => {
+        if (JSON.parse(e.data)[0] === "OK") resolve(null);
+      };
+    });
 
     // 5. Should still have 2, but one updated
     const finalStored = await queryEvents({ kinds: [30000] });

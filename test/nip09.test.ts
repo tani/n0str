@@ -12,6 +12,15 @@ import { db, queryEvents } from "../src/db.ts";
 import { generateSecretKey, getPublicKey, finalizeEvent } from "nostr-tools";
 import { sql } from "drizzle-orm";
 
+async function consumeAuth(ws: WebSocket) {
+  return new Promise((resolve) => {
+    ws.onmessage = (e) => {
+      const msg = JSON.parse(e.data);
+      if (msg[0] === "AUTH") resolve(msg[1]);
+    };
+  });
+}
+
 describe("NIP-09 Event Deletion", () => {
   const dbPath = "nostra.nip09.test.db";
   let server: any;
@@ -40,6 +49,7 @@ describe("NIP-09 Event Deletion", () => {
   test("Delete event by author", async () => {
     const ws = new WebSocket(url);
     await new Promise((resolve) => (ws.onopen = resolve));
+    await consumeAuth(ws);
 
     // 1. Publish an event
     const event = finalizeEvent(
@@ -52,7 +62,11 @@ describe("NIP-09 Event Deletion", () => {
       sk1,
     );
     ws.send(JSON.stringify(["EVENT", event]));
-    await new Promise((resolve) => (ws.onmessage = resolve)); // Wait for OK
+    await new Promise((resolve) => {
+      ws.onmessage = (e) => {
+        if (JSON.parse(e.data)[0] === "OK") resolve(null);
+      };
+    }); // Wait for OK
 
     // 2. Verify it exists
     expect(await queryEvents({ ids: [event.id] })).toHaveLength(1);
@@ -68,7 +82,11 @@ describe("NIP-09 Event Deletion", () => {
       sk1,
     );
     ws.send(JSON.stringify(["EVENT", deletion]));
-    await new Promise((resolve) => (ws.onmessage = resolve)); // Wait for OK
+    await new Promise((resolve) => {
+      ws.onmessage = (e) => {
+        if (JSON.parse(e.data)[0] === "OK") resolve(null);
+      };
+    }); // Wait for OK
 
     // 4. Verify original event is gone
     expect(await queryEvents({ ids: [event.id] })).toHaveLength(0);
@@ -82,6 +100,7 @@ describe("NIP-09 Event Deletion", () => {
   test("Fail to delete event by others", async () => {
     const ws = new WebSocket(url);
     await new Promise((resolve) => (ws.onopen = resolve));
+    await consumeAuth(ws);
 
     // 1. Publish an event by user 1
     const event = finalizeEvent(
@@ -94,7 +113,11 @@ describe("NIP-09 Event Deletion", () => {
       sk1,
     );
     ws.send(JSON.stringify(["EVENT", event]));
-    await new Promise((resolve) => (ws.onmessage = resolve));
+    await new Promise((resolve) => {
+      ws.onmessage = (e) => {
+        if (JSON.parse(e.data)[0] === "OK") resolve(null);
+      };
+    });
 
     // 2. Try to delete by user 2
     const deletion = finalizeEvent(
@@ -107,7 +130,11 @@ describe("NIP-09 Event Deletion", () => {
       sk2,
     );
     ws.send(JSON.stringify(["EVENT", deletion]));
-    await new Promise((resolve) => (ws.onmessage = resolve));
+    await new Promise((resolve) => {
+      ws.onmessage = (e) => {
+        if (JSON.parse(e.data)[0] === "OK") resolve(null);
+      };
+    });
 
     // 3. Verify original event STILL exists
     expect(await queryEvents({ ids: [event.id] })).toHaveLength(1);
@@ -118,6 +145,7 @@ describe("NIP-09 Event Deletion", () => {
   test("Delete replaceable event by 'a' tag", async () => {
     const ws = new WebSocket(url);
     await new Promise((resolve) => (ws.onopen = resolve));
+    await consumeAuth(ws);
 
     // 1. Publish a replaceable event (kind 30000)
     const event = finalizeEvent(
@@ -130,7 +158,11 @@ describe("NIP-09 Event Deletion", () => {
       sk1,
     );
     ws.send(JSON.stringify(["EVENT", event]));
-    await new Promise((resolve) => (ws.onmessage = resolve));
+    await new Promise((resolve) => {
+      ws.onmessage = (e) => {
+        if (JSON.parse(e.data)[0] === "OK") resolve(null);
+      };
+    });
 
     // 2. Verify it exists
     expect(await queryEvents({ kinds: [30000] })).toHaveLength(1);
@@ -146,7 +178,11 @@ describe("NIP-09 Event Deletion", () => {
       sk1,
     );
     ws.send(JSON.stringify(["EVENT", deletion]));
-    await new Promise((resolve) => (ws.onmessage = resolve));
+    await new Promise((resolve) => {
+      ws.onmessage = (e) => {
+        if (JSON.parse(e.data)[0] === "OK") resolve(null);
+      };
+    });
 
     // 4. Verify original event is gone
     expect(await queryEvents({ kinds: [30000] })).toHaveLength(0);
