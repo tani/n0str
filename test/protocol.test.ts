@@ -73,7 +73,7 @@ describe("Protocol", () => {
     // Target commitment match
     const eventWithTarget = { ...event, tags: [["nonce", "1", "25"]] };
     expect(validateEvent(eventWithTarget, 20).reason).toContain(
-      "pow: target difficulty 25 is less than 20",
+      "pow: actual difficulty 20 is less than target difficulty 25",
     );
   });
 

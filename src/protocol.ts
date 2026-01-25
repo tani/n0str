@@ -108,7 +108,7 @@ export function validateEvent(
       if (!isNaN(target) && target > difficulty) {
         return {
           ok: false,
-          reason: `pow: target difficulty ${target} is less than ${difficulty}`,
+          reason: `pow: actual difficulty ${difficulty} is less than target difficulty ${target}`,
         };
       }
     }
