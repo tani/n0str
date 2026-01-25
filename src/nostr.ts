@@ -1,6 +1,7 @@
 import { type } from "arktype";
 import type { Event, Filter } from "nostr-tools";
 import { verifyEvent } from "nostr-tools";
+import { logger } from "./logger";
 
 /**
  * Counts the number of leading zero bits in a hex string (NIP-13 PoW).
@@ -108,6 +109,7 @@ export async function validateEvent(
 ): Promise<{ ok: boolean; reason?: string }> {
   const out = EventSchema(event);
   if (out instanceof type.errors) {
+    void logger.debug`Event schema validation failed: ${out.summary}`;
     return {
       ok: false,
       reason: `invalid: ${out.summary}`,
@@ -120,6 +122,7 @@ export async function validateEvent(
   if (minDifficulty > 0) {
     const difficulty = countLeadingZeros(validatedEvent.id);
     if (difficulty < minDifficulty) {
+      void logger.debug`PoW difficulty too low: ${difficulty} < ${minDifficulty}`;
       return {
         ok: false,
         reason: `pow: difficulty ${difficulty} is less than ${minDifficulty}`,
@@ -130,6 +133,7 @@ export async function validateEvent(
     if (nonceTag && nonceTag[2]) {
       const target = parseInt(nonceTag[2]);
       if (!isNaN(target) && target > difficulty) {
+        void logger.debug`PoW target difficulty not met: ${difficulty} < ${target}`;
         return {
           ok: false,
           reason: `pow: actual difficulty ${difficulty} is less than target difficulty ${target}`,
@@ -140,6 +144,7 @@ export async function validateEvent(
 
   const isSigValid = await verifyEvent(validatedEvent);
   if (!isSigValid) {
+    void logger.debug`Signature verification failed for event ${validatedEvent.id}`;
     return { ok: false, reason: "invalid: signature verification failed" };
   }
 

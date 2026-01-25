@@ -2,15 +2,18 @@ import type { ServerWebSocket } from "bun";
 import type { ClientData } from "../types.ts";
 import { queryEventsForSync } from "../repository.ts";
 import { Negentropy, NegentropyStorageVector } from "../negentropy.js";
+import { logger } from "../logger.ts";
 
 export async function handleNegOpen(ws: ServerWebSocket<ClientData>, args: any[]) {
   const [subId, filter, initialMessage] = args;
 
   if (ws.data.negSubscriptions.has(subId)) {
+    void logger.debug`Replacing existing neg subscription: ${subId}`;
     ws.data.negSubscriptions.delete(subId);
   }
 
   try {
+    void logger.trace`NEG-OPEN for ${subId}`;
     const events = await queryEventsForSync(filter);
     const storage = new NegentropyStorageVector();
 
@@ -40,7 +43,9 @@ export async function handleNegOpen(ws: ServerWebSocket<ClientData>, args: any[]
       // Let's assume outputMessage is non-null if conversation continues.
       ws.send(JSON.stringify(["NEG-MSG", subId, outputMessage ?? ""]));
     }
+    void logger.trace`NEG-OPEN processed for ${subId}`;
   } catch (err: any) {
+    void logger.error`NEG-OPEN error for ${subId}: ${err.message}`;
     ws.send(JSON.stringify(["NEG-ERR", subId, "error: " + err.message]));
   }
 }
@@ -50,6 +55,7 @@ export async function handleNegMsg(ws: ServerWebSocket<ClientData>, args: any[])
   const neg = ws.data.negSubscriptions.get(subId);
 
   if (!neg) {
+    void logger.debug`NEG-MSG for unknown subscription: ${subId}`;
     ws.send(JSON.stringify(["NEG-ERR", subId, "closed: subscription not found"]));
     return;
   }
@@ -61,6 +67,7 @@ export async function handleNegMsg(ws: ServerWebSocket<ClientData>, args: any[])
       ws.send(JSON.stringify(["NEG-MSG", subId, outputMessage]));
     }
   } catch (err: any) {
+    void logger.error`NEG-MSG error for ${subId}: ${err.message}`;
     ws.send(JSON.stringify(["NEG-ERR", subId, "error: " + err.message]));
   }
 }
@@ -68,4 +75,5 @@ export async function handleNegMsg(ws: ServerWebSocket<ClientData>, args: any[])
 export function handleNegClose(ws: ServerWebSocket<ClientData>, args: any[]) {
   const [subId] = args;
   ws.data.negSubscriptions.delete(subId);
+  void logger.trace`NEG-CLOSE for ${subId}`;
 }

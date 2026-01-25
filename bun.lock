@@ -5,6 +5,8 @@
     "": {
       "name": "n0str",
       "dependencies": {
+        "@logtape/logtape": "^2.0.2",
+        "@logtape/pretty": "^2.0.2",
         "arktype": "^2.1.29",
         "nostr-tools": "^2.20.0",
       },
@@ -21,6 +23,10 @@
     "@ark/schema": ["@ark/schema@0.56.0", "", { "dependencies": { "@ark/util": "0.56.0" } }, "sha512-ECg3hox/6Z/nLajxXqNhgPtNdHWC9zNsDyskwO28WinoFEnWow4IsERNz9AnXRhTZJnYIlAJ4uGn3nlLk65vZA=="],
 
     "@ark/util": ["@ark/util@0.56.0", "", {}, "sha512-BghfRC8b9pNs3vBoDJhcta0/c1J1rsoS1+HgVUreMFPdhz/CRAKReAu57YEllNaSy98rWAdY1gE+gFup7OXpgA=="],
+
+    "@logtape/logtape": ["@logtape/logtape@2.0.2", "", {}, "sha512-cveUBLbCMFkvkLycP/2vNWvywl47JcJbazHIju94/QNGboZ/jyYAgZIm0ZXezAOx3eIz8OG1EOZ5CuQP3+2FQg=="],
+
+    "@logtape/pretty": ["@logtape/pretty@2.0.2", "", { "peerDependencies": { "@logtape/logtape": "^2.0.2" } }, "sha512-WMKoHuaEZvJgDeciIM/OL+joDDlheuoSpkfJOuKncdim7eV6GfIh0BUxLt0Td4JJsljzt5dAttxaX0kXqE0N9Q=="],
 
     "@noble/ciphers": ["@noble/ciphers@0.5.3", "", {}, "sha512-B0+6IIHiqEs3BPMT0hcRmHvEj2QHOLu+uwt+tqDDeVd0oyVzh7BPrDcPjRnV1PV/5LaknXJJQvOuRGR0zQJz+w=="],
 

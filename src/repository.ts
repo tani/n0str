@@ -1,6 +1,7 @@
 import type { Event, Filter } from "nostr-tools";
 import { isAddressable, isReplaceable } from "./nostr.ts";
 import { db } from "./db.ts";
+import { logger } from "./logger";
 
 export { db };
 
@@ -149,6 +150,8 @@ function buildTagRows(event: Event): TagRow[] {
  * Saves a Nostr event to the database, handling replacement/addressable logic and NIP-01 triggers.
  * @param event - The event to save.
  */
+// ...
+// ...
 export async function saveEvent(event: Event) {
   await db.begin(async (tx) => {
     const existing = await findExisting(tx, event);
@@ -167,15 +170,9 @@ export async function saveEvent(event: Event) {
       await tx`INSERT INTO tags ${tx(tagRows)}`;
     }
   });
+  void logger.trace`Saved event ${event.id}`;
 }
 
-/**
- * Deletes events based on NIP-09 deletion requests.
- * @param pubkey - The author of the deletion request.
- * @param eventIds - IDs of events to delete.
- * @param identifiers - NIP-33 addressable identifiers (a-tags) to delete.
- * @param until - Only delete events created before this timestamp.
- */
 export async function deleteEvents(
   pubkey: string,
   eventIds: string[],
@@ -184,11 +181,12 @@ export async function deleteEvents(
 ) {
   await db.begin(async (tx) => {
     if (eventIds.length > 0) {
-      await tx`
+      const res = await tx`
         DELETE FROM events
         WHERE pubkey = ${pubkey}
           AND id IN ${tx(eventIds)}
       `;
+      void logger.trace`Deleted ${res.count} events by IDs for ${pubkey}`;
     }
 
     for (const addr of identifiers) {
@@ -200,40 +198,38 @@ export async function deleteEvents(
 
       if (pk !== pubkey) continue;
 
-      await tx`
+      const res = await tx`
         DELETE FROM events
         WHERE kind = ${kind}
           AND pubkey = ${pubkey}
           AND created_at <= ${until}
           AND id IN (SELECT event_id FROM tags WHERE name = 'd' AND value = ${dTag})
       `;
+      if (res.count > 0) {
+        void logger.trace`Deleted ${res.count} addressable events for ${pubkey} (${addr})`;
+      }
     }
   });
 }
 
-/**
- * Removes expired events (NIP-40) from the database.
- */
 export async function cleanupExpiredEvents() {
   const now = Math.floor(Date.now() / 1000);
   await db.begin(async (tx) => {
-    await tx`
+    const result = await tx`
       DELETE FROM events
       WHERE id IN (
         SELECT event_id
         FROM tags
         WHERE name = 'expiration'
-          AND CAST(value AS INTEGER) < ${now}
+        AND CAST(value AS INTEGER) < ${now}
       )
     `;
+    if (result.count > 0) {
+      void logger.info`Cleaned up ${result.count} expired events`;
+    }
   });
 }
 
-/**
- * Counts events matching the given filters (NIP-45).
- * @param filters - Lists of Nostr filters.
- * @returns Total count of matching events across all filters.
- */
 export async function countEvents(filters: Filter[]): Promise<number> {
   let totalCount = 0;
   for (const filter of filters) {
@@ -242,14 +238,10 @@ export async function countEvents(filters: Filter[]): Promise<number> {
     const result = await db.unsafe<{ count: number }[]>(query, params);
     totalCount += result[0]?.count ?? 0;
   }
+  void logger.trace`Counted ${totalCount} events`;
   return totalCount;
 }
 
-/**
- * Queries events matching a single filter and includes their tags.
- * @param filter - The Nostr filter.
- * @returns Array of matching events.
- */
 export async function queryEvents(filter: Filter): Promise<Event[]> {
   const { clause, params } = buildWhereClause(filter);
   let baseQuery = `SELECT id, pubkey, created_at, kind, content, sig FROM events ${clause} ORDER BY created_at DESC`;
@@ -297,14 +289,11 @@ export async function queryEvents(filter: Filter): Promise<Event[]> {
     }
   }
 
-  return Array.from(events.values());
+  const result = Array.from(events.values());
+  void logger.trace`Query returned ${result.length} events`;
+  return result;
 }
 
-/**
- * Queries events for NIP-77 Negentropy sync, returning only id and created_at.
- * Sorted by created_at ASC, id ASC.
- * @param filter - The Nostr filter.
- */
 export async function queryEventsForSync(filter: Filter): Promise<ExistingRow[]> {
   const { clause, params } = buildWhereClause(filter);
   const query = `
@@ -313,5 +302,7 @@ export async function queryEventsForSync(filter: Filter): Promise<ExistingRow[]>
     ${clause} 
     ORDER BY created_at ASC, id ASC
   `;
-  return await db.unsafe<ExistingRow[]>(query, params);
+  const result = await db.unsafe<ExistingRow[]>(query, params);
+  void logger.trace`Sync query returned ${result.length} events`;
+  return result;
 }

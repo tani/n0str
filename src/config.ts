@@ -1,5 +1,6 @@
 import { type } from "arktype";
 import * as fs from "node:fs";
+import { logger as defaultLogger } from "./logger";
 
 /** Default relay configuration following NIP-11 specification. */
 export const defaultRelayInfo = {
@@ -64,24 +65,24 @@ export type RelayInfo = typeof RelayInfoSchema.infer;
  * @param logger - Logger instance for reporting status and errors.
  * @returns Combined relay information from default and loaded configuration.
  */
-export function loadRelayInfo(configPath: string = "n0str.json", logger = console) {
+export function loadRelayInfo(configPath: string = "n0str.json", logger = defaultLogger) {
   let loadedRelayInfo = defaultRelayInfo;
 
   if (fs.existsSync(configPath)) {
     const fileContent = fs.readFileSync(configPath, "utf-8");
     const out = RelayInfoFileSchema(fileContent);
     if (out instanceof type.errors) {
-      logger.error("Invalid configuration in n0str.json:", out.summary);
+      void logger.error`Invalid configuration in n0str.json: ${out.summary}`;
     } else {
       loadedRelayInfo = {
         ...defaultRelayInfo,
         ...out,
         limitation: { ...defaultRelayInfo.limitation, ...out.limitation },
       };
-      logger.log("Loaded configuration from n0str.json");
+      void logger.info`Loaded configuration from n0str.json`;
     }
   } else {
-    logger.log("n0str.json not found, using default configuration");
+    void logger.info`n0str.json not found, using default configuration`;
   }
 
   return loadedRelayInfo;

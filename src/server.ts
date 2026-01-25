@@ -13,13 +13,15 @@ import { handleClose } from "./handlers/close.ts";
 import { handleAuth } from "./handlers/auth.ts";
 import { handleNegOpen, handleNegMsg, handleNegClose } from "./handlers/neg.ts";
 
+import { logger } from "./logger.ts";
+
 const clients = new Set<ServerWebSocket<ClientData>>();
 
 /**
  * Performs a periodic cleanup of expired events from the repository.
  */
 export async function runCleanupTick() {
-  await cleanupExpiredEvents().catch(console.error);
+  await cleanupExpiredEvents().catch((err) => void logger.error`Cleanup error: ${err}`);
 }
 
 // Periodic cleanup
@@ -65,16 +67,23 @@ export const relay = {
   websocket: {
     open(ws: ServerWebSocket<ClientData>) {
       clients.add(ws);
+      void logger.debug`Client connected. Total clients: ${clients.size}`;
       ws.send(JSON.stringify(["AUTH", ws.data.challenge]));
     },
     async message(ws: ServerWebSocket<ClientData>, rawMessage: string | Buffer) {
       const messageStr = typeof rawMessage === "string" ? rawMessage : rawMessage.toString();
+      void logger.trace`Received message: ${messageStr}`;
+
       if (messageStr.length > relayInfo.limitation.max_message_length) {
+        void logger.warn`Message too large: ${messageStr.length} bytes`;
         ws.send(JSON.stringify(["NOTICE", "error: message too large"]));
         return;
       }
       const msg = ClientMessageSchema(messageStr);
-      if (msg instanceof type.errors) return;
+      if (msg instanceof type.errors) {
+        void logger.debug`Invalid message schema: ${msg.summary}`;
+        return;
+      }
 
       await match
         .in<ClientMessage>()
@@ -88,11 +97,14 @@ export const relay = {
           "'NEG-OPEN'": (m) => handleNegOpen(ws, [m[1], m[2], m[3]]),
           "'NEG-MSG'": (m) => handleNegMsg(ws, [m[1], m[2]]),
           "'NEG-CLOSE'": (m) => handleNegClose(ws, [m[1]]),
-          default: () => {},
+          default: () => {
+            void logger.warn`Unknown message type: ${msg[0]}`;
+          },
         })(msg);
     },
     close(ws: ServerWebSocket<ClientData>) {
       clients.delete(ws);
+      void logger.debug`Client disconnected. Total clients: ${clients.size}`;
     },
   },
 };

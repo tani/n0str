@@ -8,16 +8,21 @@ describe("config coverage", () => {
     const configPath = resolve("n0str.invalid-schema.json");
     fs.writeFileSync(configPath, JSON.stringify({ name: 123 }), "utf8");
     const errors: unknown[] = [];
-    const originalError = console.error;
-    console.error = (...args) => {
-      errors.push(args);
-    };
+    const logs: unknown[] = [];
+
+    const mockLogger = {
+      error: (...args: any[]) => errors.push(args),
+      info: (...args: any[]) => logs.push(args),
+      debug: () => {},
+      warn: () => {},
+      trace: () => {},
+    } as any;
+
     try {
-      const loaded = loadRelayInfo(configPath, console);
+      const loaded = loadRelayInfo(configPath, mockLogger);
       expect(loaded).toEqual(defaultRelayInfo);
       expect(errors.length).toBeGreaterThan(0);
     } finally {
-      console.error = originalError;
       fs.unlinkSync(configPath);
     }
   });
@@ -25,16 +30,21 @@ describe("config coverage", () => {
   test("missing config uses defaults", async () => {
     const configPath = resolve("n0str.missing.json");
     const logs: unknown[] = [];
-    const originalLog = console.log;
-    console.log = (...args) => {
-      logs.push(args);
-    };
+
+    const mockLogger = {
+      error: () => {},
+      info: (...args: any[]) => logs.push(args),
+      debug: () => {},
+      warn: () => {},
+      trace: () => {},
+    } as any;
+
     try {
-      const loaded = loadRelayInfo(configPath, console);
+      const loaded = loadRelayInfo(configPath, mockLogger);
       expect(loaded).toEqual(defaultRelayInfo);
       expect(logs.length).toBeGreaterThan(0);
     } finally {
-      console.log = originalLog;
+      // Nothing to cleanup
     }
   });
 
@@ -42,16 +52,20 @@ describe("config coverage", () => {
     const configPath = resolve("n0str.invalid-json.json");
     fs.writeFileSync(configPath, "{ invalid json", "utf8");
     const errors: unknown[] = [];
-    const originalError = console.error;
-    console.error = (...args) => {
-      errors.push(args);
-    };
+
+    const mockLogger = {
+      error: (...args: any[]) => errors.push(args),
+      info: () => {},
+      debug: () => {},
+      warn: () => {},
+      trace: () => {},
+    } as any;
+
     try {
-      const loaded = loadRelayInfo(configPath, console);
+      const loaded = loadRelayInfo(configPath, mockLogger);
       expect(loaded).toEqual(defaultRelayInfo);
       expect(errors.length).toBeGreaterThan(0);
     } finally {
-      console.error = originalError;
       fs.unlinkSync(configPath);
     }
   });
@@ -64,16 +78,20 @@ describe("config coverage", () => {
     };
     fs.writeFileSync(configPath, JSON.stringify(validConfig), "utf8");
     const logs: unknown[] = [];
-    const originalLog = console.log;
-    console.log = (...args) => {
-      logs.push(args);
-    };
+
+    const mockLogger = {
+      error: () => {},
+      info: (...args: any[]) => logs.push(args),
+      debug: () => {},
+      warn: () => {},
+      trace: () => {},
+    } as any;
+
     try {
-      const loaded = loadRelayInfo(configPath, console);
+      const loaded = loadRelayInfo(configPath, mockLogger);
       expect(loaded.name).toBe("Custom Relay");
       expect(logs.length).toBeGreaterThan(0);
     } finally {
-      console.log = originalLog;
       fs.unlinkSync(configPath);
     }
   });
