@@ -27,7 +27,7 @@
 - [x] NIP-05: Mapping Nostr keys to DNS-based internet identifiers
 - [x] NIP-09: Event Deletion Request
 - [x] NIP-10: Text Notes and Threads
-- [x] NIP-11: Relay Information Document
+- [x] NIP-11: Relay Information Document (with Limitation block)
 - [x] NIP-12: Generic Tag Queries
 - [x] NIP-13: Proof of Work
 - [x] NIP-15: Nostr Marketplace
@@ -42,6 +42,7 @@
 - [x] NIP-33: Parameterized Replaceable Events
 - [x] NIP-40: Expiration Timestamp
 - [x] NIP-42: Authentication of clients to relays
+- [x] NIP-44: Versioned Encrypted Payloads (Verification through storage)
 - [x] NIP-45: Counting results
 - [x] NIP-50: Search Capability
 - [x] NIP-51: Lists

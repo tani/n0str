@@ -38,13 +38,22 @@ const relayInfo = {
   contact: "hi@example.com",
   supported_nips: [
     1, 2, 3, 4, 5, 9, 10, 11, 12, 13, 15, 16, 17, 18, 20, 22, 23, 25, 28, 33,
-    40, 42, 45, 50, 51, 57, 65, 78,
+    40, 42, 44, 45, 50, 51, 57, 65, 78,
   ],
   software: "https://github.com/tani/nostra",
-
   version: "0.1.0",
   limitation: {
-    min_pow_difficulty: 0, // Configurable
+    max_message_length: 65536,
+    max_subscriptions: 20,
+    max_filters: 10,
+    max_limit: 1000,
+    max_subid_length: 64,
+    min_pow_difficulty: 0,
+    auth_required: false,
+    payment_required: false,
+    restricted_writes: false,
+    created_at_lower_limit: 31536000, // 1 year
+    created_at_upper_limit: 3600, // 1 hour
   },
 };
 
@@ -93,9 +102,17 @@ export const relay = {
       clients.add(ws);
       ws.send(JSON.stringify(["AUTH", ws.data.challenge]));
     },
-    async message(ws: ServerWebSocket<ClientData>, message: string | Buffer) {
-      const data = typeof message === "string" ? message : message.toString();
-      const msg = parseMessage(data);
+    async message(
+      ws: ServerWebSocket<ClientData>,
+      rawMessage: string | Buffer,
+    ) {
+      const messageStr =
+        typeof rawMessage === "string" ? rawMessage : rawMessage.toString();
+      if (messageStr.length > relayInfo.limitation.max_message_length) {
+        ws.send(JSON.stringify(["NOTICE", "error: message too large"]));
+        return;
+      }
+      const msg = parseMessage(messageStr);
 
       if (!msg) return;
 
@@ -174,6 +191,20 @@ export const relay = {
         }
         case "REQ": {
           const [subId, ...filters] = payload as [string, ...Filter[]];
+
+          if (
+            ws.data.subscriptions.size >= relayInfo.limitation.max_subscriptions
+          ) {
+            ws.send(
+              JSON.stringify([
+                "CLOSED",
+                subId,
+                "error: max subscriptions reached",
+              ]),
+            );
+            return;
+          }
+
           ws.data.subscriptions.set(subId, filters);
 
           // Send historical events
