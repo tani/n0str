@@ -7,8 +7,8 @@ export const defaultRelayInfo = {
   pubkey: "bf2bee5281149c7c350f5d12ae32f514c7864ff10805182f4178538c2c421007",
   contact: "hi@example.com",
   supported_nips: [
-    1, 2, 3, 4, 5, 9, 10, 11, 12, 13, 15, 16, 17, 18, 20, 22, 23, 25, 28, 33, 40, 42, 44, 45, 50,
-    51, 57, 65, 78,
+    1, 2, 3, 5, 9, 10, 11, 12, 13, 15, 16, 17, 18, 20, 22, 23, 25, 28, 33, 40,
+    42, 44, 45, 50, 51, 57, 65, 78,
   ],
   software: "https://github.com/tani/nostra",
   version: "0.1.0",
@@ -51,7 +51,10 @@ export const RelayInfoSchema = z.object({
   }),
 });
 
-export function loadRelayInfo(configPath: string = "nostra.json", logger = console) {
+export function loadRelayInfo(
+  configPath: string = "nostra.json",
+  logger = console,
+) {
   let loadedRelayInfo = defaultRelayInfo;
 
   try {
@@ -60,7 +63,10 @@ export function loadRelayInfo(configPath: string = "nostra.json", logger = conso
       const rawConfig = JSON.parse(fileContent);
       const parsed = RelayInfoSchema.safeParse(rawConfig);
       if (!parsed.success) {
-        logger.error("Invalid configuration in nostra.json:", parsed.error.format());
+        logger.error(
+          "Invalid configuration in nostra.json:",
+          parsed.error.format(),
+        );
         loadedRelayInfo = defaultRelayInfo;
       } else {
         loadedRelayInfo = { ...defaultRelayInfo, ...parsed.data };

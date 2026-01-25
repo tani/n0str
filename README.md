@@ -4,7 +4,7 @@
 
 ![License](https://img.shields.io/badge/license-AGPLv3-blue.svg)
 ![Bun](https://img.shields.io/badge/Bun-v1.3.5-black?logo=bun)
-![NIPs](https://img.shields.io/badge/NIPs-29%20Supported-purple.svg)
+![NIPs](https://img.shields.io/badge/NIPs-28%20Supported-purple.svg)
 
 ## Features
 
@@ -25,7 +25,6 @@ Nostra currently supports a wide range of Nostr Implementation Possibilities (NI
 | **01** | Basic Protocol Flow (EVENT, REQ, CLOSE) | Yes |
 | **02** | Contact List and Petnames | Yes |
 | **03** | OpenTimestamps Attestations | Yes |
-| **04** | Encrypted Direct Message | Yes |
 | **05** | Mapping Nostr keys to DNS-based internet identifiers | Yes |
 | **09** | Event Deletion | Yes |
 | **10** | On "e" and "p" tags in Text Events | Yes |
