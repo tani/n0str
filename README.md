@@ -132,6 +132,7 @@ You can also configure the relay using environment variables:
 
 - `PORT`: The port to listen on (default: 3000).
 - `LOG_LEVEL`: The logging level (default: info). Available levels: `trace`, `debug`, `info`, `warn`, `error`.
+- `DATABASE_PATH`: The path to the SQLite database (default: `./n0str.db`).
 
 ## License
 
