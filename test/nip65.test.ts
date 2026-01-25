@@ -13,7 +13,7 @@ async function consumeAuth(ws: WebSocket) {
 }
 
 describe("NIP-65: Relay List Metadata", () => {
-  const dbPath = "nostra.nip65.test.db";
+  const dbPath = "n0str.nip65.test.db";
   let server: any;
   let url: string;
 

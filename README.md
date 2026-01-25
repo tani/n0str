@@ -1,6 +1,6 @@
-# Nostra
+# n0str
 
-**Nostra** is a simple, reliable, and extensively tested [Nostr](https://github.com/nostr-protocol/nostr) relay implementation built on modern web technologies. Designed for simplicity and correctness, it leverages the power of **Bun**.
+**n0str** is a simple, reliable, and extensively tested [Nostr](https://github.com/nostr-protocol/nostr) relay implementation built on modern web technologies. Designed for simplicity and correctness, it leverages the power of **Bun**.
 
 ![License](https://img.shields.io/badge/license-AGPLv3-blue.svg)
 ![Bun](https://img.shields.io/badge/Bun-v1.3.5-black?logo=bun)
@@ -12,13 +12,13 @@
 - **Extensively Tested**: comprehensive test suite ensuring high coverage and NIP compliance.
 - **Efficient Storage**: Uses **SQLite** with **Drizzle ORM** for reliable and type-safe database interactions.
 - **Full-Text Search**: Native support for NIP-50 search capability using SQLite FTS5.
-- **Configurable**: Easy configuration via `nostra.json`.
+- **Configurable**: Easy configuration via `n0str.json`.
 - **Secure**: Implements NIP-13 (PoW), NIP-22 (Event Limits), and NIP-42 (Authentication).
 - **Type-Safe**: Fully typed with TypeScript.
 
 ## Supported NIPs
 
-Nostra currently supports a wide range of Nostr Implementation Possibilities (NIPs):
+n0str currently supports a wide range of Nostr Implementation Possibilities (NIPs):
 
 | NIP | Description | Status |
 | :--- | :--- | :--- |
@@ -55,22 +55,22 @@ Nostra currently supports a wide range of Nostr Implementation Possibilities (NI
 
 ### Quick Start with Nightly Binary
 
-You can download the latest pre-compiled binary from the [Releases](https://github.com/tani/nostra/releases/tag/nightly) page.
+You can download the latest pre-compiled binary from the [Releases](https://github.com/tani/n0str/releases/tag/nightly) page.
 
 **Linux / macOS:**
 
 ```bash
 # Download the binary for your platform (e.g., linux-x64)
-chmod +x nostra-linux-x64
-./nostra-linux-x64
+chmod +x n0str-linux-x64
+./n0str-linux-x64
 ```
 
 **Windows:**
 
-Download `nostra-win-x64.exe` and run it from the terminal.
+Download `n0str-win-x64.exe` and run it from the terminal.
 
 ```powershell
-.\nostra-win-x64.exe
+.\n0str-win-x64.exe
 ```
 
 ### Prerequisites
@@ -82,8 +82,8 @@ Download `nostra-win-x64.exe` and run it from the terminal.
 1. Clone the repository:
 
    ```bash
-   git clone https://github.com/tani/nostra.git
-   cd nostra
+   git clone https://github.com/tani/n0str.git
+   cd n0str
    ```
 
 2. Install dependencies:
@@ -104,9 +104,9 @@ The relay will start listening on `ws://localhost:3000` (or the port defined in 
 
 ## Configuration
 
-Nostra is configured via a `nostra.json` file in the root directory. If this file does not exist, default values will be used.
+n0str is configured via a `n0str.json` file in the root directory. If this file does not exist, default values will be used.
 
-**Example `nostra.json`:**
+**Example `n0str.json`:**
 
 ```json
 {

@@ -3,7 +3,7 @@ import * as fs from "node:fs";
 
 /** Default relay configuration following NIP-11 specification. */
 export const defaultRelayInfo = {
-  name: "Nostra Relay",
+  name: "n0str Relay",
   description: "A simple, reliable, and extensively tested Nostr relay.",
   pubkey: "bf2bee5281149c7c350f5d12ae32f514c7864ff10805182f4178538c2c421007",
   contact: "hi@example.com",
@@ -11,7 +11,7 @@ export const defaultRelayInfo = {
     1, 2, 3, 5, 9, 10, 11, 12, 13, 15, 16, 17, 18, 20, 22, 23, 25, 28, 33, 40, 42, 44, 45, 50, 51,
     57, 65, 78,
   ],
-  software: "https://github.com/tani/nostra",
+  software: "https://github.com/tani/n0str",
   version: "0.1.0",
   limitation: {
     max_message_length: 65536,
@@ -60,28 +60,28 @@ export type RelayInfo = typeof RelayInfoSchema.infer;
 
 /**
  * Loads relay information from a configuration file.
- * @param configPath - Path to the configuration file (default: "nostra.json").
+ * @param configPath - Path to the configuration file (default: "n0str.json").
  * @param logger - Logger instance for reporting status and errors.
  * @returns Combined relay information from default and loaded configuration.
  */
-export function loadRelayInfo(configPath: string = "nostra.json", logger = console) {
+export function loadRelayInfo(configPath: string = "n0str.json", logger = console) {
   let loadedRelayInfo = defaultRelayInfo;
 
   if (fs.existsSync(configPath)) {
     const fileContent = fs.readFileSync(configPath, "utf-8");
     const out = RelayInfoFileSchema(fileContent);
     if (out instanceof type.errors) {
-      logger.error("Invalid configuration in nostra.json:", out.summary);
+      logger.error("Invalid configuration in n0str.json:", out.summary);
     } else {
       loadedRelayInfo = {
         ...defaultRelayInfo,
         ...out,
         limitation: { ...defaultRelayInfo.limitation, ...out.limitation },
       };
-      logger.log("Loaded configuration from nostra.json");
+      logger.log("Loaded configuration from n0str.json");
     }
   } else {
-    logger.log("nostra.json not found, using default configuration");
+    logger.log("n0str.json not found, using default configuration");
   }
 
   return loadedRelayInfo;

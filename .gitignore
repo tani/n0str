@@ -144,5 +144,7 @@ vite.config.ts.timestamp-*
 *.db-shm
 *.db-wal
 
-# Nostra
+# n0str
 nostra-*
+n0str-json
+n0str-*

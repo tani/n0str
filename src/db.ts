@@ -1,6 +1,6 @@
 import { SQL } from "bun";
 
-const dbPath = process.env.DATABASE_PATH || "nostra.db";
+const dbPath = process.env.DATABASE_PATH || "n0str.db";
 
 /**
  * Database instance using Bun's SQL client with SQLite.

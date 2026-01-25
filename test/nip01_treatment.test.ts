@@ -13,7 +13,7 @@ async function consumeAuth(ws: WebSocket) {
 }
 
 describe("Event Treatment (NIP-01)", () => {
-  const dbPath = "nostra.event_treatment.test.db";
+  const dbPath = "n0str.event_treatment.test.db";
   let server: any;
   let url: string;
 

@@ -13,7 +13,7 @@ async function consumeAuth(ws: WebSocket) {
 }
 
 describe("NIP-10: Text Notes and Threads", () => {
-  const dbPath = "nostra.nip10.test.db";
+  const dbPath = "n0str.nip10.test.db";
   let server: any;
   let url: string;
 

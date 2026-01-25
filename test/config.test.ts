@@ -5,7 +5,7 @@ import { defaultRelayInfo, loadRelayInfo } from "../src/config.ts";
 
 describe("config coverage", () => {
   test("invalid schema falls back to defaults", async () => {
-    const configPath = resolve("nostra.invalid-schema.json");
+    const configPath = resolve("n0str.invalid-schema.json");
     fs.writeFileSync(configPath, JSON.stringify({ name: 123 }), "utf8");
     const errors: unknown[] = [];
     const originalError = console.error;
@@ -23,7 +23,7 @@ describe("config coverage", () => {
   });
 
   test("missing config uses defaults", async () => {
-    const configPath = resolve("nostra.missing.json");
+    const configPath = resolve("n0str.missing.json");
     const logs: unknown[] = [];
     const originalLog = console.log;
     console.log = (...args) => {
@@ -39,7 +39,7 @@ describe("config coverage", () => {
   });
 
   test("invalid JSON falls back to defaults", async () => {
-    const configPath = resolve("nostra.invalid-json.json");
+    const configPath = resolve("n0str.invalid-json.json");
     fs.writeFileSync(configPath, "{ invalid json", "utf8");
     const errors: unknown[] = [];
     const originalError = console.error;
@@ -57,7 +57,7 @@ describe("config coverage", () => {
   });
 
   test("valid config merges with defaults", async () => {
-    const configPath = resolve("nostra.valid.json");
+    const configPath = resolve("n0str.valid.json");
     const validConfig = {
       ...defaultRelayInfo,
       name: "Custom Relay",

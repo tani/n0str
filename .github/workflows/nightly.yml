@@ -36,6 +36,6 @@ jobs:
           prerelease: true
           title: "Nightly Build"
           files: |
-            nostra-linux-x64
-            nostra-macos-x64
-            nostra-win-x64.exe
+            n0str-linux-x64
+            n0str-macos-x64
+            n0str-win-x64.exe

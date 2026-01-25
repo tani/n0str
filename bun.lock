@@ -3,7 +3,7 @@
   "configVersion": 1,
   "workspaces": {
     "": {
-      "name": "nostra",
+      "name": "n0str",
       "dependencies": {
         "arktype": "^2.1.29",
         "nostr-tools": "^2.20.0",

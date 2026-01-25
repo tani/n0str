@@ -20,7 +20,7 @@ describe("NIP-11 Relay Information Document", () => {
     });
     expect(res.status).toBe(200);
     const info = (await res.json()) as any;
-    expect(info.name).toBe("Nostra Relay");
+    expect(info.name).toBe("n0str Relay");
     [
       1, 2, 3, 4, 5, 9, 10, 11, 12, 13, 15, 16, 17, 18, 20, 22, 23, 25, 28, 33, 40, 42, 44, 45, 50,
       51, 57, 65, 78,
@@ -33,6 +33,6 @@ describe("NIP-11 Relay Information Document", () => {
     const res = await fetch(url.replace("ws://", "http://"));
     expect(res.status).toBe(200);
     const text = await res.text();
-    expect(text).toContain("Nostra Relay");
+    expect(text).toContain("n0str Relay");
   });
 });

@@ -5,7 +5,7 @@ import type { Event } from "nostr-tools";
 import { existsSync } from "fs";
 
 describe("Database", () => {
-  const dbPath = "nostra.test.db";
+  const dbPath = "n0str.test.db";
 
   beforeEach(async () => {
     process.env.DATABASE_PATH = dbPath;

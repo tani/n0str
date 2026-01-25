@@ -54,7 +54,7 @@ export const relay = {
       });
     }
 
-    return new Response("Nostra Relay (ws://localhost:3000)");
+    return new Response("n0str Relay (ws://localhost:3000)");
   },
   websocket: {
     open(ws: ServerWebSocket<ClientData>) {

@@ -3,7 +3,7 @@ import { relay } from "../src/server.ts";
 import { db } from "../src/repository.ts";
 
 describe("NIP-13 Proof of Work", () => {
-  const dbPath = "nostra.nip13.test.db";
+  const dbPath = "n0str.nip13.test.db";
   let server: any;
 
   beforeAll(() => {

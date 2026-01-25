@@ -13,7 +13,7 @@ async function consumeAuth(ws: WebSocket) {
 }
 
 describe("NIP-09 Event Deletion", () => {
-  const dbPath = "nostra.nip09.test.db";
+  const dbPath = "n0str.nip09.test.db";
   let server: any;
   let url: string;
 
