@@ -26,89 +26,73 @@ type EventWithTagRow = EventRow & {
   tag_value: string | null;
 };
 
-function appendClause(
-  clauses: string[],
-  params: unknown[],
-  clause: string,
-  values: readonly unknown[] = [],
-) {
-  let built = clause;
-  for (const value of values) {
-    const placeholder = `$${params.length + 1}`;
-    built = built.replace("?", placeholder);
-    params.push(value);
+type SqlCondition = { sql: string; params: unknown[] };
+type FilterCondition =
+  | SqlCondition
+  | { col: string; val: unknown; op?: string };
+
+function toSqlCondition(c: FilterCondition): SqlCondition[] {
+  if ("sql" in c)
+    return c.params.length > 0 || c.sql.includes("expiration") ? [c] : [];
+  if (c.val === undefined || (Array.isArray(c.val) && c.val.length === 0))
+    return [];
+  if (Array.isArray(c.val)) {
+    return [
+      {
+        sql: `${c.col} IN (${c.val.map(() => "?").join(", ")})`,
+        params: c.val,
+      },
+    ];
   }
-  clauses.push(built);
+  return [{ sql: `${c.col} ${c.op ?? "="} ?`, params: [c.val] }];
 }
 
-function appendInClause(
-  clauses: string[],
-  params: unknown[],
-  column: string,
-  values?: readonly unknown[],
-) {
-  if (!values || values.length === 0) return;
-  const placeholders = values.map((_, idx) => `$${params.length + idx + 1}`).join(", ");
-  params.push(...values);
-  clauses.push(`${column} IN (${placeholders})`);
-}
-
-function appendTagClause(
-  clauses: string[],
-  params: unknown[],
-  tagName: string,
-  values: readonly string[],
-) {
-  const tagNameIndex = params.length + 1;
-  params.push(tagName);
-  const placeholders = values.map((_, idx) => `$${params.length + idx + 1}`).join(", ");
-  params.push(...values);
-  clauses.push(
-    `events.id IN (SELECT event_id FROM tags WHERE name = $${tagNameIndex} AND value IN (${placeholders}))`,
-  );
-}
-
-function buildWhereClause(filter: Filter) {
-  const clauses: string[] = [];
+function finalizeConditions(conditions: SqlCondition[]) {
   const params: unknown[] = [];
-  const now = Math.floor(Date.now() / 1000);
-
-  appendClause(
-    clauses,
-    params,
-    "events.id NOT IN (SELECT event_id FROM tags WHERE name = 'expiration' AND CAST(value AS INTEGER) < ?)",
-    [now],
-  );
-  appendInClause(clauses, params, "events.id", filter.ids);
-  appendInClause(clauses, params, "events.pubkey", filter.authors);
-  appendInClause(clauses, params, "events.kind", filter.kinds);
-
-  if (filter.since !== undefined) {
-    appendClause(clauses, params, "events.created_at >= ?", [filter.since]);
-  }
-  if (filter.until !== undefined) {
-    appendClause(clauses, params, "events.created_at <= ?", [filter.until]);
-  }
-
-  if (filter.search) {
-    appendClause(
-      clauses,
-      params,
-      "events.id IN (SELECT id FROM events_fts WHERE events_fts MATCH ?)",
-      [filter.search],
-    );
-  }
-
-  for (const [key, values] of Object.entries(filter)) {
-    if (key.startsWith("#") && Array.isArray(values) && values.length > 0) {
-      appendTagClause(clauses, params, key.slice(1), values as string[]);
+  const clauses = conditions.map(({ sql, params: p }) => {
+    let built = sql;
+    for (const v of p) {
+      params.push(v);
+      built = built.replace("?", `$${params.length}`);
     }
-  }
-
+    return built;
+  });
   return {
     clause: clauses.length > 0 ? `WHERE ${clauses.join(" AND ")}` : "",
     params,
   };
+}
+
+function buildWhereClause(filter: Filter) {
+  const now = Math.floor(Date.now() / 1000);
+
+  const rawConditions: FilterCondition[] = [
+    {
+      sql: "events.id NOT IN (SELECT event_id FROM tags WHERE name = 'expiration' AND CAST(value AS INTEGER) < ?)",
+      params: [now],
+    },
+    { col: "events.id", val: filter.ids },
+    { col: "events.pubkey", val: filter.authors },
+    { col: "events.kind", val: filter.kinds },
+    { col: "events.created_at", op: ">=", val: filter.since },
+    { col: "events.created_at", op: "<=", val: filter.until },
+    {
+      sql: "events.id IN (SELECT id FROM events_fts WHERE events_fts MATCH ?)",
+      params: filter.search ? [filter.search] : [],
+    },
+    ...Object.entries(filter).flatMap(([k, v]): FilterCondition[] =>
+      k.startsWith("#") && Array.isArray(v) && v.length > 0
+        ? [
+            {
+              sql: `events.id IN (SELECT event_id FROM tags WHERE name = ? AND value IN (${v.map(() => "?").join(", ")}))`,
+              params: [k.slice(1), ...v],
+            },
+          ]
+        : [],
+    ),
+  ];
+
+  return finalizeConditions(rawConditions.flatMap(toSqlCondition));
 }
 
 function isOlderEvent(candidate: Event, existing: ExistingRow) {
@@ -118,7 +102,10 @@ function isOlderEvent(candidate: Event, existing: ExistingRow) {
   );
 }
 
-async function findExisting(tx: typeof db, event: Event): Promise<ExistingRow | undefined> {
+async function findExisting(
+  tx: typeof db,
+  event: Event,
+): Promise<ExistingRow | undefined> {
   if (isReplaceable(event.kind)) {
     return (
       await tx<ExistingRow[]>`
