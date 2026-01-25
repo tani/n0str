@@ -13,7 +13,7 @@ async function consumeAuth(ws: WebSocket) {
 }
 
 describe("NIP-17: Private Direct Messages", () => {
-  const dbPath = "n0str.nip17.test.db";
+  const dbPath = "n0str.test.db";
   let server: any;
   let url: string;
 

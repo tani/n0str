@@ -13,7 +13,7 @@ async function consumeAuth(ws: WebSocket) {
 }
 
 describe("NIP-40 Expiration", () => {
-  const dbPath = "n0str.nip40.test.db";
+  const dbPath = "n0str.test.db";
   let server: any;
   let url: string;
 

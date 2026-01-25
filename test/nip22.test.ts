@@ -13,7 +13,7 @@ async function consumeAuth(ws: WebSocket) {
 }
 
 describe("NIP-22: Event Created_at Limits", () => {
-  const dbPath = "n0str.nip22.test.db";
+  const dbPath = "n0str.test.db";
   let server: any;
   let url: string;
 

@@ -13,7 +13,7 @@ async function consumeAuth(ws: WebSocket) {
 }
 
 describe("NIP-78: Application-specific Data", () => {
-  const dbPath = "n0str.nip78.test.db";
+  const dbPath = "n0str.test.db";
   let server: any;
   let url: string;
 

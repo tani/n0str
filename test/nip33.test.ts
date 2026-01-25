@@ -13,7 +13,7 @@ async function consumeAuth(ws: WebSocket) {
 }
 
 describe("NIP-33: Parameterized Replaceable Events", () => {
-  const dbPath = "n0str.nip33.test.db";
+  const dbPath = "n0str.test.db";
   let server: any;
   let url: string;
 

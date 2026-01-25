@@ -13,7 +13,7 @@ async function consumeAuth(ws: WebSocket) {
 }
 
 describe("NIP-45 Event Counts", () => {
-  const dbPath = "n0str.nip45.test.db";
+  const dbPath = "n0str.test.db";
   let server: any;
   let url: string;
 
