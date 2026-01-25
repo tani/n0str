@@ -40,4 +40,4 @@ jobs:
             n0str-linux-arm64
             n0str-macos-x64
             n0str-macos-arm64
-            n0str-win-x64.exe
+            n0str-windows-x64.exe
