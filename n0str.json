@@ -1,11 +1,11 @@
 {
   "name": "n0str Relay",
-  "description": "A fast and lightweight Nostr relay built with Bun, SQLite, and Drizzle.",
+  "description": "A simple, reliable, and extensively tested Nostr relay.",
   "pubkey": "bf2bee5281149c7c350f5d12ae32f514c7864ff10805182f4178538c2c421007",
   "contact": "hi@example.com",
   "supported_nips": [
-    1, 2, 3, 4, 5, 9, 10, 11, 12, 13, 15, 16, 17, 18, 20, 22, 23, 25, 28, 33, 40, 42, 44, 45, 50,
-    51, 57, 65, 78
+    1, 2, 3, 5, 9, 10, 11, 12, 13, 15, 16, 17, 18, 20, 22, 23, 25, 28, 33, 40, 42, 44, 45, 50, 51,
+    57, 65, 70, 77, 78
   ],
   "software": "https://github.com/tani/n0str",
   "version": "0.1.0",
