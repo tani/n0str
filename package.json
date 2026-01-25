@@ -24,6 +24,7 @@
   },
   "dependencies": {
     "arktype": "^2.1.29",
+    "negentropy": "^0.0.0",
     "nostr-tools": "^2.20.0"
   }
 }

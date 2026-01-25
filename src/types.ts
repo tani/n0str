@@ -8,4 +8,5 @@ export type ClientData = {
   challenge: string;
   relayUrl: string;
   pubkey?: string;
+  negSubscriptions: Map<string, any>;
 };

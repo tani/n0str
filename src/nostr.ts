@@ -76,11 +76,17 @@ const $ = type.scope({
   EventMsg: ["'EVENT'", "Event"],
   AuthMsg: ["'AUTH'", "Event"],
   CloseMsg: ["'CLOSE'", "string"],
-  ClientMessage: "EventMsg | ReqMsg | CountMsg | AuthMsg | CloseMsg",
+  NegOpenMsg: ["'NEG-OPEN'", "string", "Filter", "string"],
+  NegMsg: ["'NEG-MSG'", "string", "string"],
+  NegCloseMsg: ["'NEG-CLOSE'", "string"],
+  ClientMessage:
+    "EventMsg | ReqMsg | CountMsg | AuthMsg | CloseMsg | NegOpenMsg | NegMsg | NegCloseMsg",
 });
 
 /** Schema for parsing and validating Nostr client messages. */
-export const ClientMessageSchema = type("string.json.parse").to($.type("ClientMessage"));
+export const ClientMessageSchema = type("string.json.parse").to(
+  $.type("ClientMessage"),
+);
 
 /** Type of message sent by a client to the relay. */
 export type ClientMessage = typeof ClientMessageSchema.infer;
@@ -222,14 +228,19 @@ export function matchFilter(filter: Filter, event: Event): boolean {
   if (filter.ids && !filter.ids.includes(event.id)) return false;
   if (filter.authors && !filter.authors.includes(event.pubkey)) return false;
   if (filter.kinds && !filter.kinds.includes(event.kind)) return false;
-  if (filter.since !== undefined && event.created_at < filter.since) return false;
-  if (filter.until !== undefined && event.created_at > filter.until) return false;
+  if (filter.since !== undefined && event.created_at < filter.since)
+    return false;
+  if (filter.until !== undefined && event.created_at > filter.until)
+    return false;
 
   for (const [key, values] of Object.entries(filter)) {
     if (key.startsWith("#") && Array.isArray(values)) {
       const tagName = key.substring(1);
-      const eventTags = event.tags.filter((t) => t[0] === tagName).map((t) => t[1]);
-      if (!values.some((v) => typeof v === "string" && eventTags.includes(v))) return false;
+      const eventTags = event.tags
+        .filter((t) => t[0] === tagName)
+        .map((t) => t[1]);
+      if (!values.some((v) => typeof v === "string" && eventTags.includes(v)))
+        return false;
     }
   }
 

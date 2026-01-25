@@ -1,7 +1,13 @@
 import { type } from "arktype";
 import type { ServerWebSocket } from "bun";
 import type { ClientData } from "../types";
-import { EventSchema, validateEvent, validateCreatedAt, isEphemeral, matchFilters } from "../nostr";
+import {
+  EventSchema,
+  validateEvent,
+  validateCreatedAt,
+  isEphemeral,
+  matchFilters,
+} from "../nostr";
 import { saveEvent, deleteEvents } from "../repository";
 
 const MIN_DIFFICULTY = 0;
@@ -22,7 +28,14 @@ export async function handleEvent(
   const rawEvent = payload[0];
   const event = EventSchema(rawEvent);
   if (event instanceof type.errors) {
-    ws.send(JSON.stringify(["OK", rawEvent?.id ?? "unknown", false, "error: malformed event"]));
+    ws.send(
+      JSON.stringify([
+        "OK",
+        rawEvent?.id ?? "unknown",
+        false,
+        "error: malformed event",
+      ]),
+    );
     return;
   }
 
@@ -31,7 +44,9 @@ export async function handleEvent(
   if (expirationTag && expirationTag[1]) {
     const exp = parseInt(expirationTag[1]);
     if (!isNaN(exp) && exp < Math.floor(Date.now() / 1000)) {
-      ws.send(JSON.stringify(["OK", event.id, false, "error: event has expired"]));
+      ws.send(
+        JSON.stringify(["OK", event.id, false, "error: event has expired"]),
+      );
       return;
     }
   }
@@ -47,6 +62,34 @@ export async function handleEvent(
   if (!timeResult.ok) {
     ws.send(JSON.stringify(["OK", event.id, false, timeResult.reason]));
     return;
+  }
+
+  // NIP-70: Protected Events
+  const protectedTag = event.tags.find((t) => t[0] === "-");
+  if (protectedTag) {
+    if (!ws.data.pubkey) {
+      ws.send(
+        JSON.stringify([
+          "OK",
+          event.id,
+          false,
+          "auth-required: this event may only be published by its author",
+        ]),
+      );
+      ws.send(JSON.stringify(["AUTH", ws.data.challenge]));
+      return;
+    }
+    if (ws.data.pubkey !== event.pubkey) {
+      ws.send(
+        JSON.stringify([
+          "OK",
+          event.id,
+          false,
+          "restricted: this event may only be published by its author",
+        ]),
+      );
+      return;
+    }
   }
 
   if (!isEphemeral(event.kind)) {
