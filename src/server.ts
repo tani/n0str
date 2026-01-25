@@ -28,7 +28,7 @@ setInterval(runCleanupTick, 60 * 60 * 1000); // Hourly
  * Bun.serve compatible relay object containing fetch and websocket handlers.
  */
 export const relay = {
-  port: 3000,
+  port: parseInt(process.env.PORT || "3000"),
   fetch(req: Request, server: any) {
     if (req.headers.get("Upgrade")?.toLowerCase() === "websocket") {
       const challenge = crypto.randomUUID();
@@ -61,8 +61,12 @@ export const relay = {
       clients.add(ws);
       ws.send(JSON.stringify(["AUTH", ws.data.challenge]));
     },
-    async message(ws: ServerWebSocket<ClientData>, rawMessage: string | Buffer) {
-      const messageStr = typeof rawMessage === "string" ? rawMessage : rawMessage.toString();
+    async message(
+      ws: ServerWebSocket<ClientData>,
+      rawMessage: string | Buffer,
+    ) {
+      const messageStr =
+        typeof rawMessage === "string" ? rawMessage : rawMessage.toString();
       if (messageStr.length > relayInfo.limitation.max_message_length) {
         ws.send(JSON.stringify(["NOTICE", "error: message too large"]));
         return;
