@@ -201,4 +201,51 @@ describe("NIP-01 Core Relay", () => {
     expect(res?.status).toBe(400);
     expect(await res?.text()).toBe("Upgrade failed");
   });
+
+  test("NIP-12: Generic Tag Queries (#e, #p, etc.)", async () => {
+    const ws = new WebSocket(url);
+
+    await new Promise((resolve) => (ws.onopen = resolve));
+    await consumeAuth(ws);
+
+    const event = finalizeEvent(
+      {
+        kind: 1,
+        created_at: Math.floor(Date.now() / 1000),
+        tags: [
+          ["e", "some-event-id"],
+          ["p", "some-pubkey"],
+          ["t", "nostr"],
+        ],
+        content: "NIP-12 test",
+      },
+      sk,
+    );
+    ws.send(JSON.stringify(["EVENT", event]));
+    await new Promise((resolve) => {
+      ws.onmessage = (e) => {
+        if (JSON.parse(e.data)[0] === "OK") resolve(null);
+      };
+    });
+
+    // Test multiple tag filters
+    const subId = "nip12-sub";
+    ws.send(
+      JSON.stringify([
+        "REQ",
+        subId,
+        { "#t": ["nostr"], "#p": ["some-pubkey"] },
+      ]),
+    );
+
+    const response = await new Promise<any>((resolve) => {
+      ws.onmessage = (e) => {
+        const msg = JSON.parse(e.data);
+        if (msg[0] === "EVENT") resolve(msg);
+      };
+    });
+    expect(response[2].id).toBe(event.id);
+
+    ws.close();
+  });
 });

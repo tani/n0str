@@ -37,10 +37,9 @@ const relayInfo = {
   pubkey: "bf2bee5281149c7c350f5d12ae32f514c7864ff10805182f4178538c2c421007", // Placeholder or configurable
   contact: "hi@example.com",
   supported_nips: [
-    1, 2, 3, 4, 5, 9, 10, 11, 13, 15, 17, 18, 22, 23, 25, 28, 33, 40, 42, 45,
-    50, 51, 65,
+    1, 2, 3, 4, 5, 9, 10, 11, 12, 13, 15, 16, 17, 18, 20, 22, 23, 25, 28, 33,
+    40, 42, 45, 50, 51, 57, 65, 78,
   ],
-
   software: "https://github.com/tani/nostra",
 
   version: "0.1.0",
