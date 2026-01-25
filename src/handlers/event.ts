@@ -1,3 +1,4 @@
+import { type } from "arktype";
 import type { ServerWebSocket } from "bun";
 import type { ClientData } from "../types";
 import { EventSchema, validateEvent, validateCreatedAt, isEphemeral, matchFilters } from "../nostr";
@@ -11,12 +12,11 @@ export async function handleEvent(
   clients: Set<ServerWebSocket<ClientData>>,
 ) {
   const rawEvent = payload[0];
-  const eventParse = EventSchema.safeParse(rawEvent);
-  if (!eventParse.success) {
+  const event = EventSchema(rawEvent);
+  if (event instanceof type.errors) {
     ws.send(JSON.stringify(["OK", rawEvent?.id ?? "unknown", false, "error: malformed event"]));
     return;
   }
-  const event = eventParse.data;
 
   // NIP-40: Check expiration on publish
   const expirationTag = event.tags.find((t) => t[0] === "expiration");
@@ -28,14 +28,14 @@ export async function handleEvent(
     }
   }
 
-  const result = validateEvent(event, MIN_DIFFICULTY);
+  const result = await validateEvent(event, MIN_DIFFICULTY);
   if (!result.ok) {
     ws.send(JSON.stringify(["OK", event.id, false, result.reason]));
     return;
   }
 
   // NIP-22: Check created_at limits
-  const timeResult = validateCreatedAt(event.created_at);
+  const timeResult = await validateCreatedAt(event.created_at);
   if (!timeResult.ok) {
     ws.send(JSON.stringify(["OK", event.id, false, timeResult.reason]));
     return;

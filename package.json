@@ -22,7 +22,7 @@
     "typescript": "^5"
   },
   "dependencies": {
-    "nostr-tools": "^2.20.0",
-    "zod": "^4.3.6"
+    "arktype": "^2.1.29",
+    "nostr-tools": "^2.20.0"
   }
 }

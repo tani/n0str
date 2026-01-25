@@ -1,5 +1,5 @@
+import { type } from "arktype";
 import * as fs from "node:fs";
-import { z } from "zod";
 
 export const defaultRelayInfo = {
   name: "Nostra Relay",
@@ -27,51 +27,52 @@ export const defaultRelayInfo = {
   },
 };
 
-// Zod schemas for runtime validation
-export const RelayInfoSchema = z.object({
-  name: z.string(),
-  description: z.string(),
-  pubkey: z.string().length(64),
-  contact: z.string().email().optional(),
-  supported_nips: z.array(z.number()),
-  software: z.string().url(),
-  version: z.string(),
-  limitation: z.object({
-    max_message_length: z.number().int().positive(),
-    max_subscriptions: z.number().int().positive(),
-    max_filters: z.number().int().positive(),
-    max_limit: z.number().int().positive(),
-    max_subid_length: z.number().int().positive(),
-    min_pow_difficulty: z.number().int().nonnegative(),
-    auth_required: z.boolean(),
-    payment_required: z.boolean(),
-    restricted_writes: z.boolean(),
-    created_at_lower_limit: z.number().int().nonnegative(),
-    created_at_upper_limit: z.number().int().nonnegative(),
-  }),
+// ArkType schemas for runtime validation
+export const RelayInfoSchema = type({
+  "name?": "string",
+  "description?": "string",
+  "pubkey?": "string==64",
+  "contact?": "string",
+  "supported_nips?": "number[]",
+  "software?": "string",
+  "version?": "string",
+  "limitation?": {
+    "max_message_length?": "number>0",
+    "max_subscriptions?": "number>0",
+    "max_filters?": "number>0",
+    "max_limit?": "number>0",
+    "max_subid_length?": "number>0",
+    "min_pow_difficulty?": "number>=0",
+    "auth_required?": "boolean",
+    "payment_required?": "boolean",
+    "restricted_writes?": "boolean",
+    "created_at_lower_limit?": "number>=0",
+    "created_at_upper_limit?": "number>=0",
+  },
 });
+
+export const RelayInfoFileSchema = type("string.json.parse").to(RelayInfoSchema);
+
+export type RelayInfo = typeof RelayInfoSchema.infer;
 
 export function loadRelayInfo(configPath: string = "nostra.json", logger = console) {
   let loadedRelayInfo = defaultRelayInfo;
 
-  try {
-    if (fs.existsSync(configPath)) {
-      const fileContent = fs.readFileSync(configPath, "utf-8");
-      const rawConfig = JSON.parse(fileContent);
-      const parsed = RelayInfoSchema.safeParse(rawConfig);
-      if (!parsed.success) {
-        logger.error("Invalid configuration in nostra.json:", parsed.error.format());
-        loadedRelayInfo = defaultRelayInfo;
-      } else {
-        loadedRelayInfo = { ...defaultRelayInfo, ...parsed.data };
-        logger.log("Loaded configuration from nostra.json");
-      }
+  if (fs.existsSync(configPath)) {
+    const fileContent = fs.readFileSync(configPath, "utf-8");
+    const out = RelayInfoFileSchema(fileContent);
+    if (out instanceof type.errors) {
+      logger.error("Invalid configuration in nostra.json:", out.summary);
     } else {
-      logger.log("nostra.json not found, using default configuration");
+      loadedRelayInfo = {
+        ...defaultRelayInfo,
+        ...out,
+        limitation: { ...defaultRelayInfo.limitation, ...out.limitation },
+      };
+      logger.log("Loaded configuration from nostra.json");
     }
-  } catch (e) {
-    logger.error("Failed to load nostra.json:", e);
-    loadedRelayInfo = defaultRelayInfo;
+  } else {
+    logger.log("nostra.json not found, using default configuration");
   }
 
   return loadedRelayInfo;

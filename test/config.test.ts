@@ -6,7 +6,7 @@ import { defaultRelayInfo, loadRelayInfo } from "../src/config.ts";
 describe("config coverage", () => {
   test("invalid schema falls back to defaults", async () => {
     const configPath = resolve("nostra.invalid-schema.json");
-    fs.writeFileSync(configPath, JSON.stringify({ name: "bad-config" }), "utf8");
+    fs.writeFileSync(configPath, JSON.stringify({ name: 123 }), "utf8");
     const errors: unknown[] = [];
     const originalError = console.error;
     console.error = (...args) => {

@@ -1,6 +1,7 @@
 import { cleanupExpiredEvents } from "./repository.ts";
-import { parseMessage } from "./nostr.ts";
+import { parseMessage, type ClientMessage } from "./nostr.ts";
 import { relayInfo } from "./config.ts";
+import { match } from "arktype";
 import type { ServerWebSocket } from "bun";
 import type { ClientData } from "./types.ts";
 
@@ -64,25 +65,17 @@ export const relay = {
 
       if (!msg) return;
 
-      const [type, ...payload] = msg;
-
-      switch (type) {
-        case "EVENT":
-          await handleEvent(ws, payload, clients);
-          break;
-        case "REQ":
-          await handleReq(ws, payload);
-          break;
-        case "COUNT":
-          await handleCount(ws, payload);
-          break;
-        case "CLOSE":
-          handleClose(ws, payload);
-          break;
-        case "AUTH":
-          handleAuth(ws, payload);
-          break;
-      }
+      await match
+        .in<ClientMessage>()
+        .at("0")
+        .match({
+          "'EVENT'": (m) => handleEvent(ws, [m[1]], clients),
+          "'REQ'": (m) => handleReq(ws, [m[1], ...m.slice(2)]),
+          "'COUNT'": (m) => handleCount(ws, [m[1], ...m.slice(2)]),
+          "'AUTH'": (m) => handleAuth(ws, [m[1]]),
+          "'CLOSE'": (m) => handleClose(ws, [m[1]]),
+          default: () => {},
+        })(msg);
     },
     close(ws: ServerWebSocket<ClientData>) {
       clients.delete(ws);

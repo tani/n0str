@@ -1,4 +1,4 @@
-import { z } from "zod";
+import { type } from "arktype";
 import type { Event, Filter } from "nostr-tools";
 import { verifyEvent } from "nostr-tools";
 
@@ -16,28 +16,27 @@ export function countLeadingZeros(hex: string): number {
   return count;
 }
 
-// Zod Schemas
-export const EventSchema = z.object({
-  id: z.string(),
-  pubkey: z.string().length(64),
-  created_at: z.number().int(),
-  kind: z.number().int(),
-  content: z.string(),
-  tags: z.array(z.array(z.string())),
-  sig: z.string().length(128),
+// ArkType Schemas
+export const EventSchema = type({
+  id: "string",
+  pubkey: "string==64",
+  created_at: "number",
+  kind: "number",
+  content: "string",
+  tags: "string[][]",
+  sig: "string==128",
 });
 
-export const FilterSchema = z
-  .object({
-    ids: z.array(z.string()).optional(),
-    authors: z.array(z.string()).optional(),
-    kinds: z.array(z.number()).optional(),
-    since: z.number().optional(),
-    until: z.number().optional(),
-    limit: z.number().optional(),
-    search: z.string().optional(),
-  })
-  .catchall(z.array(z.string())); // Support #... tag filters
+export const FilterSchema = type({
+  "ids?": "string[]",
+  "authors?": "string[]",
+  "kinds?": "number[]",
+  "since?": "number",
+  "until?": "number",
+  "limit?": "number",
+  "search?": "string",
+  "[string]": "unknown", // Support #... tag filters loosely
+});
 
 export function isReplaceable(kind: number): boolean {
   return kind === 0 || kind === 3 || (kind >= 10000 && kind < 20000);
@@ -51,15 +50,20 @@ export function isAddressable(kind: number): boolean {
   return kind >= 30000 && kind < 40000;
 }
 
-export const ClientMessageSchema = z.union([
-  z.tuple([z.literal("EVENT"), EventSchema]),
-  z.tuple([z.literal("REQ"), z.string()]).rest(FilterSchema),
-  z.tuple([z.literal("COUNT"), z.string()]).rest(FilterSchema),
-  z.tuple([z.literal("AUTH"), EventSchema]),
-  z.tuple([z.literal("CLOSE"), z.string()]),
-]);
+const $ = type.scope({
+  Event: EventSchema,
+  Filter: FilterSchema,
+  ReqMsg: ["'REQ'", "string", "...", "Filter[]"],
+  CountMsg: ["'COUNT'", "string", "...", "Filter[]"],
+  EventMsg: ["'EVENT'", "Event"],
+  AuthMsg: ["'AUTH'", "Event"],
+  CloseMsg: ["'CLOSE'", "string"],
+  ClientMessage: "EventMsg | ReqMsg | CountMsg | AuthMsg | CloseMsg",
+});
 
-export type ClientMessage = z.infer<typeof ClientMessageSchema>;
+export const ClientMessageSchema = type("string.json.parse").to($.type("ClientMessage"));
+
+export type ClientMessage = typeof ClientMessageSchema.infer;
 
 export type RelayMessage =
   | ["EVENT", string, Event]
@@ -68,29 +72,23 @@ export type RelayMessage =
   | ["NOTICE", string];
 
 export function parseMessage(data: string): ClientMessage | null {
-  try {
-    const raw = JSON.parse(data);
-    const result = ClientMessageSchema.safeParse(raw);
-    return result.success ? (result.data as ClientMessage) : null;
-  } catch {
-    return null;
-  }
+  const out = ClientMessageSchema(data);
+  return out instanceof type.errors ? null : out;
 }
 
-export function validateEvent(
+export async function validateEvent(
   event: any,
   minDifficulty: number = 0,
-): { ok: boolean; reason?: string } {
-  const result = EventSchema.safeParse(event);
-  if (!result.success) {
-    const error = result.error.issues[0];
+): Promise<{ ok: boolean; reason?: string }> {
+  const out = EventSchema(event);
+  if (out instanceof type.errors) {
     return {
       ok: false,
-      reason: `invalid: ${error?.message} at ${error?.path.join(".")}`,
+      reason: `invalid: ${out.summary}`,
     };
   }
 
-  const validatedEvent = result.data as Event;
+  const validatedEvent = out as Event;
 
   // NIP-13: check difficulty
   if (minDifficulty > 0) {
@@ -114,19 +112,20 @@ export function validateEvent(
     }
   }
 
-  if (!verifyEvent(validatedEvent)) {
+  const isSigValid = await verifyEvent(validatedEvent);
+  if (!isSigValid) {
     return { ok: false, reason: "invalid: signature verification failed" };
   }
 
   return { ok: true };
 }
 
-export function validateAuthEvent(
+export async function validateAuthEvent(
   event: any,
   challenge: string,
   relayUrl: string,
-): { ok: boolean; reason?: string } {
-  const result = validateEvent(event);
+): Promise<{ ok: boolean; reason?: string }> {
+  const result = await validateEvent(event);
   if (!result.ok) return result;
 
   const authEvent = event as Event;
@@ -165,10 +164,10 @@ export function validateAuthEvent(
   return { ok: true };
 }
 
-export function validateCreatedAt(createdAt: number): {
+export async function validateCreatedAt(createdAt: number): Promise<{
   ok: boolean;
   reason?: string;
-} {
+}> {
   const now = Math.floor(Date.now() / 1000);
   const oneYearAgo = now - 60 * 60 * 24 * 365;
   const oneHourAhead = now + 60 * 60;

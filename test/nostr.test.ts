@@ -21,13 +21,13 @@ describe("Protocol", () => {
     expect(parseMessage(JSON.stringify(["EVENT", { id: 123 }]))).toBeNull();
   });
 
-  test("validateEvent handles Zod errors", () => {
-    const result = validateEvent({ id: 123 });
+  test("validateEvent handles ArkType errors", async () => {
+    const result = await validateEvent({ id: 123 });
     expect(result.ok).toBe(false);
     expect(result.reason).toContain("invalid");
   });
 
-  test("validateEvent handles signature failure", () => {
+  test("validateEvent handles signature failure", async () => {
     const event = finalizeEvent(
       {
         kind: 1,
@@ -37,9 +37,10 @@ describe("Protocol", () => {
       },
       sk,
     );
-    // Tamper with content
-    event.content = "tampered";
-    const result = validateEvent(event);
+    // Tamper with content and strip symbols to force re-verification
+    const tampered = JSON.parse(JSON.stringify(event));
+    tampered.content = "tampered";
+    const result = await validateEvent(tampered);
     expect(result.ok).toBe(false);
     expect(result.reason).toBe("invalid: signature verification failed");
   });
@@ -51,7 +52,7 @@ describe("Protocol", () => {
     expect(countLeadingZeros("002f0000000000000000000000000000")).toBe(10);
   });
 
-  test("validateEvent with PoW", () => {
+  test("validateEvent with PoW", async () => {
     const event = {
       id: "00000e9d97a1ab09fc381030b346cdd7a142ad57e6df0b46dc9bef6c7e2d",
       pubkey: pk,
@@ -62,17 +63,12 @@ describe("Protocol", () => {
       sig: "a".repeat(128),
     } as any;
 
-    // We skip signature verification for these since we just want to test PoW logic
-    // Actually, I'll mock verifyEvent or just ignore the sig failure in my head
-    // but the code will fail if I don't mock it.
-    // However, I can check the reason string.
-
-    expect(validateEvent(event, 10).reason).not.toContain("pow");
-    expect(validateEvent(event, 25).reason).toContain("pow: difficulty 20 is less than 25");
+    expect((await validateEvent(event, 10)).reason).not.toContain("pow");
+    expect((await validateEvent(event, 25)).reason).toContain("pow: difficulty 20 is less than 25");
 
     // Target commitment match
     const eventWithTarget = { ...event, tags: [["nonce", "1", "25"]] };
-    expect(validateEvent(eventWithTarget, 20).reason).toContain(
+    expect((await validateEvent(eventWithTarget, 20)).reason).toContain(
       "pow: actual difficulty 20 is less than target difficulty 25",
     );
   });
@@ -98,7 +94,7 @@ describe("Protocol", () => {
   });
 
   describe("validateAuthEvent branches", () => {
-    test("invalid signature", () => {
+    test("invalid signature", async () => {
       const event = finalizeEvent(
         {
           kind: 22242,
@@ -108,13 +104,14 @@ describe("Protocol", () => {
         },
         sk,
       );
-      const tampered = { ...event, sig: "0".repeat(128) };
-      const res = validateAuthEvent(tampered, "challenge", "ws://localhost");
+      const tampered = JSON.parse(JSON.stringify(event));
+      tampered.sig = "0".repeat(128);
+      const res = await validateAuthEvent(tampered, "challenge", "ws://localhost");
       expect(res.ok).toBe(false);
       expect(res.reason).toContain("signature verification failed");
     });
 
-    test("wrong kind", () => {
+    test("wrong kind", async () => {
       const event = finalizeEvent(
         {
           kind: 1,
@@ -124,12 +121,12 @@ describe("Protocol", () => {
         },
         sk,
       );
-      const res = validateAuthEvent(event, "challenge", "ws://localhost");
+      const res = await validateAuthEvent(event, "challenge", "ws://localhost");
       expect(res.ok).toBe(false);
       expect(res.reason).toBe("invalid: kind must be 22242");
     });
 
-    test("created_at too far", () => {
+    test("created_at too far", async () => {
       const event = finalizeEvent(
         {
           kind: 22242,
@@ -139,12 +136,12 @@ describe("Protocol", () => {
         },
         sk,
       );
-      const res = validateAuthEvent(event, "challenge", "ws://localhost");
+      const res = await validateAuthEvent(event, "challenge", "ws://localhost");
       expect(res.ok).toBe(false);
       expect(res.reason).toBe("invalid: created_at is too far from current time");
     });
 
-    test("missing relay tag", () => {
+    test("missing relay tag", async () => {
       const event = finalizeEvent(
         {
           kind: 22242,
@@ -154,7 +151,7 @@ describe("Protocol", () => {
         },
         sk,
       );
-      const res = validateAuthEvent(event, "challenge", "ws://localhost");
+      const res = await validateAuthEvent(event, "challenge", "ws://localhost");
       expect(res.ok).toBe(false);
       expect(res.reason).toBe("invalid: missing relay tag");
     });
