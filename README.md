@@ -10,7 +10,7 @@
 
 - **Simplicity**: Codebase designed to be easy to understand and maintain.
 - **Extensively Tested**: comprehensive test suite ensuring high coverage and NIP compliance.
-- **Efficient Storage**: Uses **SQLite** with **Drizzle ORM** for reliable and type-safe database interactions.
+- **Efficient Storage**: Uses **SQLite** for reliable database interactions.
 - **Full-Text Search**: Native support for NIP-50 search capability using SQLite FTS5.
 - **Configurable**: Easy configuration via `n0str.json`.
 - **Secure**: Implements NIP-13 (PoW), NIP-22 (Event Limits), and NIP-42 (Authentication).
@@ -124,34 +124,6 @@ n0str is configured via a `n0str.json` file in the root directory. If this file 
 
 See the default configuration in `src/relay.ts` for all available options.
 
-## Development
-
-### Type Checking
-
-```bash
-bun typecheck
-```
-
-### Linting using OXLint
-
-```bash
-bun lint
-```
-
-### Formatting using OXFmt
-
-```bash
-bun format
-```
-
-### Testing
-
-Run the test suite to verify functionality:
-
-```bash
-bun test
-```
-
 ## License
 
-AGPL
+AGPLv3. See [LICENSE](LICENSE) for details.
