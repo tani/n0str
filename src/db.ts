@@ -26,71 +26,86 @@ type EventWithTagRow = EventRow & {
   tag_value: string | null;
 };
 
-class WhereBuilder {
-  private clauses: string[] = [];
-  private params: unknown[] = [];
-
-  add(clause: string, values: readonly unknown[] = []) {
-    let built = clause;
-    for (const value of values) {
-      const placeholder = `$${this.params.length + 1}`;
-      built = built.replace("?", placeholder);
-      this.params.push(value);
-    }
-    this.clauses.push(built);
+function appendClause(
+  clauses: string[],
+  params: unknown[],
+  clause: string,
+  values: readonly unknown[] = [],
+) {
+  let built = clause;
+  for (const value of values) {
+    const placeholder = `$${params.length + 1}`;
+    built = built.replace("?", placeholder);
+    params.push(value);
   }
+  clauses.push(built);
+}
 
-  addIn(column: string, values?: readonly unknown[]) {
-    if (!values || values.length === 0) return;
-    const placeholders = values.map((_, idx) => `$${this.params.length + idx + 1}`).join(", ");
-    this.params.push(...values);
-    this.clauses.push(`${column} IN (${placeholders})`);
-  }
+function appendInClause(
+  clauses: string[],
+  params: unknown[],
+  column: string,
+  values?: readonly unknown[],
+) {
+  if (!values || values.length === 0) return;
+  const placeholders = values.map((_, idx) => `$${params.length + idx + 1}`).join(", ");
+  params.push(...values);
+  clauses.push(`${column} IN (${placeholders})`);
+}
 
-  addTagFilter(tagName: string, values: readonly string[]) {
-    const tagNameIndex = this.params.length + 1;
-    this.params.push(tagName);
-    const placeholders = values.map((_, idx) => `$${this.params.length + idx + 1}`).join(", ");
-    this.params.push(...values);
-    this.clauses.push(
-      `events.id IN (SELECT event_id FROM tags WHERE name = $${tagNameIndex} AND value IN (${placeholders}))`,
-    );
-  }
-
-  build() {
-    return {
-      clause: this.clauses.length > 0 ? `WHERE ${this.clauses.join(" AND ")}` : "",
-      params: this.params,
-    };
-  }
+function appendTagClause(
+  clauses: string[],
+  params: unknown[],
+  tagName: string,
+  values: readonly string[],
+) {
+  const tagNameIndex = params.length + 1;
+  params.push(tagName);
+  const placeholders = values.map((_, idx) => `$${params.length + idx + 1}`).join(", ");
+  params.push(...values);
+  clauses.push(
+    `events.id IN (SELECT event_id FROM tags WHERE name = $${tagNameIndex} AND value IN (${placeholders}))`,
+  );
 }
 
 function buildWhereClause(filter: Filter) {
-  const builder = new WhereBuilder();
+  const clauses: string[] = [];
+  const params: unknown[] = [];
   const now = Math.floor(Date.now() / 1000);
 
-  builder.add(
+  appendClause(
+    clauses,
+    params,
     "events.id NOT IN (SELECT event_id FROM tags WHERE name = 'expiration' AND CAST(value AS INTEGER) < ?)",
     [now],
   );
-  builder.addIn("events.id", filter.ids);
-  builder.addIn("events.pubkey", filter.authors);
-  builder.addIn("events.kind", filter.kinds);
+  appendInClause(clauses, params, "events.id", filter.ids);
+  appendInClause(clauses, params, "events.pubkey", filter.authors);
+  appendInClause(clauses, params, "events.kind", filter.kinds);
 
-  if (filter.since !== undefined) builder.add("events.created_at >= ?", [filter.since]);
-  if (filter.until !== undefined) builder.add("events.created_at <= ?", [filter.until]);
+  if (filter.since !== undefined) {
+    appendClause(clauses, params, "events.created_at >= ?", [filter.since]);
+  }
+  if (filter.until !== undefined) {
+    appendClause(clauses, params, "events.created_at <= ?", [filter.until]);
+  }
 
   if (filter.search) {
-    builder.add("events.id IN (SELECT id FROM events_fts WHERE events_fts MATCH ?)", [filter.search]);
+    appendClause(clauses, params, "events.id IN (SELECT id FROM events_fts WHERE events_fts MATCH ?)", [
+      filter.search,
+    ]);
   }
 
   for (const [key, values] of Object.entries(filter)) {
     if (key.startsWith("#") && Array.isArray(values) && values.length > 0) {
-      builder.addTagFilter(key.slice(1), values as string[]);
+      appendTagClause(clauses, params, key.slice(1), values as string[]);
     }
   }
 
-  return builder.build();
+  return {
+    clause: clauses.length > 0 ? `WHERE ${clauses.join(" AND ")}` : "",
+    params,
+  };
 }
 
 function isOlderEvent(candidate: Event, existing: ExistingRow) {
