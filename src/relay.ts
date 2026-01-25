@@ -36,7 +36,10 @@ const relayInfo = {
     "A fast and lightweight Nostr relay built with Bun, SQLite, and Drizzle.",
   pubkey: "bf2bee5281149c7c350f5d12ae32f514c7864ff10805182f4178538c2c421007", // Placeholder or configurable
   contact: "hi@example.com",
-  supported_nips: [1, 2, 3, 4, 5, 9, 10, 11, 13, 22, 40, 42, 45, 50],
+  supported_nips: [
+    1, 2, 3, 4, 5, 9, 10, 11, 13, 15, 17, 18, 22, 23, 25, 28, 33, 40, 42, 45,
+    50, 51, 65,
+  ],
 
   software: "https://github.com/tani/nostra",
 

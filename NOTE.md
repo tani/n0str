@@ -29,11 +29,20 @@
 - [x] NIP-10: Text Notes and Threads
 - [x] NIP-11: Relay Information Document
 - [x] NIP-13: Proof of Work
+- [x] NIP-15: Nostr Marketplace
+- [x] NIP-17: Private Direct Messages (Gift Wrap)
+- [x] NIP-18: Reposts
 - [x] NIP-22: Event Created_at Limits
+- [x] NIP-23: Long-form Content
+- [x] NIP-25: Reactions
+- [x] NIP-28: Public Chat
+- [x] NIP-33: Parameterized Replaceable Events
 - [x] NIP-40: Expiration Timestamp
 - [x] NIP-42: Authentication of clients to relays
 - [x] NIP-45: Counting results
 - [x] NIP-50: Search Capability
+- [x] NIP-51: Lists
+- [x] NIP-65: Relay List Metadata
 - [x] Testing (One file per NIP, coverage boosters expanded, Integration tests passing)
 
 ## NIP-11 Implementation Details
