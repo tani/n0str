@@ -22,8 +22,8 @@ describe("NIP-11 Relay Information Document", () => {
     const info = (await res.json()) as any;
     expect(info.name).toBe("n0str Relay");
     [
-      1, 2, 3, 5, 9, 10, 11, 12, 13, 15, 16, 17, 18, 20, 22, 23, 25, 28, 33, 40,
-      42, 44, 45, 50, 51, 57, 65, 70, 77, 78,
+      1, 2, 3, 5, 9, 10, 11, 12, 13, 15, 16, 17, 18, 20, 22, 23, 25, 28, 33, 40, 42, 44, 45, 50, 51,
+      57, 65, 70, 77, 78,
     ].forEach((nip) => {
       expect(info.supported_nips).toContain(nip);
     });
