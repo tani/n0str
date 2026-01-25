@@ -145,4 +145,4 @@ vite.config.ts.timestamp-*
 *.db-wal
 
 # Nostra
-nostra
+nostra-*

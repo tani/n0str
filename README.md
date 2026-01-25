@@ -53,11 +53,31 @@ Nostra currently supports a wide range of Nostr Implementation Possibilities (NI
 
 ## Getting Started
 
+### Quick Start with Nightly Binary
+
+You can download the latest pre-compiled binary from the [Releases](https://github.com/tani/nostra/releases/tag/nightly) page.
+
+**Linux / macOS:**
+
+```bash
+# Download the binary for your platform (e.g., linux-x64)
+chmod +x nostra-linux-x64
+./nostra-linux-x64
+```
+
+**Windows:**
+
+Download `nostra-win-x64.exe` and run it from the terminal.
+
+```powershell
+.\nostra-win-x64.exe
+```
+
 ### Prerequisites
 
 - [Bun](https://bun.sh/) (v1.3.5 or later)
 
-### Installation
+### Installation from Source
 
 1. Clone the repository:
 

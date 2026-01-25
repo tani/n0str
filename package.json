@@ -9,7 +9,10 @@
     "lint": "oxlint",
     "format": "oxfmt src/ test/",
     "prepare": "bun x simple-git-hooks",
-    "compile": "bun build --compile index.ts --outfile nostra"
+    "compile": "bun run compile:linux && bun run compile:mac && bun run compile:win",
+    "compile:linux": "bun build --compile index.ts --target bun-linux-x64 --outfile nostra-linux-x64",
+    "compile:mac": "bun build --compile index.ts --target bun-macos-x64 --outfile nostra-macos-x64",
+    "compile:win": "bun build --compile index.ts --target bun-windows-x64 --outfile nostra-win-x64.exe"
   },
   "simple-git-hooks": {
     "pre-commit": "bun run format && bun run lint",
