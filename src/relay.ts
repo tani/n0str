@@ -12,13 +12,12 @@ import { handleAuth } from "./handlers/auth.ts";
 
 const clients = new Set<ServerWebSocket<ClientData>>();
 
+export async function runCleanupTick() {
+  await cleanupExpiredEvents().catch(console.error);
+}
+
 // Periodic cleanup
-setInterval(
-  () => {
-    cleanupExpiredEvents().catch(console.error);
-  },
-  60 * 60 * 1000,
-); // Hourly
+setInterval(runCleanupTick, 60 * 60 * 1000); // Hourly
 
 export const relay = {
   port: 3000,

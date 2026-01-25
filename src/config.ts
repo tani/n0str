@@ -51,26 +51,30 @@ export const RelayInfoSchema = z.object({
   }),
 });
 
-let loadedRelayInfo = defaultRelayInfo;
+export function loadRelayInfo(configPath: string = "nostra.json", logger = console) {
+  let loadedRelayInfo = defaultRelayInfo;
 
-try {
-  if (fs.existsSync("nostra.json")) {
-    const fileContent = fs.readFileSync("nostra.json", "utf-8");
-    const rawConfig = JSON.parse(fileContent);
-    const parsed = RelayInfoSchema.safeParse(rawConfig);
-    if (!parsed.success) {
-      console.error("Invalid configuration in nostra.json:", parsed.error.format());
-      loadedRelayInfo = defaultRelayInfo;
+  try {
+    if (fs.existsSync(configPath)) {
+      const fileContent = fs.readFileSync(configPath, "utf-8");
+      const rawConfig = JSON.parse(fileContent);
+      const parsed = RelayInfoSchema.safeParse(rawConfig);
+      if (!parsed.success) {
+        logger.error("Invalid configuration in nostra.json:", parsed.error.format());
+        loadedRelayInfo = defaultRelayInfo;
+      } else {
+        loadedRelayInfo = { ...defaultRelayInfo, ...parsed.data };
+        logger.log("Loaded configuration from nostra.json");
+      }
     } else {
-      loadedRelayInfo = { ...defaultRelayInfo, ...parsed.data };
-      console.log("Loaded configuration from nostra.json");
+      logger.log("nostra.json not found, using default configuration");
     }
-  } else {
-    console.log("nostra.json not found, using default configuration");
+  } catch (e) {
+    logger.error("Failed to load nostra.json:", e);
+    loadedRelayInfo = defaultRelayInfo;
   }
-} catch (e) {
-  console.error("Failed to load nostra.json:", e);
-  loadedRelayInfo = defaultRelayInfo;
+
+  return loadedRelayInfo;
 }
 
-export const relayInfo = loadedRelayInfo;
+export const relayInfo = loadRelayInfo();

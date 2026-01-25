@@ -82,6 +82,19 @@ describe("Database", () => {
     expect(until1500[0]!.id).toBe("1");
   });
 
+  test("queryEvents respects limit", async () => {
+    await saveEvent(sampleEvent);
+    await saveEvent({
+      ...sampleEvent,
+      id: "2",
+      created_at: 2000,
+      kind: 2,
+    });
+    const limited = await queryEvents({ limit: 1 });
+    expect(limited).toHaveLength(1);
+    expect(limited[0]!.id).toBe("2");
+  });
+
   test("duplicate save ignored", async () => {
     await saveEvent(sampleEvent);
     await saveEvent(sampleEvent);

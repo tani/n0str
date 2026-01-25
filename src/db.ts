@@ -91,9 +91,12 @@ function buildWhereClause(filter: Filter) {
   }
 
   if (filter.search) {
-    appendClause(clauses, params, "events.id IN (SELECT id FROM events_fts WHERE events_fts MATCH ?)", [
-      filter.search,
-    ]);
+    appendClause(
+      clauses,
+      params,
+      "events.id IN (SELECT id FROM events_fts WHERE events_fts MATCH ?)",
+      [filter.search],
+    );
   }
 
   for (const [key, values] of Object.entries(filter)) {
