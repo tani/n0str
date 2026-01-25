@@ -61,12 +61,8 @@ export const relay = {
       clients.add(ws);
       ws.send(JSON.stringify(["AUTH", ws.data.challenge]));
     },
-    async message(
-      ws: ServerWebSocket<ClientData>,
-      rawMessage: string | Buffer,
-    ) {
-      const messageStr =
-        typeof rawMessage === "string" ? rawMessage : rawMessage.toString();
+    async message(ws: ServerWebSocket<ClientData>, rawMessage: string | Buffer) {
+      const messageStr = typeof rawMessage === "string" ? rawMessage : rawMessage.toString();
       if (messageStr.length > relayInfo.limitation.max_message_length) {
         ws.send(JSON.stringify(["NOTICE", "error: message too large"]));
         return;
