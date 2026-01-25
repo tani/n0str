@@ -1,8 +1,32 @@
 type LogFn = (msg: string | TemplateStringsArray, ...args: any[]) => void;
 
-function createLogFn(level: "debug" | "info" | "warn" | "error" | "trace"): LogFn {
+const LOG_LEVELS = {
+  trace: 0,
+  debug: 1,
+  info: 2,
+  warn: 3,
+  error: 4,
+} as const;
+
+type LogLevel = keyof typeof LOG_LEVELS;
+
+function getCurrentLogLevel(): number {
+  const envLevel = process.env.LOG_LEVEL?.toLowerCase();
+  if (envLevel && envLevel in LOG_LEVELS) {
+    return LOG_LEVELS[envLevel as LogLevel];
+  }
+  return LOG_LEVELS.info;
+}
+
+function createLogFn(level: LogLevel): LogFn {
   const consoleMethod = level === "trace" ? "debug" : level;
+  const levelPriority = LOG_LEVELS[level];
+
   return (msg: string | TemplateStringsArray, ...args: any[]) => {
+    if (levelPriority < getCurrentLogLevel()) {
+      return;
+    }
+
     if (Array.isArray(msg) && (msg as any).raw) {
       const strings = msg as TemplateStringsArray;
       let result = "";
