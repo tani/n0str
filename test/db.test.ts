@@ -2,7 +2,7 @@ import { expect, test, describe, beforeEach, afterEach } from "bun:test";
 import { saveEvent, queryEvents, cleanupExpiredEvents, db } from "../src/db.ts";
 import { generateSecretKey, finalizeEvent } from "nostr-tools";
 import type { Event } from "nostr-tools";
-import { unlinkSync, existsSync } from "fs";
+import { existsSync } from "fs";
 import { sql } from "drizzle-orm";
 
 describe("Database", () => {

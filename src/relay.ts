@@ -1,10 +1,4 @@
-import {
-  saveEvent,
-  queryEvents,
-  deleteEvents,
-  cleanupExpiredEvents,
-  countEvents,
-} from "./db.ts";
+import { saveEvent, queryEvents, deleteEvents, cleanupExpiredEvents, countEvents } from "./db.ts";
 import {
   parseMessage,
   validateEvent,
@@ -15,11 +9,6 @@ import {
 } from "./protocol.ts";
 import type { Event, Filter } from "nostr-tools";
 import type { ServerWebSocket } from "bun";
-
-type Subscription = {
-  id: string;
-  filters: Filter[];
-};
 
 type ClientData = {
   subscriptions: Map<string, Filter[]>;
@@ -32,13 +21,12 @@ const clients = new Set<ServerWebSocket<ClientData>>();
 
 const relayInfo = {
   name: "Nostra Relay",
-  description:
-    "A fast and lightweight Nostr relay built with Bun, SQLite, and Drizzle.",
+  description: "A fast and lightweight Nostr relay built with Bun, SQLite, and Drizzle.",
   pubkey: "bf2bee5281149c7c350f5d12ae32f514c7864ff10805182f4178538c2c421007", // Placeholder or configurable
   contact: "hi@example.com",
   supported_nips: [
-    1, 2, 3, 4, 5, 9, 10, 11, 12, 13, 15, 16, 17, 18, 20, 22, 23, 25, 28, 33,
-    40, 42, 44, 45, 50, 51, 57, 65, 78,
+    1, 2, 3, 4, 5, 9, 10, 11, 12, 13, 15, 16, 17, 18, 20, 22, 23, 25, 28, 33, 40, 42, 44, 45, 50,
+    51, 57, 65, 78,
   ],
   software: "https://github.com/tani/nostra",
   version: "0.1.0",
@@ -102,12 +90,8 @@ export const relay = {
       clients.add(ws);
       ws.send(JSON.stringify(["AUTH", ws.data.challenge]));
     },
-    async message(
-      ws: ServerWebSocket<ClientData>,
-      rawMessage: string | Buffer,
-    ) {
-      const messageStr =
-        typeof rawMessage === "string" ? rawMessage : rawMessage.toString();
+    async message(ws: ServerWebSocket<ClientData>, rawMessage: string | Buffer) {
+      const messageStr = typeof rawMessage === "string" ? rawMessage : rawMessage.toString();
       if (messageStr.length > relayInfo.limitation.max_message_length) {
         ws.send(JSON.stringify(["NOTICE", "error: message too large"]));
         return;
@@ -127,14 +111,7 @@ export const relay = {
           if (expirationTag && expirationTag[1]) {
             const exp = parseInt(expirationTag[1]);
             if (!isNaN(exp) && exp < Math.floor(Date.now() / 1000)) {
-              ws.send(
-                JSON.stringify([
-                  "OK",
-                  event.id,
-                  false,
-                  "error: event has expired",
-                ]),
-              );
+              ws.send(JSON.stringify(["OK", event.id, false, "error: event has expired"]));
               return;
             }
           }
@@ -170,12 +147,7 @@ export const relay = {
               .filter((id): id is string => typeof id === "string");
 
             if (eventIds.length > 0 || identifiers.length > 0) {
-              await deleteEvents(
-                event.pubkey,
-                eventIds,
-                identifiers,
-                event.created_at,
-              );
+              await deleteEvents(event.pubkey, eventIds, identifiers, event.created_at);
             }
           }
 
@@ -192,16 +164,8 @@ export const relay = {
         case "REQ": {
           const [subId, ...filters] = payload as [string, ...Filter[]];
 
-          if (
-            ws.data.subscriptions.size >= relayInfo.limitation.max_subscriptions
-          ) {
-            ws.send(
-              JSON.stringify([
-                "CLOSED",
-                subId,
-                "error: max subscriptions reached",
-              ]),
-            );
+          if (ws.data.subscriptions.size >= relayInfo.limitation.max_subscriptions) {
+            ws.send(JSON.stringify(["CLOSED", subId, "error: max subscriptions reached"]));
             return;
           }
 
@@ -234,11 +198,7 @@ export const relay = {
         }
         case "AUTH": {
           const authEvent = payload[0] as Event;
-          const result = validateAuthEvent(
-            authEvent,
-            ws.data.challenge,
-            ws.data.relayUrl,
-          );
+          const result = validateAuthEvent(authEvent, ws.data.challenge, ws.data.relayUrl);
 
           if (!result.ok) {
             ws.send(JSON.stringify(["OK", authEvent.id, false, result.reason]));

@@ -30,13 +30,9 @@ db.run(sql`
   );
 `);
 db.run(sql`CREATE INDEX IF NOT EXISTS idx_events_pubkey ON events(pubkey);`);
-db.run(
-  sql`CREATE INDEX IF NOT EXISTS idx_events_created_at ON events(created_at);`,
-);
+db.run(sql`CREATE INDEX IF NOT EXISTS idx_events_created_at ON events(created_at);`);
 db.run(sql`CREATE INDEX IF NOT EXISTS idx_events_kind ON events(kind);`);
-db.run(
-  sql`CREATE INDEX IF NOT EXISTS idx_tags_name_value ON tags(name, value);`,
-);
+db.run(sql`CREATE INDEX IF NOT EXISTS idx_tags_name_value ON tags(name, value);`);
 
 // NIP-50: FTS5 Search Capability (Internal content for reliability)
 db.run(sql`
@@ -63,14 +59,8 @@ export async function saveEvent(event: Event) {
   await db.transaction(async (tx) => {
     if (isReplaceable(event.kind)) {
       const existing = await tx.query.events.findFirst({
-        where: and(
-          eq(schema.events.kind, event.kind),
-          eq(schema.events.pubkey, event.pubkey),
-        ),
-        orderBy: (events, { desc }) => [
-          desc(events.created_at),
-          desc(events.id),
-        ],
+        where: and(eq(schema.events.kind, event.kind), eq(schema.events.pubkey, event.pubkey)),
+        orderBy: (events, { desc }) => [desc(events.created_at), desc(events.id)],
       });
 
       if (existing) {
@@ -90,10 +80,7 @@ export async function saveEvent(event: Event) {
           eq(schema.events.pubkey, event.pubkey),
           sql`id IN (SELECT event_id FROM tags WHERE name = 'd' AND value = ${dTag})`,
         ),
-        orderBy: (events, { desc }) => [
-          desc(events.created_at),
-          desc(events.id),
-        ],
+        orderBy: (events, { desc }) => [desc(events.created_at), desc(events.id)],
       });
 
       if (existing) {
@@ -142,12 +129,7 @@ export async function deleteEvents(
     if (eventIds.length > 0) {
       await tx
         .delete(schema.events)
-        .where(
-          and(
-            inArray(schema.events.id, eventIds),
-            eq(schema.events.pubkey, pubkey),
-          ),
-        );
+        .where(and(inArray(schema.events.id, eventIds), eq(schema.events.pubkey, pubkey)));
     }
 
     // Delete by identifiers (a tags: kind:pubkey:d-identifier)
@@ -197,13 +179,10 @@ function getFilterConditions(filter: Filter) {
   );
 
   if (filter.ids) conditions.push(inArray(schema.events.id, filter.ids));
-  if (filter.authors)
-    conditions.push(inArray(schema.events.pubkey, filter.authors));
+  if (filter.authors) conditions.push(inArray(schema.events.pubkey, filter.authors));
   if (filter.kinds) conditions.push(inArray(schema.events.kind, filter.kinds));
-  if (filter.since !== undefined)
-    conditions.push(gte(schema.events.created_at, filter.since));
-  if (filter.until !== undefined)
-    conditions.push(lte(schema.events.created_at, filter.until));
+  if (filter.since !== undefined) conditions.push(gte(schema.events.created_at, filter.since));
+  if (filter.until !== undefined) conditions.push(lte(schema.events.created_at, filter.until));
 
   if (filter.search) {
     conditions.push(

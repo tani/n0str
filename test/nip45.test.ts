@@ -1,12 +1,4 @@
-import {
-  expect,
-  test,
-  describe,
-  beforeAll,
-  afterAll,
-  beforeEach,
-  afterEach,
-} from "bun:test";
+import { expect, test, describe, beforeAll, beforeEach, afterEach } from "bun:test";
 import { relay } from "../src/relay.ts";
 import { db } from "../src/db.ts";
 import { generateSecretKey, finalizeEvent } from "nostr-tools";

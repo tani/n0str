@@ -1,12 +1,4 @@
-import {
-  expect,
-  test,
-  describe,
-  beforeAll,
-  afterAll,
-  beforeEach,
-  afterEach,
-} from "bun:test";
+import { expect, test, describe, beforeAll, beforeEach, afterEach } from "bun:test";
 import { relay } from "../src/relay.ts";
 import { db, queryEvents } from "../src/db.ts";
 import { generateSecretKey, getPublicKey, finalizeEvent } from "nostr-tools";
@@ -206,10 +198,9 @@ describe("Event Treatment (NIP-01)", () => {
     // 5. Should still have 2, but one updated
     const finalStored = await queryEvents({ kinds: [30000] });
     expect(finalStored).toHaveLength(2);
-    expect(
-      finalStored.find((e) => e.tags.find((t) => t[0] === "d" && t[1] === "a"))
-        ?.content,
-    ).toBe("content-a-updated");
+    expect(finalStored.find((e) => e.tags.find((t) => t[0] === "d" && t[1] === "a"))?.content).toBe(
+      "content-a-updated",
+    );
 
     ws.close();
   });

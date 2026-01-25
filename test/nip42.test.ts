@@ -1,14 +1,6 @@
-import {
-  expect,
-  test,
-  describe,
-  beforeAll,
-  afterAll,
-  beforeEach,
-  afterEach,
-} from "bun:test";
+import { expect, test, describe, beforeEach, afterEach } from "bun:test";
 import { relay } from "../src/relay.ts";
-import { finalizeEvent, generateSecretKey, getPublicKey } from "nostr-tools";
+import { finalizeEvent, generateSecretKey } from "nostr-tools";
 
 describe("NIP-42 Authentication", () => {
   let server: any;
@@ -24,7 +16,6 @@ describe("NIP-42 Authentication", () => {
   });
 
   const sk = generateSecretKey();
-  const pk = getPublicKey(sk);
 
   test("Client receives challenge on connect", async () => {
     const ws = new WebSocket(url);

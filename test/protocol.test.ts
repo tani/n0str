@@ -68,9 +68,7 @@ describe("Protocol", () => {
     // However, I can check the reason string.
 
     expect(validateEvent(event, 10).reason).not.toContain("pow");
-    expect(validateEvent(event, 25).reason).toContain(
-      "pow: difficulty 20 is less than 25",
-    );
+    expect(validateEvent(event, 25).reason).toContain("pow: difficulty 20 is less than 25");
 
     // Target commitment match
     const eventWithTarget = { ...event, tags: [["nonce", "1", "25"]] };
@@ -143,9 +141,7 @@ describe("Protocol", () => {
       );
       const res = validateAuthEvent(event, "challenge", "ws://localhost");
       expect(res.ok).toBe(false);
-      expect(res.reason).toBe(
-        "invalid: created_at is too far from current time",
-      );
+      expect(res.reason).toBe("invalid: created_at is too far from current time");
     });
 
     test("missing relay tag", () => {

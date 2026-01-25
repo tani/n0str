@@ -1,12 +1,4 @@
-import {
-  expect,
-  test,
-  describe,
-  beforeAll,
-  afterAll,
-  beforeEach,
-  afterEach,
-} from "bun:test";
+import { expect, test, describe, beforeAll, beforeEach, afterEach } from "bun:test";
 import { relay } from "../src/relay.ts";
 import { db } from "../src/db.ts";
 import { generateSecretKey, getPublicKey, finalizeEvent } from "nostr-tools";
@@ -230,13 +222,7 @@ describe("NIP-01 Core Relay", () => {
 
     // Test multiple tag filters
     const subId = "nip12-sub";
-    ws.send(
-      JSON.stringify([
-        "REQ",
-        subId,
-        { "#t": ["nostr"], "#p": ["some-pubkey"] },
-      ]),
-    );
+    ws.send(JSON.stringify(["REQ", subId, { "#t": ["nostr"], "#p": ["some-pubkey"] }]));
 
     const response = await new Promise<any>((resolve) => {
       ws.onmessage = (e) => {

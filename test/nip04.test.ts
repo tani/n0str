@@ -1,14 +1,6 @@
-import {
-  expect,
-  test,
-  describe,
-  beforeAll,
-  afterAll,
-  beforeEach,
-  afterEach,
-} from "bun:test";
+import { expect, test, describe, beforeAll, beforeEach, afterEach } from "bun:test";
 import { relay } from "../src/relay.ts";
-import { db, queryEvents } from "../src/db.ts";
+import { db } from "../src/db.ts";
 import { generateSecretKey, getPublicKey, finalizeEvent } from "nostr-tools";
 import { sql } from "drizzle-orm";
 

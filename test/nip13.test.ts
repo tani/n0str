@@ -1,21 +1,11 @@
-import {
-  expect,
-  test,
-  describe,
-  beforeAll,
-  afterAll,
-  beforeEach,
-  afterEach,
-} from "bun:test";
+import { test, describe, beforeAll, beforeEach, afterEach } from "bun:test";
 import { relay } from "../src/relay.ts";
 import { db } from "../src/db.ts";
-import { generateSecretKey, finalizeEvent } from "nostr-tools";
 import { sql } from "drizzle-orm";
 
 describe("NIP-13 Proof of Work", () => {
   const dbPath = "nostra.nip13.test.db";
   let server: any;
-  let url: string;
 
   beforeAll(() => {
     process.env.DATABASE_PATH = dbPath;
@@ -25,7 +15,6 @@ describe("NIP-13 Proof of Work", () => {
     await db.run(sql`DELETE FROM events`);
     await db.run(sql`DELETE FROM tags`);
     server = Bun.serve({ ...relay, port: 0 });
-    url = `ws://localhost:${server.port}`;
   });
 
   afterEach(() => {

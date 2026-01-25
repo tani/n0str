@@ -1,12 +1,4 @@
-import {
-  expect,
-  test,
-  describe,
-  beforeAll,
-  afterAll,
-  beforeEach,
-  afterEach,
-} from "bun:test";
+import { expect, test, describe, beforeAll, beforeEach, afterEach } from "bun:test";
 import { relay } from "../src/relay.ts";
 import { db, queryEvents } from "../src/db.ts";
 import { generateSecretKey, getPublicKey, finalizeEvent } from "nostr-tools";
@@ -44,7 +36,6 @@ describe("NIP-09 Event Deletion", () => {
   const sk1 = generateSecretKey();
   const pk1 = getPublicKey(sk1);
   const sk2 = generateSecretKey();
-  const pk2 = getPublicKey(sk2);
 
   test("Delete event by author", async () => {
     const ws = new WebSocket(url);

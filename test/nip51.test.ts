@@ -1,12 +1,4 @@
-import {
-  expect,
-  test,
-  describe,
-  beforeAll,
-  afterAll,
-  beforeEach,
-  afterEach,
-} from "bun:test";
+import { expect, test, describe, beforeAll, beforeEach, afterEach } from "bun:test";
 import { relay } from "../src/relay.ts";
 import { db, queryEvents } from "../src/db.ts";
 import { generateSecretKey, getPublicKey, finalizeEvent } from "nostr-tools";
@@ -52,10 +44,7 @@ describe("NIP-51: Lists", () => {
     const now = Math.floor(Date.now() / 1000);
     const kind = 10000; // Mute list
 
-    const e1 = finalizeEvent(
-      { kind, created_at: now, tags: [], content: "" },
-      sk,
-    );
+    const e1 = finalizeEvent({ kind, created_at: now, tags: [], content: "" }, sk);
     ws.send(JSON.stringify(["EVENT", e1]));
     await new Promise((resolve) => {
       ws.onmessage = (e) => {
@@ -63,10 +52,7 @@ describe("NIP-51: Lists", () => {
       };
     });
 
-    const e2 = finalizeEvent(
-      { kind, created_at: now + 1, tags: [], content: "list content" },
-      sk,
-    );
+    const e2 = finalizeEvent({ kind, created_at: now + 1, tags: [], content: "list content" }, sk);
     ws.send(JSON.stringify(["EVENT", e2]));
     await new Promise((resolve) => {
       ws.onmessage = (e) => {
