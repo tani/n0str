@@ -1,6 +1,5 @@
 import { SQL } from "bun";
-
-const dbPath = process.env.DATABASE_PATH || "n0str.db";
+import { config } from "./args.ts";
 
 /**
  * Database instance using Bun's SQL client with SQLite.
@@ -8,7 +7,7 @@ const dbPath = process.env.DATABASE_PATH || "n0str.db";
  */
 export const db = new SQL({
   adapter: "sqlite",
-  filename: dbPath,
+  filename: config.dbPath,
 });
 
 await db`PRAGMA foreign_keys = ON`;

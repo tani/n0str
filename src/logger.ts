@@ -1,3 +1,5 @@
+import { args } from "./args.ts";
+
 type LogFn = (msg: string | TemplateStringsArray, ...args: any[]) => void;
 
 const LOG_LEVELS = {
@@ -11,7 +13,7 @@ const LOG_LEVELS = {
 type LogLevel = keyof typeof LOG_LEVELS;
 
 function getCurrentLogLevel(): number {
-  const envLevel = process.env.LOG_LEVEL?.toLowerCase();
+  const envLevel = (args.logLevel ?? process.env.LOG_LEVEL ?? "info").toLowerCase();
   if (envLevel && envLevel in LOG_LEVELS) {
     return LOG_LEVELS[envLevel as LogLevel];
   }

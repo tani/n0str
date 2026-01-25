@@ -14,6 +14,7 @@ import { handleAuth } from "./handlers/auth.ts";
 import { handleNegOpen, handleNegMsg, handleNegClose } from "./handlers/neg.ts";
 
 import { logger } from "./logger.ts";
+import { config } from "./args.ts";
 
 const clients = new Set<ServerWebSocket<ClientData>>();
 
@@ -31,7 +32,7 @@ setInterval(runCleanupTick, 60 * 60 * 1000); // Hourly
  * Bun.serve compatible relay object containing fetch and websocket handlers.
  */
 export const relay = {
-  port: parseInt(process.env.PORT || "3000"),
+  port: config.port,
   fetch(req: Request, server: any) {
     if (req.headers.get("Upgrade")?.toLowerCase() === "websocket") {
       const challenge = crypto.randomUUID();
@@ -62,7 +63,7 @@ export const relay = {
       });
     }
 
-    return new Response("n0str Relay (ws://localhost:3000)");
+    return new Response(`n0str Relay (ws://localhost:${config.port})`);
   },
   websocket: {
     open(ws: ServerWebSocket<ClientData>) {
