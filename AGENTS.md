@@ -73,10 +73,10 @@
   * `src/db.ts`: Initializes the SQLite connection and schema (including FTS5 triggers).
   * `src/repository.ts`: Encapsulates all data access logic (saving events, querying, NIP-09 deletion, NIP-40 expiration).
 * **Logging:**
-  * Uses `@logtape/logtape` for structured logging.
-  * **Style:** Use tagged template literals (e.g., `void logger.debug\`Message\``) for pretty-printing structures.
+  * Uses `console` wrappers for logging.
+  * **Style:** Use tagged template literals (e.g., `void logger.debug\`Message\``) or standard calls (e.g., `logger.info("Message")`).
   * **Levels:**
-    * `trace`: detailed per-message/per-query logs.
+    * `trace`: detailed per-message/per-query logs (mapped to `console.debug`).
     * `debug`: state changes, validation failures, client auth.
     * `info`: startup config, periodic maintenance summary.
     * `warn`: protocol violations, resource limits.
@@ -93,5 +93,5 @@
 * `src/repository.ts`: Data Access Layer.
 * `src/handlers/`: Request handlers for specific commands (EVENT, REQ, COUNT, etc.).
 * `src/nostr.ts`: Nostr protocol utilities (validation, types).
-* `src/logger.ts`: Logger configuration.
+* `src/logger.ts`: Logger implementation.
 * `test/`: Contains integration/unit tests for various NIPs.

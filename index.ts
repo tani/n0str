@@ -1,8 +1,6 @@
 import { relay } from "./src/server.ts";
-import { setupLogger, logger } from "./src/logger.ts";
-
-await setupLogger();
+import { logger } from "./src/logger.ts";
 
 const server = Bun.serve(relay);
 
-logger.info(`n0str relay listening on ws://localhost:${server.port}`);
+void logger.info`n0str relay listening on ws://localhost:${server.port}`;
