@@ -27,15 +27,11 @@ type EventWithTagRow = EventRow & {
 };
 
 type SqlCondition = { sql: string; params: unknown[] };
-type FilterCondition =
-  | SqlCondition
-  | { col: string; val: unknown; op?: string };
+type FilterCondition = SqlCondition | { col: string; val: unknown; op?: string };
 
 function toSqlCondition(c: FilterCondition): SqlCondition[] {
-  if ("sql" in c)
-    return c.params.length > 0 || c.sql.includes("expiration") ? [c] : [];
-  if (c.val === undefined || (Array.isArray(c.val) && c.val.length === 0))
-    return [];
+  if ("sql" in c) return c.params.length > 0 || c.sql.includes("expiration") ? [c] : [];
+  if (c.val === undefined || (Array.isArray(c.val) && c.val.length === 0)) return [];
   if (Array.isArray(c.val)) {
     return [
       {
@@ -102,10 +98,7 @@ function isOlderEvent(candidate: Event, existing: ExistingRow) {
   );
 }
 
-async function findExisting(
-  tx: typeof db,
-  event: Event,
-): Promise<ExistingRow | undefined> {
+async function findExisting(tx: typeof db, event: Event): Promise<ExistingRow | undefined> {
   if (isReplaceable(event.kind)) {
     return (
       await tx<ExistingRow[]>`
