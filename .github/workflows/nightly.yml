@@ -37,5 +37,7 @@ jobs:
           title: "Nightly Build"
           files: |
             n0str-linux-x64
+            n0str-linux-arm64
             n0str-macos-x64
+            n0str-macos-arm64
             n0str-win-x64.exe

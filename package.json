@@ -9,7 +9,7 @@
     "lint": "oxlint",
     "format": "oxfmt src/ test/",
     "prepare": "bun x simple-git-hooks",
-    "compile": "echo linux-x64 macos-x64 windows-x64 | xargs -I% -n 1 bun build --compile index.ts --target bun-% --outfile n0str-%"
+    "compile": "echo linux-x64 linux-arm64 macos-x64 macos-arm64 windows-x64 | xargs -I% -n 1 bun build --compile index.ts --target bun-% --outfile n0str-%"
   },
   "simple-git-hooks": {
     "pre-commit": "bun run format && bun run lint",
