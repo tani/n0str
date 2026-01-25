@@ -1,4 +1,4 @@
-import { describe, expect, test } from "bun:test";
+import { describe, expect, test, spyOn } from "bun:test";
 import { generateSecretKey, finalizeEvent } from "nostr-tools";
 import { relayInfo } from "../src/config.ts";
 
@@ -72,6 +72,26 @@ describe("relay coverage", () => {
     await relay.websocket.message(ws, JSON.stringify(["AUTH", { id: "bad", kind: 1, tags: [] }]));
     expect(sent.some((msg) => msg.includes('"OK"'))).toBe(true);
 
+    // Cover default branch in match (unreachable with current ClientMessageSchema,
+    // but good to have for robustness if schema changes)
+    await relay.websocket.message(ws, JSON.stringify(["UNKNOWN", "something"]));
+
     relay.websocket.close(ws);
+    expect(relay.websocket.close).toBeDefined();
+  });
+
+  test("runCleanupTick coverage", async () => {
+    const serverModule = await import("../src/server.ts");
+    const repo = await import("../src/repository.ts");
+
+    // Success path
+    await serverModule.runCleanupTick();
+
+    // Error path
+    const spy = spyOn(repo, "cleanupExpiredEvents").mockImplementation(async () => {
+      throw new Error("db error");
+    });
+    await serverModule.runCleanupTick();
+    spy.mockRestore();
   });
 });

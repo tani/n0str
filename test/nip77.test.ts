@@ -100,13 +100,57 @@ describe("NIP-77 Negentropy Syncing", () => {
     await new Promise((resolve) => (ws.onopen = resolve));
 
     const subId = "sync3";
-    ws.send(JSON.stringify(["NEG-OPEN", subId, {}, ""])); // Invalid hex but should trigger handler or error
-    // sending valid hex just in case
+
+    // Test invalid initial message
+    ws.send(JSON.stringify(["NEG-OPEN", subId, {}, "invalid hex"]));
+    const errResponse = await new Promise<any>((resolve) => {
+      ws.onmessage = (e) => {
+        const msg = JSON.parse(e.data);
+        if (msg[0] === "NEG-ERR" && msg[1] === subId) resolve(msg);
+      };
+    });
+    expect(errResponse[0]).toBe("NEG-ERR");
+
+    // Re-open with valid message
     const storage = new NegentropyStorageVector();
     storage.seal();
     const neg = new Negentropy(storage);
     const initMsg = await neg.initiate();
     ws.send(JSON.stringify(["NEG-OPEN", subId, {}, initMsg]));
+
+    // Re-open same subId (should log 'Replacing existing neg subscription')
+    ws.send(JSON.stringify(["NEG-OPEN", subId, {}, initMsg]));
+
+    // Test NEG-MSG for unknown sub
+    ws.send(JSON.stringify(["NEG-MSG", "unknown-sub", "00"]));
+    const unknownSubErr = await new Promise<any>((resolve) => {
+      const originalOnMessage = ws.onmessage;
+      ws.onmessage = (e) => {
+        const msg = JSON.parse(e.data);
+        if (msg[0] === "NEG-ERR" && msg[1] === "unknown-sub") {
+          ws.onmessage = originalOnMessage;
+          resolve(msg);
+        }
+      };
+    });
+    expect(unknownSubErr[2]).toContain("subscription not found");
+
+    // Test valid NEG-MSG
+    ws.send(JSON.stringify(["NEG-MSG", subId, initMsg]));
+
+    // Test invalid NEG-MSG (to trigger catch block)
+    ws.send(JSON.stringify(["NEG-MSG", subId, "invalid hex"]));
+    const negMsgErr = await new Promise<any>((resolve) => {
+      const originalOnMessage = ws.onmessage;
+      ws.onmessage = (e) => {
+        const msg = JSON.parse(e.data);
+        if (msg[0] === "NEG-ERR" && msg[1] === subId) {
+          ws.onmessage = originalOnMessage;
+          resolve(msg);
+        }
+      };
+    });
+    expect(negMsgErr[0]).toBe("NEG-ERR");
 
     // Just ensure server doesn't crash on CLOSE
     ws.send(JSON.stringify(["NEG-CLOSE", subId]));

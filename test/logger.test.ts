@@ -99,4 +99,28 @@ describe("logger", () => {
     void logger.info`info`;
     expect(infoSpy).toHaveBeenCalled();
   });
+
+  test("handles Error objects", () => {
+    const err = new Error("test error");
+    void logger.error`Got error: ${err}`;
+    expect(errorSpy).toHaveBeenCalledWith(expect.stringContaining("test error"));
+  });
+
+  test("handles JSON objects", () => {
+    const obj = { foo: "bar" };
+    void logger.info`Data: ${obj}`;
+    expect(infoSpy).toHaveBeenCalledWith(expect.stringContaining('{"foo":"bar"}'));
+  });
+
+  test("handles circular JSON objects", () => {
+    const obj: any = { foo: "bar" };
+    obj.self = obj;
+    void logger.info`Data: ${obj}`;
+    expect(infoSpy).toHaveBeenCalledWith(expect.stringContaining("[object Object]"));
+  });
+
+  test("handles direct log calls", () => {
+    logger.info("direct log", { foo: "bar" });
+    expect(infoSpy).toHaveBeenCalledWith("direct log", { foo: "bar" });
+  });
 });
