@@ -4,15 +4,15 @@
   "type": "module",
   "private": true,
   "scripts": {
+    "typecheck": "tsc --noEmit",
+    "start": "bun run index.ts",
     "lint": "oxlint",
     "format": "oxfmt src/ test/"
   },
   "devDependencies": {
     "@types/bun": "^1.3.6",
     "oxfmt": "^0.26.0",
-    "oxlint": "^1.41.0"
-  },
-  "peerDependencies": {
+    "oxlint": "^1.41.0",
     "typescript": "^5"
   },
   "dependencies": {
