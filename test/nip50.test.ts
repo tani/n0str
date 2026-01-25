@@ -129,12 +129,28 @@ describe("NIP-50 Search Capability", () => {
 
     const cases = [
       { lang: "en", content: "Full text search works reliably in English.", query: "search" },
-      { lang: "es", content: "La búsqueda de texto completo funciona bien en español.", query: "búsqueda" },
-      { lang: "fr", content: "La recherche en texte intégral fonctionne en français.", query: "recherche" },
-      { lang: "de", content: "Die Volltextsuche funktioniert zuverlässig auf Deutsch.", query: "Volltextsuche" },
+      {
+        lang: "es",
+        content: "La búsqueda de texto completo funciona bien en español.",
+        query: "búsqueda",
+      },
+      {
+        lang: "fr",
+        content: "La recherche en texte intégral fonctionne en français.",
+        query: "recherche",
+      },
+      {
+        lang: "de",
+        content: "Die Volltextsuche funktioniert zuverlässig auf Deutsch.",
+        query: "Volltextsuche",
+      },
       { lang: "it", content: "La ricerca full text funziona bene in italiano.", query: "ricerca" },
       { lang: "pt", content: "A busca de texto completo funciona em português.", query: "busca" },
-      { lang: "ru", content: "Полнотекстовый поиск работает надежно на русском языке.", query: "поиск" },
+      {
+        lang: "ru",
+        content: "Полнотекстовый поиск работает надежно на русском языке.",
+        query: "поиск",
+      },
       { lang: "ja", content: "日本語の全文検索をテストします。", query: "全文検索" },
       { lang: "zh", content: "我们正在测试全文搜索功能。", query: "搜索" },
       { lang: "ko", content: "한국어 검색 기능을 테스트합니다.", query: "검색" },
@@ -195,8 +211,16 @@ describe("NIP-50 Search Capability", () => {
       { lang: "hi", content: "हिंदी में पूर्ण-पाठ खोज अच्छी तरह काम करती है।", query: "खोज" },
       { lang: "th", content: "เรากำลังทดสอบการค้นหาแบบข้อความเต็มภาษาไทย", query: "ค้นหา" },
       { lang: "tr", content: "Türkçe tam metin arama güvenilir şekilde çalışır.", query: "arama" },
-      { lang: "nl", content: "Volledige-tekstreeks werkt goed in het Nederlands.", query: "Volledige" },
-      { lang: "id", content: "Pencarian teks lengkap bekerja dengan baik dalam Bahasa Indonesia.", query: "Pencarian" },
+      {
+        lang: "nl",
+        content: "Volledige-tekstreeks werkt goed in het Nederlands.",
+        query: "Volledige",
+      },
+      {
+        lang: "id",
+        content: "Pencarian teks lengkap bekerja dengan baik dalam Bahasa Indonesia.",
+        query: "Pencarian",
+      },
     ];
 
     for (const item of cases) {
