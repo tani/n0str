@@ -4,6 +4,7 @@ import { relay } from "../src/relay.ts";
 import { db } from "../src/db.ts";
 import { generateSecretKey, finalizeEvent } from "nostr-tools";
 import { sql } from "drizzle-orm";
+import type { Server } from "bun";
 
 const consumeAuth = (ws: WebSocket) =>
   Effect.async<string>((resume) => {
@@ -15,7 +16,7 @@ const consumeAuth = (ws: WebSocket) =>
 
 describe("NIP-45 Event Counts", () => {
   const dbPath = "nostra.nip45.test.db";
-  let server: any;
+  let server: Server;
   let url: string;
 
   beforeAll(() => {
@@ -64,15 +65,18 @@ describe("NIP-45 Event Counts", () => {
       const subId = "count-sub";
       ws.send(JSON.stringify(["COUNT", subId, { kinds: [1] }]));
 
-      const response = yield* Effect.async<any>((resume) => {
+      const response = yield* Effect.async<unknown>((resume) => {
         ws.onmessage = (e) => {
           const msg = JSON.parse(e.data);
           if (msg[0] === "COUNT") resume(Effect.succeed(msg));
         };
       });
 
+      // @ts-expect-error - response is unknown
       expect(response[0]).toBe("COUNT");
+      // @ts-expect-error - response is unknown
       expect(response[1]).toBe(subId);
+      // @ts-expect-error - response is unknown
       expect(response[2].count).toBe(3);
 
       ws.close();

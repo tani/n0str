@@ -5,7 +5,7 @@ import type { Filter } from "nostr-tools";
 import { queryEvents } from "../db";
 import { relayInfo } from "../config";
 
-export function handleReq(ws: ServerWebSocket<ClientData>, payload: any[]) {
+export function handleReq(ws: ServerWebSocket<ClientData>, payload: unknown[]) {
   return Effect.gen(function* () {
     const [subId, ...filters] = payload as [string, ...Filter[]];
 

@@ -2,7 +2,7 @@ import { Effect } from "effect";
 import { cleanupExpiredEvents } from "./db.ts";
 import { parseMessage } from "./protocol.ts";
 import { relayInfo } from "./config.ts";
-import type { ServerWebSocket } from "bun";
+import type { ServerWebSocket, Server } from "bun";
 import type { ClientData } from "./types.ts";
 
 import { handleEvent } from "./handlers/event.ts";
@@ -23,7 +23,7 @@ setInterval(
 
 export const relay = {
   port: 3000,
-  fetch(req: Request, server: any) {
+  fetch(req: Request, server: Server) {
     if (req.headers.get("Upgrade")?.toLowerCase() === "websocket") {
       const challenge = crypto.randomUUID();
       const url = new URL(req.url);

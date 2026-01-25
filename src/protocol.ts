@@ -78,7 +78,7 @@ export function parseMessage(data: string): ClientMessage | null {
 }
 
 export function validateEvent(
-  event: any,
+  event: unknown,
   minDifficulty: number = 0,
 ): { ok: boolean; reason?: string } {
   const result = EventSchema.safeParse(event);
@@ -122,7 +122,7 @@ export function validateEvent(
 }
 
 export function validateAuthEvent(
-  event: any,
+  event: unknown,
   challenge: string,
   relayUrl: string,
 ): { ok: boolean; reason?: string } {
