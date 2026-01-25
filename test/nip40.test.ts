@@ -90,21 +90,19 @@ describe("NIP-40 Expiration", () => {
     expect(auth[0]).toBe("AUTH");
 
     const now = Math.floor(Date.now() / 1000);
-    const event = finalizeEvent(
+    const expiredEvent = finalizeEvent(
       {
         kind: 1,
-        created_at: now,
-        tags: [["expiration", (now + 1).toString()]],
-        content: "will expire soon",
+        created_at: now - 100,
+        tags: [["expiration", (now - 50).toString()]],
+        content: "this is already expired",
       },
       sk,
     );
 
-    ws.send(JSON.stringify(["EVENT", event]));
-    const ok = await nextMsg();
-    expect(ok[0]).toBe("OK");
-
-    await new Promise((resolve) => setTimeout(resolve, 3000));
+    // Insert directly to DB to bypass handleEvent's publish-time rejection
+    const { saveEvent } = await import("../src/repository.ts");
+    await saveEvent(expiredEvent);
 
     ws.send(JSON.stringify(["REQ", "sub1", {}]));
 
