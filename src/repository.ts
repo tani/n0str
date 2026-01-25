@@ -27,15 +27,11 @@ type EventWithTagRow = EventRow & {
 };
 
 type SqlCondition = { sql: string; params: unknown[] };
-type FilterCondition =
-  | SqlCondition
-  | { col: string; val: unknown; op?: string };
+type FilterCondition = SqlCondition | { col: string; val: unknown; op?: string };
 
 function toSqlCondition(c: FilterCondition): SqlCondition[] {
-  if ("sql" in c)
-    return c.params.length > 0 || c.sql.includes("expiration") ? [c] : [];
-  if (c.val === undefined || (Array.isArray(c.val) && c.val.length === 0))
-    return [];
+  if ("sql" in c) return c.params.length > 0 || c.sql.includes("expiration") ? [c] : [];
+  if (c.val === undefined || (Array.isArray(c.val) && c.val.length === 0)) return [];
   if (Array.isArray(c.val)) {
     return [
       {
@@ -116,10 +112,7 @@ function isOlderEvent(candidate: Event, existing: ExistingRow) {
  * @param tx - Database transaction or client.
  * @param event - The event to find a replacement for.
  */
-async function findExisting(
-  tx: typeof db,
-  event: Event,
-): Promise<ExistingRow | undefined> {
+async function findExisting(tx: typeof db, event: Event): Promise<ExistingRow | undefined> {
   if (isReplaceable(event.kind)) {
     return (
       await tx<ExistingRow[]>`
@@ -312,9 +305,7 @@ export async function queryEvents(filter: Filter): Promise<Event[]> {
  * Sorted by created_at ASC, id ASC.
  * @param filter - The Nostr filter.
  */
-export async function queryEventsForSync(
-  filter: Filter,
-): Promise<ExistingRow[]> {
+export async function queryEventsForSync(filter: Filter): Promise<ExistingRow[]> {
   const { clause, params } = buildWhereClause(filter);
   const query = `
     SELECT id, created_at 

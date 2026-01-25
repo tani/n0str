@@ -3,10 +3,7 @@ import type { ClientData } from "../types.ts"; // Note the .ts extension usage i
 import { queryEventsForSync } from "../repository.ts";
 import { Negentropy } from "negentropy";
 
-export async function handleNegOpen(
-  ws: ServerWebSocket<ClientData>,
-  args: any[],
-) {
+export async function handleNegOpen(ws: ServerWebSocket<ClientData>, args: any[]) {
   const [subId, filter, initialMessage] = args;
 
   // NIP-77: "If a NEG-OPEN is issued for a currently open subscription ID, the existing subscription is first closed."
@@ -33,17 +30,12 @@ export async function handleNegOpen(
   }
 }
 
-export async function handleNegMsg(
-  ws: ServerWebSocket<ClientData>,
-  args: any[],
-) {
+export async function handleNegMsg(ws: ServerWebSocket<ClientData>, args: any[]) {
   const [subId, message] = args;
   const neg = ws.data.negSubscriptions.get(subId);
 
   if (!neg) {
-    ws.send(
-      JSON.stringify(["NEG-ERR", subId, "closed: subscription not found"]),
-    );
+    ws.send(JSON.stringify(["NEG-ERR", subId, "closed: subscription not found"]));
     return;
   }
 
