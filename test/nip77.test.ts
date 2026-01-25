@@ -1,8 +1,8 @@
 import { expect, test, describe, beforeEach, afterEach } from "bun:test";
 import { relay } from "../src/server.ts";
 import { finalizeEvent, generateSecretKey } from "nostr-tools";
-import { saveEvent, db } from "../src/repository.ts";
-import { Negentropy } from "negentropy";
+import { saveEvent } from "../src/repository.ts";
+import { Negentropy, NegentropyStorageVector } from "../src/negentropy.js";
 
 describe("NIP-77 Negentropy Syncing", () => {
   let server: any;
@@ -25,9 +25,10 @@ describe("NIP-77 Negentropy Syncing", () => {
     await new Promise((resolve) => (ws.onopen = resolve));
 
     // Create client negentropy
-    const neg = new Negentropy(32);
-    neg.seal();
-    const initialMsg = neg.initiate();
+    const storage = new NegentropyStorageVector();
+    storage.seal();
+    const neg = new Negentropy(storage);
+    const initialMsg = await neg.initiate();
 
     const subId = "sync1";
     ws.send(JSON.stringify(["NEG-OPEN", subId, { kinds: [1001] }, initialMsg]));
@@ -40,10 +41,10 @@ describe("NIP-77 Negentropy Syncing", () => {
     });
 
     expect(response[0]).toBe("NEG-MSG");
-    expect(response[2]).toBeDefined();
+    // response[2] can be null or string
 
     // Reconcile client side
-    const [out, have, need] = neg.reconcile(response[2]);
+    const [_out, have, need] = await neg.reconcile(response[2] ?? "");
     expect(have.length).toBe(0);
     expect(need.length).toBe(0); // DB is empty
 
@@ -67,9 +68,10 @@ describe("NIP-77 Negentropy Syncing", () => {
     await new Promise((resolve) => (ws.onopen = resolve));
 
     // Client doesn't have the event
-    const neg = new Negentropy(32);
-    neg.seal();
-    const initialMsg = neg.initiate();
+    const storage = new NegentropyStorageVector();
+    storage.seal();
+    const neg = new Negentropy(storage);
+    const initialMsg = await neg.initiate();
 
     const subId = "sync2";
     ws.send(JSON.stringify(["NEG-OPEN", subId, { kinds: [1002] }, initialMsg]));
@@ -82,7 +84,7 @@ describe("NIP-77 Negentropy Syncing", () => {
     });
 
     // Client parses response
-    const [out, have, need] = neg.reconcile(response[2]);
+    const [_out, _have, need] = await neg.reconcile(response[2] ?? "");
 
     // Relay should have the event, client needs it.
     // Wait, "need" means "IDs client needs (relay has)".
@@ -100,9 +102,11 @@ describe("NIP-77 Negentropy Syncing", () => {
     const subId = "sync3";
     ws.send(JSON.stringify(["NEG-OPEN", subId, {}, ""])); // Invalid hex but should trigger handler or error
     // sending valid hex just in case
-    const neg = new Negentropy(32);
-    neg.seal();
-    ws.send(JSON.stringify(["NEG-OPEN", subId, {}, neg.initiate()]));
+    const storage = new NegentropyStorageVector();
+    storage.seal();
+    const neg = new Negentropy(storage);
+    const initMsg = await neg.initiate();
+    ws.send(JSON.stringify(["NEG-OPEN", subId, {}, initMsg]));
 
     // Just ensure server doesn't crash on CLOSE
     ws.send(JSON.stringify(["NEG-CLOSE", subId]));

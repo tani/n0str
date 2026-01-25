@@ -9,7 +9,7 @@ export const defaultRelayInfo = {
   contact: "hi@example.com",
   supported_nips: [
     1, 2, 3, 5, 9, 10, 11, 12, 13, 15, 16, 17, 18, 20, 22, 23, 25, 28, 33, 40, 42, 44, 45, 50, 51,
-    57, 65, 78,
+    57, 65, 70, 77, 78,
   ],
   software: "https://github.com/tani/n0str",
   version: "0.1.0",

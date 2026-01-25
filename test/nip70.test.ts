@@ -1,12 +1,11 @@
 import { expect, test, describe, beforeEach, afterEach } from "bun:test";
 import { relay } from "../src/server.ts";
-import { finalizeEvent, generateSecretKey, getPublicKey } from "nostr-tools";
+import { finalizeEvent, generateSecretKey } from "nostr-tools";
 
 describe("NIP-70 Protected Events", () => {
   let server: any;
   let url: string;
   const sk1 = generateSecretKey();
-  const pk1 = getPublicKey(sk1);
   const sk2 = generateSecretKey();
 
   beforeEach(() => {

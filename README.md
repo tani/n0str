@@ -4,7 +4,7 @@
 
 ![License](https://img.shields.io/badge/license-AGPLv3-blue.svg)
 ![Bun](https://img.shields.io/badge/Bun-v1.3.5-black?logo=bun)
-![NIPs](https://img.shields.io/badge/NIPs-28%20Supported-purple.svg)
+![NIPs](https://img.shields.io/badge/NIPs-30%20Supported-purple.svg)
 
 ## Features
 
@@ -16,9 +16,9 @@
 - **Secure**: Implements NIP-13 (PoW), NIP-22 (Event Limits), and NIP-42 (Authentication).
 - **Type-Safe**: Fully typed with TypeScript.
 
-## Supported NIPs
+## Tested NIPs
 
-n0str currently supports a wide range of Nostr Implementation Possibilities (NIPs):
+n0str is tested against a wide range of Nostr Implementation Possibilities (NIPs):
 
 | NIP | Description | Status |
 | :--- | :--- | :--- |
@@ -49,6 +49,8 @@ n0str currently supports a wide range of Nostr Implementation Possibilities (NIP
 | **51** | Lists | Yes |
 | **57** | Lightning Zaps | Yes |
 | **65** | Relay List Metadata | Yes |
+| **70** | Protected Events | Yes |
+| **77** | Negentropy Syncing | Yes |
 | **78** | Application-specific Data | Yes |
 
 ## Getting Started

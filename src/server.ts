@@ -86,7 +86,6 @@ export const relay = {
           "'AUTH'": (m) => handleAuth(ws, [m[1]]),
           "'CLOSE'": (m) => handleClose(ws, [m[1]]),
           "'NEG-OPEN'": (m) => handleNegOpen(ws, [m[1], m[2], m[3]]),
-          // @ts-ignore
           "'NEG-MSG'": (m) => handleNegMsg(ws, [m[1], m[2]]),
           "'NEG-CLOSE'": (m) => handleNegClose(ws, [m[1]]),
           default: () => {},
