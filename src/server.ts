@@ -15,6 +15,43 @@ import { handleNegOpen, handleNegMsg, handleNegClose } from "./handlers/neg.ts";
 
 import { logger } from "./logger.ts";
 
+function renderWelcomePage(info: typeof relayInfo) {
+  return `<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>${info.name}</title>
+    <style>
+        body { font-family: system-ui, sans-serif; max-width: 800px; margin: 0 auto; padding: 2rem; line-height: 1.6; }
+        h1 { color: #333; }
+        .card { border: 1px solid #eee; border-radius: 8px; padding: 1.5rem; margin-bottom: 1rem; }
+        code { background: #f5f5f5; padding: 0.2em 0.4em; border-radius: 4px; word-break: break-all; }
+        ul { display: flex; flex-wrap: wrap; gap: 0.5rem; list-style: none; padding: 0; }
+        li { background: #e0e0e0; padding: 0.2rem 0.6rem; border-radius: 1rem; font-size: 0.9em; }
+    </style>
+</head>
+<body>
+    <h1>${info.name}</h1>
+    <p>${info.description}</p>
+
+    <div class="card">
+        <h3>Relay Information</h3>
+        <p><strong>Admin:</strong> <a href="mailto:${info.contact}">${info.contact}</a></p>
+        <p><strong>Pubkey:</strong> <code>${info.pubkey}</code></p>
+        <p><strong>Software:</strong> <a href="${info.software}">${info.software}</a> ${info.version}</p>
+    </div>
+
+    <div class="card">
+        <h3>Supported NIPs</h3>
+        <ul>
+            ${info.supported_nips.map((nip) => `<li>NIP-${nip}</li>`).join("")}
+        </ul>
+    </div>
+</body>
+</html>`;
+}
+
 const clients = new Set<ServerWebSocket<ClientData>>();
 
 /**
@@ -62,7 +99,11 @@ export const relay = {
       });
     }
 
-    return new Response("n0str Relay (ws://localhost:3000)");
+    return new Response(renderWelcomePage(relayInfo), {
+      headers: {
+        "Content-Type": "text/html",
+      },
+    });
   },
   websocket: {
     open(ws: ServerWebSocket<ClientData>) {

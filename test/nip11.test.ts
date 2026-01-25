@@ -32,6 +32,7 @@ describe("NIP-11 Relay Information Document", () => {
   test("Default HTTP Response", async () => {
     const res = await fetch(url.replace("ws://", "http://"));
     expect(res.status).toBe(200);
+    expect(res.headers.get("Content-Type")).toBe("text/html");
     const text = await res.text();
     expect(text).toContain("n0str Relay");
   });

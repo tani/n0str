@@ -41,6 +41,7 @@ describe("relay coverage", () => {
 
     const defaultReq = new Request("http://localhost/");
     const defaultResult = relay.fetch(defaultReq, failedUpgradeServer) as Response;
+    expect(defaultResult.headers.get("Content-Type")).toBe("text/html");
     expect(await defaultResult.text()).toContain("n0str Relay");
 
     await relay.websocket.message(ws, "not json");
