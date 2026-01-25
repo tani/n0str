@@ -2,6 +2,7 @@ import type { Event, Filter } from "nostr-tools";
 import { isAddressable, isReplaceable } from "./nostr.ts";
 import { db } from "./db.ts";
 import { logger } from "./logger";
+import { segmentForFts, segmentSearchQuery } from "./fts.ts";
 
 export { db };
 
@@ -66,6 +67,7 @@ function finalizeConditions(conditions: SqlCondition[]) {
  */
 function buildWhereClause(filter: Filter) {
   const now = Math.floor(Date.now() / 1000);
+  const searchQuery = filter.search ? segmentSearchQuery(filter.search) : "";
 
   const rawConditions: FilterCondition[] = [
     {
@@ -79,7 +81,7 @@ function buildWhereClause(filter: Filter) {
     { col: "events.created_at", op: "<=", val: filter.until },
     {
       sql: "events.id IN (SELECT id FROM events_fts WHERE events_fts MATCH ?)",
-      params: filter.search ? [filter.search] : [],
+      params: searchQuery ? [searchQuery] : [],
     },
     ...Object.entries(filter).flatMap(([k, v]): FilterCondition[] =>
       k.startsWith("#") && Array.isArray(v) && v.length > 0
@@ -160,10 +162,14 @@ export async function saveEvent(event: Event) {
       await tx`DELETE FROM events WHERE id = ${existing.id}`;
     }
 
-    await tx`
+    const insertResult = await tx`
       INSERT INTO events ${tx(event, "id", "pubkey", "created_at", "kind", "content", "sig")}
       ON CONFLICT DO NOTHING
     `;
+    if ((insertResult?.count ?? 0) > 0) {
+      const ftsContent = segmentForFts(event.content);
+      await tx`INSERT INTO events_fts(id, content) VALUES (${event.id}, ${ftsContent})`;
+    }
 
     const tagRows = buildTagRows(event);
     if (tagRows.length > 0) {

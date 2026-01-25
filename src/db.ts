@@ -46,11 +46,7 @@ await db`
 `;
 
 // Triggers for FTS5 sync
-await db`
-  CREATE TRIGGER IF NOT EXISTS events_ai AFTER INSERT ON events BEGIN
-    INSERT INTO events_fts(id, content) VALUES (new.id, new.content);
-  END;
-`;
+await db`DROP TRIGGER IF EXISTS events_ai`;
 
 await db`
   CREATE TRIGGER IF NOT EXISTS events_ad AFTER DELETE ON events BEGIN
