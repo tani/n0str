@@ -166,7 +166,7 @@ export async function cleanupExpiredEvents() {
   });
 }
 
-export async function queryEvents(filter: Filter): Promise<Event[]> {
+function getFilterConditions(filter: Filter) {
   const now = Math.floor(Date.now() / 1000);
   const conditions = [];
 
@@ -197,6 +197,24 @@ export async function queryEvents(filter: Filter): Promise<Event[]> {
       );
     }
   }
+  return conditions;
+}
+
+export async function countEvents(filters: Filter[]): Promise<number> {
+  let totalCount = 0;
+  for (const filter of filters) {
+    const conditions = getFilterConditions(filter);
+    const result = await db
+      .select({ count: sql<number>`count(*)` })
+      .from(schema.events)
+      .where(conditions.length > 0 ? and(...conditions) : undefined);
+    totalCount += result[0]?.count || 0;
+  }
+  return totalCount;
+}
+
+export async function queryEvents(filter: Filter): Promise<Event[]> {
+  const conditions = getFilterConditions(filter);
 
   const rows = await db.query.events.findMany({
     where: conditions.length > 0 ? and(...conditions) : undefined,

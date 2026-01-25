@@ -53,6 +53,7 @@ export function isAddressable(kind: number): boolean {
 export const ClientMessageSchema = z.union([
   z.tuple([z.literal("EVENT"), EventSchema]),
   z.tuple([z.literal("REQ"), z.string()]).rest(FilterSchema),
+  z.tuple([z.literal("COUNT"), z.string()]).rest(FilterSchema),
   z.tuple([z.literal("CLOSE"), z.string()]),
 ]);
 

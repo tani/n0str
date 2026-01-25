@@ -204,4 +204,38 @@ describe("Relay Integration", () => {
 
     ws.close();
   });
+
+  test("NIP-45: COUNT message", async () => {
+    const ws = new WebSocket(url);
+    await new Promise((resolve) => (ws.onopen = resolve));
+
+    // 1. Publish some events
+    for (let i = 0; i < 3; i++) {
+      const event = finalizeEvent(
+        {
+          kind: 1,
+          created_at: Math.floor(Date.now() / 1000),
+          tags: [],
+          content: `test ${i}`,
+        },
+        sk,
+      );
+      ws.send(JSON.stringify(["EVENT", event]));
+      await new Promise((resolve) => (ws.onmessage = resolve));
+    }
+
+    // 2. Count them
+    const subId = "count-sub";
+    ws.send(JSON.stringify(["COUNT", subId, { kinds: [1] }]));
+
+    const response = await new Promise<any>((resolve) => {
+      ws.onmessage = (e) => resolve(JSON.parse(e.data));
+    });
+
+    expect(response[0]).toBe("COUNT");
+    expect(response[1]).toBe(subId);
+    expect(response[2].count).toBe(3);
+
+    ws.close();
+  });
 });

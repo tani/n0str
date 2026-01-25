@@ -3,6 +3,7 @@ import {
   queryEvents,
   deleteEvents,
   cleanupExpiredEvents,
+  countEvents,
 } from "./db.ts";
 import {
   parseMessage,
@@ -30,8 +31,9 @@ const relayInfo = {
     "A fast and lightweight Nostr relay built with Bun, SQLite, and Drizzle.",
   pubkey: "bf2bee5281149c7c350f5d12ae32f514c7864ff10805182f4178538c2c421007", // Placeholder or configurable
   contact: "hi@example.com",
-  supported_nips: [1, 9, 11, 13, 40],
+  supported_nips: [1, 9, 11, 13, 40, 45],
   software: "https://github.com/tani/nostra",
+
   version: "0.1.0",
   limitation: {
     min_pow_difficulty: 0, // Configurable
@@ -163,6 +165,12 @@ export const relay = {
             }
           }
           ws.send(JSON.stringify(["EOSE", subId]));
+          break;
+        }
+        case "COUNT": {
+          const [subId, ...filters] = payload as [string, ...Filter[]];
+          const count = await countEvents(filters);
+          ws.send(JSON.stringify(["COUNT", subId, { count }]));
           break;
         }
         case "CLOSE": {
