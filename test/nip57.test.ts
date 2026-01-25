@@ -2,7 +2,6 @@ import { expect, test, describe, beforeAll, beforeEach, afterEach } from "bun:te
 import { relay } from "../src/relay.ts";
 import { db, queryEvents } from "../src/db.ts";
 import { generateSecretKey, finalizeEvent } from "nostr-tools";
-import { sql } from "drizzle-orm";
 
 async function consumeAuth(ws: WebSocket) {
   return new Promise((resolve) => {
@@ -23,8 +22,8 @@ describe("NIP-57: Lightning Zaps", () => {
   });
 
   beforeEach(async () => {
-    await db.run(sql`DELETE FROM events`);
-    await db.run(sql`DELETE FROM tags`);
+    await db`DELETE FROM events`;
+    await db`DELETE FROM tags`;
     server = Bun.serve({ ...relay, port: 0 });
     url = `ws://localhost:${server.port}`;
   });
@@ -60,7 +59,7 @@ describe("NIP-57: Lightning Zaps", () => {
       const stored = await queryEvents({ kinds: [kind] });
       expect(stored).toHaveLength(1);
       expect(stored[0]?.id).toBe(e.id);
-      await db.run(sql`DELETE FROM events`);
+      await db`DELETE FROM events`;
     }
 
     ws.close();

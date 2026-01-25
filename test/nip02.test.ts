@@ -2,7 +2,6 @@ import { expect, test, describe, beforeAll, beforeEach, afterEach } from "bun:te
 import { relay } from "../src/relay.ts";
 import { db, queryEvents } from "../src/db.ts";
 import { generateSecretKey, getPublicKey, finalizeEvent } from "nostr-tools";
-import { sql } from "drizzle-orm";
 
 async function consumeAuth(ws: WebSocket) {
   return new Promise((resolve) => {
@@ -23,8 +22,8 @@ describe("NIP-02: Follow List", () => {
   });
 
   beforeEach(async () => {
-    await db.run(sql`DELETE FROM events`);
-    await db.run(sql`DELETE FROM tags`);
+    await db`DELETE FROM events`;
+    await db`DELETE FROM tags`;
     server = Bun.serve({ ...relay, port: 0 });
     url = `ws://localhost:${server.port}`;
   });

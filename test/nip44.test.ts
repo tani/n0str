@@ -1,6 +1,5 @@
 import { expect, test, describe, beforeAll, beforeEach, afterEach } from "bun:test";
 import { generateSecretKey, finalizeEvent } from "nostr-tools";
-import { sql } from "drizzle-orm";
 
 async function consumeAuth(ws: WebSocket) {
   return new Promise((resolve) => {
@@ -28,8 +27,8 @@ describe("NIP-44: Encrypted Payloads", () => {
   });
 
   beforeEach(async () => {
-    await db.run(sql`DELETE FROM events`);
-    await db.run(sql`DELETE FROM tags`);
+    await db`DELETE FROM events`;
+    await db`DELETE FROM tags`;
     server = Bun.serve({ ...relay, port: 0 });
     url = `ws://localhost:${server.port}`;
   });

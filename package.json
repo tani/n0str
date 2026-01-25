@@ -22,7 +22,6 @@
     "typescript": "^5"
   },
   "dependencies": {
-    "drizzle-orm": "^0.45.1",
     "nostr-tools": "^2.20.0",
     "zod": "^4.3.6"
   }

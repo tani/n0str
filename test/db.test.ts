@@ -3,16 +3,15 @@ import { saveEvent, queryEvents, cleanupExpiredEvents, db } from "../src/db.ts";
 import { generateSecretKey, finalizeEvent } from "nostr-tools";
 import type { Event } from "nostr-tools";
 import { existsSync } from "fs";
-import { sql } from "drizzle-orm";
 
 describe("Database", () => {
   const dbPath = "nostra.test.db";
 
   beforeEach(async () => {
     process.env.DATABASE_PATH = dbPath;
-    // Clear tables using drizzle instance directly for test setup
-    await db.run(sql`DELETE FROM events`);
-    await db.run(sql`DELETE FROM tags`);
+    // Clear tables for test setup
+    await db`DELETE FROM events`;
+    await db`DELETE FROM tags`;
   });
 
   afterEach(() => {
