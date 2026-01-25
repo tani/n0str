@@ -4,62 +4,94 @@
 
 **n0str** is a lightweight, reliable, and extensively tested **Nostr relay** implementation built on modern web technologies.
 
-*   **Core Technology:** TypeScript, **Bun** runtime.
-*   **Database:** **SQLite** with **Drizzle ORM** for type-safe and efficient storage.
-*   **Key Features:**
-    *   Full-Text Search (NIP-50) using SQLite FTS5.
-    *   Comprehensive NIP support (see README for full list).
-    *   Configurable via `n0str.json`.
-    *   Implements security features like PoW (NIP-13) and Authentication (NIP-42).
+* **Core Technology:** TypeScript, **Bun** runtime.
+* **Database:** **SQLite** (via `bun:sql`) for native performance and simplicity.
+* **Key Features:**
+  * Full-Text Search (NIP-50) using SQLite FTS5.
+  * Comprehensive NIP support (see README for full list).
+  * Configurable via `n0str.json`.
+  * Implements security features like PoW (NIP-13) and Authentication (NIP-42).
+  * **NIP-77** Negentropy Syncing support.
 
 ## Building and Running
 
 ### Prerequisites
-*   **Bun**: v1.3.5 or later (`bun --version`)
+
+* **Bun**: v1.3.5 or later (`bun --version`)
 
 ### Commands
 
-*   **Install Dependencies:**
-    ```bash
-    bun install
-    ```
-*   **Start Relay:**
-    ```bash
-    bun start
-    ```
-    (Runs `src/index.ts`. Listens on `ws://localhost:3000` by default.)
-*   **Run Tests:**
-    ```bash
-    bun test
-    ```
-*   **Type Check:**
-    ```bash
-    bun typecheck
-    ```
-*   **Lint:**
-    ```bash
-    bun lint
-    ```
-    (Uses `oxlint`)
-*   **Format Code:**
-    ```bash
-    bun format
-    ```
-    (Uses `oxfmt`)
+* **Install Dependencies:**
+
+  ```bash
+  bun install
+  ```
+
+* **Start Relay:**
+
+  ```bash
+  bun start
+  ```
+  (Runs `src/index.ts`. Listens on `ws://localhost:3000` by default.)
+
+* **Run Tests:**
+
+  ```bash
+  bun test
+  ```
+
+* **Type Check:**
+
+  ```bash
+  bun typecheck
+  ```
+
+* **Lint:**
+
+  ```bash
+  bun lint
+  ```
+  (Uses `oxlint`)
+
+* **Format Code:**
+
+  ```bash
+  bun format
+  ```
+  (Uses `oxfmt`)
+
+* **Compile Binary:**
+
+  ```bash
+  bun run compile
+  ```
+  (Generates single-file executables for Linux (x64/ARM64), macOS (x64/ARM64), and Windows (x64).)
 
 ## Development Conventions
 
-*   **Database Access:** All database logic is encapsulated in `src/db.ts` using Drizzle ORM.
-*   **Schema:** Database schema is defined in `src/schema.ts`.
-*   **Configuration:** The application reads from `n0str.json` at startup. Default configuration handling is likely in `src/relay.ts` or `src/init.ts`.
-*   **Git Hooks:** The project uses `simple-git-hooks` to enforce formatting and linting on commit, and type-checking/testing on push.
-*   **NIP Implementation:** Each supported NIP usually has corresponding logic in `src/` and tests in `test/` (e.g., `test/nip50.test.ts`).
+* **Database Access:**
+  * `src/db.ts`: Initializes the SQLite connection and schema (including FTS5 triggers).
+  * `src/repository.ts`: Encapsulates all data access logic (saving events, querying, NIP-09 deletion, NIP-40 expiration).
+* **Logging:**
+  * Uses `@logtape/logtape` for structured logging.
+  * **Style:** Use tagged template literals (e.g., `void logger.debug\`Message\``) for pretty-printing structures.
+  * **Levels:**
+    * `trace`: detailed per-message/per-query logs.
+    * `debug`: state changes, validation failures, client auth.
+    * `info`: startup config, periodic maintenance summary.
+    * `warn`: protocol violations, resource limits.
+    * `error`: internal failures.
+* **Configuration:** The application reads from `n0str.json` at startup using `src/config.ts`.
+* **Git Hooks:** The project uses `simple-git-hooks` to enforce formatting and linting on commit, and type-checking/testing on push.
 
 ## Key Files
 
-*   `n0str.json`: Main configuration file (auto-generated or manually created).
-*   `src/index.ts`: Application entry point.
-*   `src/db.ts`: Database abstraction layer (save, query, delete events).
-*   `src/schema.ts`: Drizzle ORM schema definitions.
-*   `src/relay.ts`: Core relay logic and configuration types.
-*   `test/`: Contains integration/unit tests for various NIPs.
+* `n0str.json`: Configuration file.
+* `src/index.ts`: Application entry point.
+* `src/server.ts`: WebServer logic and routing (Bun.serve).
+* `src/db.ts`: Database connection and schema initialization.
+* `src/repository.ts`: Data Access Layer.
+* `src/handlers/`: Request handlers for specific commands (EVENT, REQ, COUNT, etc.).
+* `src/nostr.ts`: Nostr protocol utilities (validation, types).
+* `src/logger.ts`: Logger configuration.
+* `test/`: Contains integration/unit tests for various NIPs.
