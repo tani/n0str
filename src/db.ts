@@ -1,7 +1,16 @@
 import { Database } from "bun:sqlite";
 import { drizzle } from "drizzle-orm/bun-sqlite";
 import * as schema from "./schema";
-import { and, gte, lte, inArray, sql, eq } from "drizzle-orm";
+import {
+  and,
+  gte,
+  lte,
+  inArray,
+  notInArray,
+  sql,
+  eq,
+  count,
+} from "drizzle-orm";
 import type { Event, Filter } from "nostr-tools";
 import { isReplaceable, isAddressable } from "./protocol.ts";
 
@@ -30,9 +39,13 @@ db.run(sql`
   );
 `);
 db.run(sql`CREATE INDEX IF NOT EXISTS idx_events_pubkey ON events(pubkey);`);
-db.run(sql`CREATE INDEX IF NOT EXISTS idx_events_created_at ON events(created_at);`);
+db.run(
+  sql`CREATE INDEX IF NOT EXISTS idx_events_created_at ON events(created_at);`,
+);
 db.run(sql`CREATE INDEX IF NOT EXISTS idx_events_kind ON events(kind);`);
-db.run(sql`CREATE INDEX IF NOT EXISTS idx_tags_name_value ON tags(name, value);`);
+db.run(
+  sql`CREATE INDEX IF NOT EXISTS idx_tags_name_value ON tags(name, value);`,
+);
 
 // NIP-50: FTS5 Search Capability (Internal content for reliability)
 db.run(sql`
@@ -59,8 +72,14 @@ export async function saveEvent(event: Event) {
   await db.transaction(async (tx) => {
     if (isReplaceable(event.kind)) {
       const existing = await tx.query.events.findFirst({
-        where: and(eq(schema.events.kind, event.kind), eq(schema.events.pubkey, event.pubkey)),
-        orderBy: (events, { desc }) => [desc(events.created_at), desc(events.id)],
+        where: and(
+          eq(schema.events.kind, event.kind),
+          eq(schema.events.pubkey, event.pubkey),
+        ),
+        orderBy: (events, { desc }) => [
+          desc(events.created_at),
+          desc(events.id),
+        ],
       });
 
       if (existing) {
@@ -80,7 +99,10 @@ export async function saveEvent(event: Event) {
           eq(schema.events.pubkey, event.pubkey),
           sql`id IN (SELECT event_id FROM tags WHERE name = 'd' AND value = ${dTag})`,
         ),
-        orderBy: (events, { desc }) => [desc(events.created_at), desc(events.id)],
+        orderBy: (events, { desc }) => [
+          desc(events.created_at),
+          desc(events.id),
+        ],
       });
 
       if (existing) {
@@ -129,7 +151,12 @@ export async function deleteEvents(
     if (eventIds.length > 0) {
       await tx
         .delete(schema.events)
-        .where(and(inArray(schema.events.id, eventIds), eq(schema.events.pubkey, pubkey)));
+        .where(
+          and(
+            inArray(schema.events.id, eventIds),
+            eq(schema.events.pubkey, pubkey),
+          ),
+        );
     }
 
     // Delete by identifiers (a tags: kind:pubkey:d-identifier)
@@ -144,16 +171,22 @@ export async function deleteEvents(
       if (pk !== pubkey) continue;
 
       // Find events with matching kind, pubkey, and d-tag (using subquery for d-tag)
-      await tx
-        .delete(schema.events)
-        .where(
-          and(
-            eq(schema.events.kind, kind),
-            eq(schema.events.pubkey, pubkey),
-            lte(schema.events.created_at, until),
-            sql`id IN (SELECT event_id FROM tags WHERE name = 'd' AND value = ${dTag})`,
+      await tx.delete(schema.events).where(
+        and(
+          eq(schema.events.kind, kind),
+          eq(schema.events.pubkey, pubkey),
+          lte(schema.events.created_at, until),
+          inArray(
+            schema.events.id,
+            db
+              .select({ id: schema.tags.eventId })
+              .from(schema.tags)
+              .where(
+                and(eq(schema.tags.name, "d"), eq(schema.tags.value, dTag)),
+              ),
           ),
-        );
+        ),
+      );
     }
   });
 }
@@ -161,11 +194,20 @@ export async function deleteEvents(
 export async function cleanupExpiredEvents() {
   const now = Math.floor(Date.now() / 1000);
   await db.transaction(async (tx) => {
-    await tx
-      .delete(schema.events)
-      .where(
-        sql`id IN (SELECT event_id FROM tags WHERE name = 'expiration' AND CAST(value AS INTEGER) < ${now})`,
-      );
+    await tx.delete(schema.events).where(
+      inArray(
+        schema.events.id,
+        db
+          .select({ id: schema.tags.eventId })
+          .from(schema.tags)
+          .where(
+            and(
+              eq(schema.tags.name, "expiration"),
+              sql`CAST(${schema.tags.value} AS INTEGER) < ${now}`,
+            ),
+          ),
+      ),
+    );
   });
 }
 
@@ -175,18 +217,39 @@ function getFilterConditions(filter: Filter) {
 
   // NIP-40: Filter out expired events
   conditions.push(
-    sql`events.id NOT IN (SELECT event_id FROM tags WHERE name = 'expiration' AND CAST(value AS INTEGER) < ${now})`,
+    // NIP-40: Filter out expired events
+    notInArray(
+      schema.events.id,
+      db
+        .select({ id: schema.tags.eventId })
+        .from(schema.tags)
+        .where(
+          and(
+            eq(schema.tags.name, "expiration"),
+            sql`CAST(${schema.tags.value} AS INTEGER) < ${now}`,
+          ),
+        ),
+    ),
   );
 
   if (filter.ids) conditions.push(inArray(schema.events.id, filter.ids));
-  if (filter.authors) conditions.push(inArray(schema.events.pubkey, filter.authors));
+  if (filter.authors)
+    conditions.push(inArray(schema.events.pubkey, filter.authors));
   if (filter.kinds) conditions.push(inArray(schema.events.kind, filter.kinds));
-  if (filter.since !== undefined) conditions.push(gte(schema.events.created_at, filter.since));
-  if (filter.until !== undefined) conditions.push(lte(schema.events.created_at, filter.until));
+  if (filter.since !== undefined)
+    conditions.push(gte(schema.events.created_at, filter.since));
+  if (filter.until !== undefined)
+    conditions.push(lte(schema.events.created_at, filter.until));
 
   if (filter.search) {
     conditions.push(
-      sql`events.id IN (SELECT id FROM events_fts WHERE events_fts MATCH ${filter.search})`,
+      inArray(
+        schema.events.id,
+        db
+          .select({ id: schema.eventsFts.id })
+          .from(schema.eventsFts)
+          .where(sql`events_fts MATCH ${filter.search}`),
+      ),
     );
   }
 
@@ -194,12 +257,19 @@ function getFilterConditions(filter: Filter) {
   for (const [key, values] of Object.entries(filter)) {
     if (key.startsWith("#") && Array.isArray(values)) {
       const tagName = key.substring(1);
-      const valuesSql = sql.join(
-        values.map((v) => sql`${v}`),
-        sql`, `,
-      );
       conditions.push(
-        sql`events.id IN (SELECT event_id FROM tags WHERE name = ${tagName} AND value IN (${valuesSql}))`,
+        inArray(
+          schema.events.id,
+          db
+            .select({ id: schema.tags.eventId })
+            .from(schema.tags)
+            .where(
+              and(
+                eq(schema.tags.name, tagName),
+                inArray(schema.tags.value, values as string[]),
+              ),
+            ),
+        ),
       );
     }
   }
@@ -211,7 +281,7 @@ export async function countEvents(filters: Filter[]): Promise<number> {
   for (const filter of filters) {
     const conditions = getFilterConditions(filter);
     const result = await db
-      .select({ count: sql<number>`count(*)` })
+      .select({ count: count() })
       .from(schema.events)
       .where(conditions.length > 0 ? and(...conditions) : undefined);
     totalCount += result[0]?.count || 0;

@@ -31,6 +31,12 @@ export const tags = sqliteTable(
   (table) => [index("idx_tags_name_value").on(table.name, table.value)],
 );
 
+// Virtual table for FTS5
+export const eventsFts = sqliteTable("events_fts", {
+  id: text("id"),
+  content: text("content"),
+});
+
 export const eventsRelations = relations(events, ({ many }) => ({
   tags: many(tags),
 }));
