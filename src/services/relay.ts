@@ -1,7 +1,7 @@
 import type { ServerWebSocket } from "bun";
-import { relayInfo } from "../config.ts";
-import { logger } from "../logger.ts";
-import type { ClientData } from "../types.ts";
+import { relayInfo } from "../config/index.ts";
+import { logger } from "../utils/logger.ts";
+import type { ClientData } from "../interfaces/types.ts";
 import { SqliteEventRepository } from "../repositories/sqlite.ts";
 import { WebSocketManager } from "../managers/websocket.ts";
 import { NostrMessageHandler } from "../handlers/message.ts";

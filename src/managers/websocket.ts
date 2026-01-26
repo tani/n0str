@@ -1,8 +1,8 @@
 import type { ServerWebSocket } from "bun";
-import type { ClientData } from "../types.ts";
+import type { ClientData } from "../interfaces/types.ts";
 import type { Event, Filter } from "nostr-tools";
-import { matchFilters } from "../nostr.ts";
-import { logger } from "../logger.ts";
+import { matchFilters } from "../utils/nostr.ts";
+import { logger } from "../utils/logger.ts";
 
 export class WebSocketManager {
   private clients: Set<ServerWebSocket<ClientData>> = new Set();

@@ -1,5 +1,5 @@
 import type { ServerWebSocket } from "bun";
-import type { ClientData } from "../types.ts";
+import type { ClientData } from "../interfaces/types.ts";
 import type { IEventRepository } from "../repositories/types.ts";
 import type { WebSocketManager } from "../managers/websocket.ts";
 import { type } from "arktype";
@@ -11,12 +11,12 @@ import {
   validateAuthEvent,
   ClientMessageSchema,
   type ClientMessage,
-} from "../nostr.ts";
-import { logger } from "../logger.ts";
+} from "../utils/nostr.ts";
+import { logger } from "../utils/logger.ts";
 import type { Filter, Event } from "nostr-tools";
-import { relayInfo } from "../config.ts";
+import { relayInfo } from "../config/index.ts";
 // @ts-ignore
-import { Negentropy, NegentropyStorageVector } from "../negentropy.js";
+import { Negentropy, NegentropyStorageVector } from "../utils/negentropy.js";
 import { match } from "arktype";
 
 const MIN_DIFFICULTY = 0;

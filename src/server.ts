@@ -1,5 +1,5 @@
 import { NostrRelay } from "./services/relay.ts";
-import { logger } from "./logger.ts";
+import { logger } from "./utils/logger.ts";
 
 export const relayService = new NostrRelay();
 await relayService.init();
