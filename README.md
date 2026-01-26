@@ -11,7 +11,6 @@
 - **Simplicity**: Codebase designed to be easy to understand and maintain.
 - **Extensively Tested**: comprehensive test suite ensuring high coverage and NIP compliance.
 - **Efficient Storage**: Support for multiple storage backends, including **SQLite** and **PGLite** (Postgres in WASM).
-- **Strictly In-Memory**: High-performance, ephemeral model with zero disk footprint.
 - **Full-Text Search**: Native support for NIP-50 search capability.
 - **Configurable**: Easy configuration via `n0str.json` or environment variables.
 - **Secure**: Implements NIP-13 (PoW), NIP-22 (Event Limits), and NIP-42 (Authentication).
@@ -133,6 +132,7 @@ You can configure the relay using the following environment variables:
 
 - `PORT`: The port to listen on (default: 3000).
 - `ENGINE`: The database engine to use (`sqlite` or `pglite`, default: `sqlite`).
+- `DATABASE`: The path to the database or `:memory:` (default: `:memory:`).
 - `LOGLEVEL`: The logging level (default: `info`). Available levels: `trace`, `debug`, `info`, `warn`, `error`.
 
 ## Architecture & Flow

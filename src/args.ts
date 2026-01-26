@@ -7,6 +7,10 @@ const { values } = parseArgs({
       type: "string",
       short: "p",
     },
+    database: {
+      type: "string",
+      short: "d",
+    },
     engine: {
       type: "string",
       short: "e",
@@ -25,7 +29,7 @@ const { values } = parseArgs({
  */
 export const config = {
   port: parseInt((values.port as string) || process.env.PORT || "3000"),
-  database: ":memory:",
+  database: (values.database as string) || process.env.DATABASE || ":memory:",
   dbEngine: (values.engine as string) || process.env.ENGINE || "sqlite",
   logLevel: (values["log-level"] as string) || process.env.LOGLEVEL || "info",
 };

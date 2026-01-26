@@ -5,9 +5,9 @@
 **n0str** is a lightweight, reliable, and extensively tested **Nostr relay** implementation built on modern web technologies.
 
 * **Core Technology:** TypeScript, **Bun** runtime.
-* **Database:** **SQLite** (via `bun:sql`) for native performance and simplicity.
+* **Storage:** Support for **SQLite** (persistent or in-memory) and **PGLite** (PostgreSQL in WASM).
 * **Key Features:**
-  * Full-Text Search (NIP-50) using SQLite FTS5.
+  * Full-Text Search (NIP-50).
   * Comprehensive NIP support (see README for full list).
   * Configurable via `n0str.json`.
   * Implements security features like PoW (NIP-13) and Authentication (NIP-42).
@@ -38,8 +38,10 @@
 * **Run Tests:**
 
   ```bash
-  bun test
+  bun run test
   ```
+
+  (Sequentially runs tests for both backends: `ENGINE=sqlite` and `ENGINE=pglite`)
 
 * **Type Check:**
 
@@ -74,11 +76,18 @@
 ## Development Conventions
 
 * **Database Access:**
-  * `src/sqlite.ts`: Initializes the SQLite connection and schema (including FTS5 triggers).
-  * `src/repository.ts`: Encapsulates all data access logic (saving events, querying, NIP-09 deletion, NIP-40 expiration).
+  * `src/repository.ts`: Abstract storage layer.
+  * `src/sqlite.ts`: SQLite backend implementation.
+  * `src/pglite.ts`: PGLite (PostgreSQL) backend implementation.
+* **Configuration:**
+  * **DATABASE**: Path to the database or `:memory:` (default: `:memory:`).
+  * **ENGINE**: `sqlite` or `pglite` (default: `sqlite`).
+  * **PORT**: Relay port (default: `3000`).
+  * **LOGLEVEL**: `trace`, `debug`, `info`, `warn`, `error` (default: `info`).
 * **Logging:**
-  * Uses `console` wrappers for logging.
+  * Uses `console` wrappers via `src/logger.ts`.
   * **Style:** Use tagged template literals (e.g., `void logger.debug\`Message\``) or standard calls (e.g., `logger.info("Message")`).
+  * **Env:** Uses `LOGLEVEL` environment variable.
   * **Levels:**
     * `trace`: detailed per-message/per-query logs (mapped to `console.debug`).
     * `debug`: state changes, validation failures, client auth.
@@ -93,8 +102,9 @@
 * `n0str.json`: Configuration file.
 * `index.ts`: Application entry point.
 * `src/server.ts`: WebServer logic and routing (Bun.serve).
-* `src/sqlite.ts`: Database connection and schema initialization.
-* `src/repository.ts`: Data Access Layer.
+* `src/sqlite.ts`: SQLite backend.
+* `src/pglite.ts`: PGLite backend.
+* `src/repository.ts`: Data Access Layer abstraction.
 * `src/message.ts`: Request handler for commands (EVENT, REQ, COUNT, etc.).
 * `src/nostr.ts`: Nostr protocol utilities (validation, types).
 * `src/logger.ts`: Logger implementation.
