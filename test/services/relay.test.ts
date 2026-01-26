@@ -1,4 +1,4 @@
-import { describe, expect, test, beforeEach, afterEach } from "bun:test";
+import { describe, expect, test, afterEach } from "bun:test";
 import { generateSecretKey, finalizeEvent } from "nostr-tools";
 import { relayInfo } from "../../src/config/index.ts";
 import { NostrRelay } from "../../src/services/relay.ts";
