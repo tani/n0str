@@ -13,7 +13,7 @@ import {
   type ClientMessage,
 } from "../utils/nostr.ts";
 import { logger } from "../utils/logger.ts";
-import type { Filter, Event } from "nostr-tools";
+import type { Filter } from "nostr-tools";
 import { relayInfo } from "../config/index.ts";
 // @ts-ignore
 import { Negentropy, NegentropyStorageVector } from "../utils/negentropy.js";

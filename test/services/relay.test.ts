@@ -13,7 +13,7 @@ describe("relay coverage", () => {
     if (existsSync(dbPath)) {
       try {
         unlinkSync(dbPath);
-      } catch (e) {
+      } catch {
         // ignore
       }
     }

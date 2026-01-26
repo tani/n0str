@@ -12,7 +12,7 @@ describe("Database", () => {
     if (existsSync(dbPath)) {
       try {
         unlinkSync(dbPath);
-      } catch (e) {
+      } catch {
         // ignore if busy, might handle it by clearing tables instead?
         // But we don't have direct access to db here easily unless we expose it.
         // Let's assume for now it works or try to proceed.

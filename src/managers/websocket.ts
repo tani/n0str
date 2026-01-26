@@ -1,6 +1,6 @@
 import type { ServerWebSocket } from "bun";
 import type { ClientData } from "../interfaces/types.ts";
-import type { Event, Filter } from "nostr-tools";
+import type { Event } from "nostr-tools";
 import { matchFilters } from "../utils/nostr.ts";
 import { logger } from "../utils/logger.ts";
 
