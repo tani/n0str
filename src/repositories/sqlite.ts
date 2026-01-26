@@ -30,12 +30,23 @@ type FilterCondition = SqlCondition | { col: string; val: unknown; op?: string }
 
 export class SqliteEventRepository implements IEventRepository {
   public db: SQL;
+  private closed = false;
 
-  constructor(dbPath: string = process.env.DATABASE_PATH || "n0str.db") {
+  constructor(dbPath: string) {
     this.db = new SQL({
       adapter: "sqlite",
       filename: dbPath,
     });
+  }
+
+  async close(): Promise<void> {
+    if (this.closed) return;
+    this.closed = true;
+    await this.db.close();
+  }
+
+  async [Symbol.asyncDispose](): Promise<void> {
+    await this.close();
   }
 
   async init(): Promise<void> {
