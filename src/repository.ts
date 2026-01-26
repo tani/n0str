@@ -1,6 +1,6 @@
 import { SqliteEventRepository } from "./repositories/sqlite.ts";
 
-export const repository = new SqliteEventRepository();
+export const repository = new SqliteEventRepository(process.env.DATABASE_PATH || "n0str.db");
 await repository.init();
 
 export const db = repository.db;

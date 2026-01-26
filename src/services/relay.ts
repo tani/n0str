@@ -2,20 +2,22 @@ import type { ServerWebSocket } from "bun";
 import { relayInfo } from "../config/index.ts";
 import { logger } from "../utils/logger.ts";
 import type { ClientData } from "../interfaces/types.ts";
-import { SqliteEventRepository } from "../repositories/sqlite.ts";
+import type { IEventRepository } from "../repositories/types.ts";
 import { WebSocketManager } from "../managers/websocket.ts";
 import { NostrMessageHandler } from "../handlers/message.ts";
 
 export class NostrRelay {
-  private repository: SqliteEventRepository;
+  private repository: IEventRepository;
   private wsManager: WebSocketManager;
   private messageHandler: NostrMessageHandler;
   private cleanupInterval: ReturnType<typeof setInterval> | null = null;
+  private _port: number;
 
-  constructor() {
-    this.repository = new SqliteEventRepository();
+  constructor(repository: IEventRepository, port: number = 3000) {
+    this.repository = repository;
     this.wsManager = new WebSocketManager();
     this.messageHandler = new NostrMessageHandler(this.repository, this.wsManager);
+    this._port = port;
   }
 
   public async init() {
@@ -41,12 +43,22 @@ export class NostrRelay {
     }
   }
 
+  public async shutdown() {
+    this.stop();
+    await this.repository.close();
+  }
+
   public get port(): number {
-    return parseInt(process.env.PORT || "3000");
+    return this._port;
   }
 
   public get fetch() {
     return (req: Request, server: any) => {
+      const url = new URL(req.url);
+      if (url.pathname === "/health") {
+        return new Response("OK");
+      }
+
       if (req.headers.get("Upgrade")?.toLowerCase() === "websocket") {
         const challenge = crypto.randomUUID();
         const relayUrl = req.url.replace(/^http/, "ws");

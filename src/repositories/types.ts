@@ -18,4 +18,5 @@ export interface IEventRepository {
   countEvents(filters: Filter[]): Promise<number>;
   queryEvents(filter: Filter): Promise<Event[]>;
   queryEventsForSync(filter: Filter): Promise<ExistingRow[]>;
+  close(): Promise<void>;
 }

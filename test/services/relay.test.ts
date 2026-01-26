@@ -2,14 +2,15 @@ import { describe, expect, test, beforeEach, afterEach } from "bun:test";
 import { generateSecretKey, finalizeEvent } from "nostr-tools";
 import { relayInfo } from "../../src/config/index.ts";
 import { NostrRelay } from "../../src/services/relay.ts";
+import { SqliteEventRepository } from "../../src/repositories/sqlite.ts";
 import { existsSync, unlinkSync } from "fs";
 
 describe("relay coverage", () => {
   const dbPath = "n0str.relay.test.db";
   let relayService: NostrRelay;
+  let repository: SqliteEventRepository;
 
   beforeEach(async () => {
-    process.env.DATABASE_PATH = dbPath;
     if (existsSync(dbPath)) {
       try {
         unlinkSync(dbPath);
@@ -17,13 +18,20 @@ describe("relay coverage", () => {
         // ignore
       }
     }
-    relayService = new NostrRelay();
+    repository = new SqliteEventRepository(dbPath);
+    relayService = new NostrRelay(repository);
     await relayService.init();
   });
 
-  afterEach(() => {
-    relayService.stop();
-    // if (existsSync(dbPath)) unlinkSync(dbPath);
+  afterEach(async () => {
+    await relayService.shutdown();
+    if (existsSync(dbPath)) {
+      try {
+        unlinkSync(dbPath);
+      } catch {
+        // ignore
+      }
+    }
   });
 
   test("relay fetch branches and websocket message paths", async () => {
