@@ -24,9 +24,14 @@ export class NostrRelay {
   }
 
   private startCleanupTask() {
-    this.cleanupInterval = setInterval(async () => {
-      await this.repository.cleanupExpiredEvents().catch((err) => void logger.error`Cleanup error: ${err}`);
-    }, 60 * 60 * 1000); // Hourly
+    this.cleanupInterval = setInterval(
+      async () => {
+        await this.repository
+          .cleanupExpiredEvents()
+          .catch((err) => void logger.error`Cleanup error: ${err}`);
+      },
+      60 * 60 * 1000,
+    ); // Hourly
   }
 
   public stop() {

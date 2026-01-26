@@ -29,7 +29,7 @@ type SqlCondition = { sql: string; params: unknown[] };
 type FilterCondition = SqlCondition | { col: string; val: unknown; op?: string };
 
 export class SqliteEventRepository implements IEventRepository {
-  private db: SQL;
+  public db: SQL;
 
   constructor(dbPath: string = process.env.DATABASE_PATH || "n0str.db") {
     this.db = new SQL({

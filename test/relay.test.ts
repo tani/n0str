@@ -73,7 +73,10 @@ describe("relay coverage", () => {
     await relayService.websocket.message(ws, JSON.stringify(["CLOSE", closeSubId]));
     expect(ws.data.subscriptions.has(closeSubId)).toBe(false);
 
-    await relayService.websocket.message(ws, "x".repeat(relayInfo.limitation.max_message_length + 1));
+    await relayService.websocket.message(
+      ws,
+      "x".repeat(relayInfo.limitation.max_message_length + 1),
+    );
     expect(sent[sent.length - 1]).toContain("error: message too large");
 
     await relayService.websocket.message(ws, JSON.stringify(["COUNT", "sub-count", {}]));
@@ -92,7 +95,10 @@ describe("relay coverage", () => {
     await relayService.websocket.message(ws, JSON.stringify(["EVENT", event]));
     await relayService.websocket.message(ws, JSON.stringify(["REQ", "sub-req", {}]));
 
-    await relayService.websocket.message(ws, JSON.stringify(["AUTH", { id: "bad", kind: 1, tags: [] }]));
+    await relayService.websocket.message(
+      ws,
+      JSON.stringify(["AUTH", { id: "bad", kind: 1, tags: [] }]),
+    );
     expect(sent.some((msg) => msg.includes('"OK"'))).toBe(true);
 
     // Cover default branch in match (unreachable with current ClientMessageSchema,

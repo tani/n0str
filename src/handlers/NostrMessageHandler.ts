@@ -196,9 +196,9 @@ export class NostrMessageHandler {
 
     const result = await validateAuthEvent(event, ws.data.challenge, ws.data.relayUrl);
     if (!result.ok) {
-        void logger.debug`Auth validation failed: ${result.reason}`;
-        ws.send(JSON.stringify(["OK", event.id, false, result.reason]));
-        return;
+      void logger.debug`Auth validation failed: ${result.reason}`;
+      ws.send(JSON.stringify(["OK", event.id, false, result.reason]));
+      return;
     }
 
     ws.data.pubkey = event.pubkey;

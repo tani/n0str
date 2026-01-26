@@ -28,7 +28,7 @@ describe("Database", () => {
   });
 
   afterEach(() => {
-     // We can't easily close the connection with the SQL adapter wrapper in Bun currently?
+    // We can't easily close the connection with the SQL adapter wrapper in Bun currently?
   });
 
   const sampleEvent: Event = {
