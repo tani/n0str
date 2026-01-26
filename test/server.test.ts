@@ -21,7 +21,6 @@ describe.each(engines)("Engine: %s > Server", (engine) => {
   });
 
   test("runCleanupTick handles error", async () => {
-    const { cleanupExpiredEvents } = await import("../src/repository.ts");
     const { logger } = await import("../src/logger.ts");
     const originalRepo = getRepository().cleanupExpiredEvents;
     const originalLogger = logger.error;

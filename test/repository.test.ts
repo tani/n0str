@@ -1,7 +1,6 @@
 import { engines } from "./utils/engines.ts";
-import { expect, test, describe, beforeEach, afterEach, beforeAll } from "bun:test";
+import { expect, test, describe, beforeEach, beforeAll } from "bun:test";
 import {
-  createRepository,
   initRepository,
   getRepository,
   clear,
@@ -14,8 +13,6 @@ import {
   close,
 } from "../src/repository.ts";
 import { relayService } from "../src/server.ts";
-import { config as defaultConfig } from "../src/args.ts";
-import type { IEventRepository } from "../src/types.ts";
 import { generateSecretKey, getPublicKey, finalizeEvent } from "nostr-tools";
 import type { Event } from "nostr-tools";
 
