@@ -397,20 +397,20 @@ export class PgLiteEventRepository implements IEventRepository {
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   private async findExisting(tx: any, event: Event): Promise<ExistingRow | undefined> {
     if (isReplaceable(event.kind)) {
-      const res = await tx.query(
+      const res = (await tx.query(
         `
         SELECT id, created_at FROM events
         WHERE kind = $1 AND pubkey = $2
         ORDER BY created_at DESC, id DESC LIMIT 1
       `,
         [event.kind, event.pubkey],
-      ) as { rows: { id: string; created_at: number }[] };
+      )) as { rows: { id: string; created_at: number }[] };
       const row = res.rows[0];
       return row ? { ...row, created_at: Number(row.created_at) } : undefined;
     }
     if (isAddressable(event.kind)) {
       const dTag = event.tags.find((t) => t[0] === "d")?.[1] || "";
-      const res = await tx.query(
+      const res = (await tx.query(
         `
         SELECT id, created_at FROM events
         WHERE kind = $1 AND pubkey = $2
@@ -418,7 +418,7 @@ export class PgLiteEventRepository implements IEventRepository {
         ORDER BY created_at DESC, id DESC LIMIT 1
       `,
         [event.kind, event.pubkey, dTag],
-      ) as { rows: { id: string; created_at: number }[] };
+      )) as { rows: { id: string; created_at: number }[] };
       const row = res.rows[0];
       return row ? { ...row, created_at: Number(row.created_at) } : undefined;
     }
