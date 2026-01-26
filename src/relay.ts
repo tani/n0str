@@ -24,10 +24,7 @@ export class NostrRelay {
   constructor(repository: IEventRepository, port: number = 3000) {
     this.repository = repository;
     this.wsManager = new WebSocketManager();
-    this.messageHandler = new NostrMessageHandler(
-      this.repository,
-      this.wsManager,
-    );
+    this.messageHandler = new NostrMessageHandler(this.repository, this.wsManager);
     this._port = port;
   }
 
@@ -137,10 +134,7 @@ export class NostrRelay {
         this.wsManager.addClient(ws);
         ws.send(JSON.stringify(["AUTH", ws.data.challenge]));
       },
-      message: async (
-        ws: ServerWebSocket<ClientData>,
-        message: string | Buffer,
-      ) => {
+      message: async (ws: ServerWebSocket<ClientData>, message: string | Buffer) => {
         await this.messageHandler.handleMessage(ws, message);
       },
       close: (ws: ServerWebSocket<ClientData>) => {

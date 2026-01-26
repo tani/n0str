@@ -25,8 +25,7 @@ const { values } = parseArgs({
  */
 export const config = {
   port: parseInt((values.port as string) || process.env.PORT || "3000"),
-  database:
-    (values.database as string) || process.env.DATABASE_PATH || "n0str.db",
+  database: (values.database as string) || process.env.DATABASE_PATH || "n0str.db",
   logLevel: (values["log-level"] as string) || process.env.LOG_LEVEL || "info",
 };
 

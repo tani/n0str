@@ -26,7 +26,5 @@ export const relay = {
  */
 export const runCleanupTick = async () => {
   const { cleanupExpiredEvents } = await import("./repository.ts");
-  await cleanupExpiredEvents().catch(
-    (err: unknown) => void logger.error`Cleanup error: ${err}`,
-  );
+  await cleanupExpiredEvents().catch((err: unknown) => void logger.error`Cleanup error: ${err}`);
 };

@@ -13,11 +13,7 @@ export class NegentropyStorageVector {
     end: number,
     cb: (item: { timestamp: number; id: Uint8Array }, i: number) => boolean,
   ): void;
-  findLowerBound(
-    begin: number,
-    end: number,
-    bound: { timestamp: number; id: Uint8Array },
-  ): number;
+  findLowerBound(begin: number, end: number, bound: { timestamp: number; id: Uint8Array }): number;
   /** Computes a fingerprint for the given range. */
   fingerprint(begin: number, end: number): Promise<Uint8Array>;
 }
@@ -30,7 +26,5 @@ export class Negentropy {
   initiate(): Promise<string>;
   setInitiator(): void;
   /** Continues the reconciliation process with a message from the other party. */
-  reconcile(
-    query: string | Uint8Array,
-  ): Promise<[string | null, string[], string[]]>;
+  reconcile(query: string | Uint8Array): Promise<[string | null, string[], string[]]>;
 }
