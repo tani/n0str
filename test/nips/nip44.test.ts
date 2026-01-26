@@ -1,4 +1,5 @@
 import { expect, test, describe, beforeAll, beforeEach, afterEach } from "bun:test";
+import { createTestEnv } from "../utils/test_helper.ts";
 import { generateSecretKey, finalizeEvent } from "nostr-tools";
 
 async function consumeAuth(ws: WebSocket) {
@@ -11,30 +12,26 @@ async function consumeAuth(ws: WebSocket) {
 }
 
 describe("NIP-44: Encrypted Payloads", () => {
-  const dbPath = "n0str.test.db";
   let server: any;
   let url: string;
-  let relay: any;
+  let repository: any;
+  let relayService: any;
   let db: any;
-
-  beforeAll(async () => {
-    process.env.DATABASE_PATH = dbPath;
-    // Dynamic import to ensure env var is set before DB init
-    const relayModule = await import("../../src/server.ts");
-    relay = relayModule.relay;
-    const dbModule = await import("../../src/repository.ts");
-    db = dbModule.db;
-  });
+  let queryEvents: any;
 
   beforeEach(async () => {
-    await db`DELETE FROM events`;
-    await db`DELETE FROM tags`;
-    server = Bun.serve({ ...relay, port: 0 });
-    url = `ws://localhost:${server.port}`;
+    const env = await createTestEnv();
+    server = env.server;
+    url = env.url;
+    repository = env.repository;
+    relayService = env.relayService;
+    db = env.db;
+    queryEvents = repository.queryEvents.bind(repository);
   });
 
-  afterEach(() => {
+  afterEach(async () => {
     server.stop();
+    await repository.close();
   });
 
   const sk = generateSecretKey();

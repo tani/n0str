@@ -1,34 +1,19 @@
 import { expect, test, describe, beforeEach, afterEach } from "bun:test";
-import { SqliteEventRepository } from "../../src/sqlite.ts";
+import { PgLiteEventRepository } from "../../src/pglite.ts";
 import { generateSecretKey, finalizeEvent } from "nostr-tools";
 import type { Event } from "nostr-tools";
-import { existsSync, unlinkSync } from "fs";
 
 describe("Database", () => {
-  const dbPath = "n0str.test.db";
-  let repository: SqliteEventRepository;
+  let repository: PgLiteEventRepository;
 
   beforeEach(async () => {
-    if (existsSync(dbPath)) {
-      try {
-        unlinkSync(dbPath);
-      } catch {
-        // ignore if busy, might handle it by clearing tables instead?
-        // But we don't have direct access to db here easily unless we expose it.
-        // Let's assume for now it works or try to proceed.
-      }
-    }
-    repository = new SqliteEventRepository(dbPath);
+    // Use in-memory database for tests by not providing a path
+    repository = new PgLiteEventRepository();
     await repository.init();
-
-    // Ensure tables are empty if file persisted
-    // Since we don't expose raw DB, and unlink might fail on Windows/Busy,
-    // we might want a 'clear' method for testing, but let's try assuming a fresh DB first.
-    // Actually, if we can't unlink, we are in trouble.
   });
 
-  afterEach(() => {
-    // We can't easily close the connection with the SQL adapter wrapper in Bun currently?
+  afterEach(async () => {
+    await repository.close();
   });
 
   const sampleEvent: Event = {

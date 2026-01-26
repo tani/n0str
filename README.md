@@ -10,8 +10,8 @@
 
 - **Simplicity**: Codebase designed to be easy to understand and maintain.
 - **Extensively Tested**: comprehensive test suite ensuring high coverage and NIP compliance.
-- **Efficient Storage**: Uses **SQLite** for reliable database interactions.
-- **Full-Text Search**: Native support for NIP-50 search capability using SQLite FTS5.
+- **Efficient Storage**: Uses **PGlite** (PostgreSQL in WASM) for reliable database interactions.
+- **Full-Text Search**: Native support for NIP-50 search capability using PostgreSQL tsvector.
 - **Configurable**: Easy configuration via `n0str.json`.
 - **Secure**: Implements NIP-13 (PoW), NIP-22 (Event Limits), and NIP-42 (Authentication).
 - **Type-Safe**: Fully typed with TypeScript.
@@ -132,7 +132,7 @@ You can also configure the relay using environment variables:
 
 - `PORT`: The port to listen on (default: 3000).
 - `LOG_LEVEL`: The logging level (default: info). Available levels: `trace`, `debug`, `info`, `warn`, `error`.
-- `DATABASE_PATH`: The path to the SQLite database (default: `./n0str.db`).
+- `DATABASE_PATH`: The path to the PGlite database directory (default: `./n0str-pgdata`).
 
 ## Architecture & Flow
 
@@ -146,7 +146,7 @@ sequenceDiagram
     participant R as NostrRelay (Bun)
     participant H as NostrMessageHandler
     participant V as Validation (nostr.ts)
-    participant DB as SqliteEventRepository
+    participant DB as PgLiteEventRepository
     participant W as WebSocketManager
 
     Note over C,W: Event Publishing (EVENT)
@@ -180,7 +180,7 @@ sequenceDiagram
 
 - **NostrRelay (src/relay.ts)**: Entry point using Bun's native WebSocket. Manages connection lifecycle and NIP-11 requests.
 - **NostrMessageHandler (src/message.ts)**: Orchestrates message processing, validation, and storage logic.
-- **SqliteEventRepository (src/sqlite.ts)**: Handles persistence and indexing using SQLite FTS5 for search.
+- **PgLiteEventRepository (src/pglite.ts)**: Handles persistence and indexing using PostgreSQL for search.
 - **WebSocketManager (src/websocket.ts)**: Tracks active connections and handles efficient event broadcasting.
 - **Validation (src/nostr.ts)**: Verifies signatures, PoW, and protocol compliance.
 

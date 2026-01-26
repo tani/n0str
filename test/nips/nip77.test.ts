@@ -1,21 +1,27 @@
 import { expect, test, describe, beforeEach, afterEach } from "bun:test";
-import { relay } from "../../src/server.ts";
+import { createTestEnv } from "../utils/test_helper.ts";
 import { finalizeEvent, generateSecretKey } from "nostr-tools";
-import { saveEvent } from "../../src/repository.ts";
 import { Negentropy, NegentropyStorageVector } from "../../src/negentropy.js";
 
 describe("NIP-77 Negentropy Syncing", () => {
   let server: any;
   let url: string;
+  let repository: any;
+  let relayService: any;
+  let db: any;
 
   beforeEach(async () => {
-    server = Bun.serve({ ...relay, port: 0 });
-    url = `ws://localhost:${server.port}`;
-    // Clear DB (optional, but good for isolation if possible. Using different kinds helps)
+    const env = await createTestEnv();
+    server = env.server;
+    url = env.url;
+    repository = env.repository;
+    relayService = env.relayService;
+    db = env.db;
   });
 
-  afterEach(() => {
+  afterEach(async () => {
     server.stop();
+    await repository.close();
   });
 
   const sk = generateSecretKey();
@@ -62,7 +68,7 @@ describe("NIP-77 Negentropy Syncing", () => {
       },
       sk,
     );
-    await saveEvent(event);
+    await repository.saveEvent(event);
 
     const ws = new WebSocket(url);
     await new Promise((resolve) => (ws.onopen = resolve));

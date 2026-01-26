@@ -1,6 +1,5 @@
-import { expect, test, describe, beforeAll, beforeEach, afterEach } from "bun:test";
-import { relay } from "../../src/server.ts";
-import { db } from "../../src/repository.ts";
+import { expect, test, describe, beforeEach, afterEach } from "bun:test";
+import { createTestEnv } from "../utils/test_helper.ts";
 import { generateSecretKey, getPublicKey, finalizeEvent } from "nostr-tools";
 
 async function consumeAuth(ws: WebSocket) {
@@ -13,23 +12,22 @@ async function consumeAuth(ws: WebSocket) {
 }
 
 describe("NIP-01 Core Relay", () => {
-  const dbPath = "n0str.test.db";
   let server: any;
   let url: string;
-
-  beforeAll(() => {
-    process.env.DATABASE_PATH = dbPath;
-  });
+  let repository: any;
+  let relayService: any;
 
   beforeEach(async () => {
-    await db`DELETE FROM events`;
-    await db`DELETE FROM tags`;
-    server = Bun.serve({ ...relay, port: 0 });
-    url = `ws://localhost:${server.port}`;
+    const env = await createTestEnv();
+    server = env.server;
+    url = env.url;
+    repository = env.repository;
+    relayService = env.relayService;
   });
 
-  afterEach(() => {
+  afterEach(async () => {
     server.stop();
+    await repository.close();
   });
 
   const sk = generateSecretKey();
@@ -188,7 +186,8 @@ describe("NIP-01 Core Relay", () => {
     const req = new Request("http://localhost", {
       headers: { Upgrade: "websocket" },
     });
-    const res = relay.fetch(req, fakeServer);
+    // Use the local relayService instance instead of global relay
+    const res = relayService.fetch(req, fakeServer);
     expect(res?.status).toBe(400);
     expect(await res?.text()).toBe("Upgrade failed");
   });

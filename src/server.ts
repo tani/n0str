@@ -1,10 +1,10 @@
 import { NostrRelay } from "./relay.ts";
 import { logger } from "./logger.ts";
-import { SqliteEventRepository } from "./sqlite.ts";
+import { PgLiteEventRepository } from "./pglite.ts";
 
-const dbPath = process.env.DATABASE_PATH || "n0str.db";
+const dbPath = process.env.DATABASE_PATH || "n0str-pgdata";
 const port = parseInt(process.env.PORT || "3000");
-const repository = new SqliteEventRepository(dbPath);
+const repository = new PgLiteEventRepository(dbPath);
 
 /**
  * The core NostrRelay service instance.

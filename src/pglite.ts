@@ -1,4 +1,4 @@
-import { SQL } from "bun";
+import { PGlite } from "@electric-sql/pglite";
 import type { Event, Filter } from "nostr-tools";
 import { isAddressable, isReplaceable } from "./nostr.ts";
 import { logger } from "./logger.ts";
@@ -29,22 +29,19 @@ type SqlCondition = { sql: string; params: unknown[] };
 type FilterCondition = SqlCondition | { col: string; val: unknown; op?: string };
 
 /**
- * SqliteEventRepository implements IEventRepository using Bun's SQL (SQLite) adapter.
+ * PgLiteEventRepository implements IEventRepository using PGlite (PostgreSQL in WASM).
  * It handles event storage, retrieval, deletion, and search indexing.
  */
-export class SqliteEventRepository implements IEventRepository {
-  public db: SQL;
+export class PgLiteEventRepository implements IEventRepository {
+  public db: PGlite;
   private closed = false;
 
   /**
-   * Creates an instance of SqliteEventRepository.
-   * @param dbPath - The path to the SQLite database file.
+   * Creates an instance of PgLiteEventRepository.
+   * @param dbPath - The path to the PGlite data directory. If undefined, uses in-memory.
    */
-  constructor(dbPath: string) {
-    this.db = new SQL({
-      adapter: "sqlite",
-      filename: dbPath,
-    });
+  constructor(dbPath?: string) {
+    this.db = new PGlite(dbPath);
   }
 
   /**
@@ -64,78 +61,95 @@ export class SqliteEventRepository implements IEventRepository {
   }
 
   /**
-   * Initializes the database schema, indexes, and search triggers.
+   * Initializes the database schema, indexes, and search columns.
    */
   async init(): Promise<void> {
-    await this.db`PRAGMA foreign_keys = ON`;
+    // Note: Foreign keys are generally supported but strict enforcement depends on config.
+    // PGlite defaults usually work fine.
 
-    await this.db`
+    await this.db.exec(`
       CREATE TABLE IF NOT EXISTS events (
         id TEXT PRIMARY KEY,
         pubkey TEXT NOT NULL,
-        created_at INTEGER NOT NULL,
+        created_at BIGINT NOT NULL,
         kind INTEGER NOT NULL,
         content TEXT NOT NULL,
-        sig TEXT NOT NULL
+        sig TEXT NOT NULL,
+        fts tsvector
       );
-    `;
-    await this.db`
+    `);
+
+    await this.db.exec(`
       CREATE TABLE IF NOT EXISTS tags (
-        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        id INTEGER PRIMARY KEY GENERATED ALWAYS AS IDENTITY,
         event_id TEXT NOT NULL,
         name TEXT NOT NULL,
         value TEXT NOT NULL,
         FOREIGN KEY(event_id) REFERENCES events(id) ON DELETE CASCADE
       );
-    `;
-    await this.db`CREATE INDEX IF NOT EXISTS idx_events_pubkey ON events(pubkey);`;
-    await this.db`CREATE INDEX IF NOT EXISTS idx_events_created_at ON events(created_at);`;
-    await this.db`CREATE INDEX IF NOT EXISTS idx_events_kind ON events(kind);`;
-    await this.db`CREATE INDEX IF NOT EXISTS idx_tags_name_value ON tags(name, value);`;
+    `);
 
-    // NIP-50: FTS5 Search Capability
-    await this.db`
-      CREATE VIRTUAL TABLE IF NOT EXISTS events_fts USING fts5(
-        id,
-        content
-      );
-    `;
-
-    // Triggers for FTS5 sync
-    await this.db`DROP TRIGGER IF EXISTS events_ai`;
-
-    await this.db`
-      CREATE TRIGGER IF NOT EXISTS events_ad AFTER DELETE ON events BEGIN
-        DELETE FROM events_fts WHERE id = old.id;
-      END;
-    `;
+    await this.db.exec(`CREATE INDEX IF NOT EXISTS idx_events_pubkey ON events(pubkey);`);
+    await this.db.exec(`CREATE INDEX IF NOT EXISTS idx_events_created_at ON events(created_at);`);
+    await this.db.exec(`CREATE INDEX IF NOT EXISTS idx_events_kind ON events(kind);`);
+    await this.db.exec(`CREATE INDEX IF NOT EXISTS idx_tags_name_value ON tags(name, value);`);
+    await this.db.exec(`CREATE INDEX IF NOT EXISTS idx_events_fts ON events USING GIN (fts);`);
   }
 
   /**
-   * Saves a Nostr event to the database and updates the search index.
+   * Saves a Nostr event to the database.
    * Handles replacement logic for replaceable and addressable events.
    * @param event - The Nostr event to save.
    */
   async saveEvent(event: Event): Promise<void> {
-    await this.db.begin(async (tx) => {
+    await this.db.transaction(async (tx) => {
       const existing = await this.findExisting(tx, event);
       if (existing) {
         if (this.isOlderEvent(event, existing)) return;
-        await tx`DELETE FROM events WHERE id = ${existing.id}`;
+        await tx.query(`DELETE FROM events WHERE id = $1`, [existing.id]);
       }
 
-      const insertResult = await tx`
-        INSERT INTO events ${tx(event, "id", "pubkey", "created_at", "kind", "content", "sig")}
+      const ftsContent = segmentForFts(event.content);
+
+      const insertQuery = `
+        INSERT INTO events (id, pubkey, created_at, kind, content, sig, fts)
+        VALUES ($1, $2, $3, $4, $5, $6, to_tsvector('simple', $7))
         ON CONFLICT DO NOTHING
       `;
-      if ((insertResult?.count ?? 0) > 0) {
-        const ftsContent = segmentForFts(event.content);
-        await tx`INSERT INTO events_fts(id, content) VALUES (${event.id}, ${ftsContent})`;
-      }
+      const insertResult = await tx.query(insertQuery, [
+        event.id,
+        event.pubkey,
+        event.created_at,
+        event.kind,
+        event.content,
+        event.sig,
+        ftsContent,
+      ]);
 
-      const tagRows = this.buildTagRows(event);
-      if (tagRows.length > 0) {
-        await tx`INSERT INTO tags ${tx(tagRows)}`;
+      // insertResult.affectedRows gives the number of rows inserted
+      if ((insertResult.affectedRows ?? 0) > 0) {
+        const tagRows = this.buildTagRows(event);
+        if (tagRows.length > 0) {
+          // Bulk insert tags
+          // PGlite supports parameterized queries, but for bulk insert we might need to construct the query or do loop
+          // For simplicity and safety against SQL injection, we'll do loop or construct parameterized values string
+          // ($1, $2, $3), ($4, $5, $6), ...
+
+          const valueStrings: string[] = [];
+          const params: unknown[] = [];
+          tagRows.forEach((row, i) => {
+            const offset = i * 3;
+            valueStrings.push(`($${offset + 1}, $${offset + 2}, $${offset + 3})`);
+            params.push(row.event_id, row.name, row.value);
+          });
+
+          if (valueStrings.length > 0) {
+            await tx.query(
+              `INSERT INTO tags (event_id, name, value) VALUES ${valueStrings.join(", ")}`,
+              params,
+            );
+          }
+        }
       }
     });
     void logger.trace`Saved event ${event.id}`;
@@ -155,14 +169,15 @@ export class SqliteEventRepository implements IEventRepository {
     identifiers: string[],
     until: number = Infinity,
   ): Promise<void> {
-    await this.db.begin(async (tx) => {
+    await this.db.transaction(async (tx) => {
       if (eventIds.length > 0) {
-        const res = await tx`
-          DELETE FROM events
-          WHERE pubkey = ${pubkey}
-            AND id IN ${tx(eventIds)}
-        `;
-        void logger.trace`Deleted ${res.count} events by IDs for ${pubkey}`;
+        // Build placeholders for eventIds
+        const placeholders = eventIds.map((_, i) => `$${i + 2}`).join(", ");
+        const res = await tx.query(
+          `DELETE FROM events WHERE pubkey = $1 AND id IN (${placeholders})`,
+          [pubkey, ...eventIds],
+        );
+        void logger.trace`Deleted ${res.affectedRows} events by IDs for ${pubkey}`;
       }
 
       for (const addr of identifiers) {
@@ -174,15 +189,17 @@ export class SqliteEventRepository implements IEventRepository {
 
         if (pk !== pubkey) continue;
 
-        const res = await tx`
-          DELETE FROM events
-          WHERE kind = ${kind}
-            AND pubkey = ${pubkey}
-            AND created_at <= ${until}
-            AND id IN (SELECT event_id FROM tags WHERE name = 'd' AND value = ${dTag})
-        `;
-        if (res.count > 0) {
-          void logger.trace`Deleted ${res.count} addressable events for ${pubkey} (${addr})`;
+        const res = await tx.query(
+          `DELETE FROM events
+           WHERE kind = $1
+             AND pubkey = $2
+             AND created_at <= $3
+             AND id IN (SELECT event_id FROM tags WHERE name = 'd' AND value = $4)`,
+          [kind, pubkey, until, dTag],
+        );
+
+        if ((res.affectedRows ?? 0) > 0) {
+          void logger.trace`Deleted ${res.affectedRows} addressable events for ${pubkey} (${addr})`;
         }
       }
     });
@@ -194,18 +211,19 @@ export class SqliteEventRepository implements IEventRepository {
    */
   async cleanupExpiredEvents(): Promise<void> {
     const now = Math.floor(Date.now() / 1000);
-    await this.db.begin(async (tx) => {
-      const result = await tx`
-        DELETE FROM events
-        WHERE id IN (
-          SELECT event_id
-          FROM tags
-          WHERE name = 'expiration'
-          AND CAST(value AS INTEGER) < ${now}
-        )
-      `;
-      if (result.count > 0) {
-        void logger.info`Cleaned up ${result.count} expired events`;
+    await this.db.transaction(async (tx) => {
+      const result = await tx.query(
+        `DELETE FROM events
+         WHERE id IN (
+           SELECT event_id
+           FROM tags
+           WHERE name = 'expiration'
+           AND CAST(value AS INTEGER) < $1
+         )`,
+        [now],
+      );
+      if ((result.affectedRows ?? 0) > 0) {
+        void logger.info`Cleaned up ${result.affectedRows} expired events`;
       }
     });
   }
@@ -221,8 +239,8 @@ export class SqliteEventRepository implements IEventRepository {
     for (const filter of filters) {
       const { clause, params } = this.buildWhereClause(filter);
       const query = `SELECT COUNT(*) as count FROM events ${clause}`;
-      const result = await this.db.unsafe<{ count: number }[]>(query, params);
-      totalCount += result[0]?.count ?? 0;
+      const result = await this.db.query<{ count: number }>(query, params);
+      totalCount += Number(result.rows[0]?.count ?? 0);
     }
     void logger.trace`Counted ${totalCount} events`;
     return totalCount;
@@ -256,7 +274,8 @@ export class SqliteEventRepository implements IEventRepository {
       ORDER BY e.created_at DESC, t.id ASC
     `;
 
-    const rows = await this.db.unsafe<EventWithTagRow[]>(query, params);
+    const result = await this.db.query<EventWithTagRow>(query, params);
+    const rows = result.rows;
     if (rows.length === 0) return [];
 
     const events = new Map<string, Event>();
@@ -266,7 +285,7 @@ export class SqliteEventRepository implements IEventRepository {
         event = {
           id: row.id,
           pubkey: row.pubkey,
-          created_at: row.created_at,
+          created_at: Number(row.created_at), // BigInt to number (safe for Nostr timestamps)
           kind: row.kind,
           content: row.content,
           sig: row.sig,
@@ -280,9 +299,9 @@ export class SqliteEventRepository implements IEventRepository {
       }
     }
 
-    const result = Array.from(events.values());
-    void logger.trace`Query returned ${result.length} events`;
-    return result;
+    const eventList = Array.from(events.values());
+    void logger.trace`Query returned ${eventList.length} events`;
+    return eventList;
   }
 
   /**
@@ -298,9 +317,9 @@ export class SqliteEventRepository implements IEventRepository {
       ${clause}
       ORDER BY created_at ASC, id ASC
     `;
-    const result = await this.db.unsafe<ExistingRow[]>(query, params);
-    void logger.trace`Sync query returned ${result.length} events`;
-    return result;
+    const result = await this.db.query<{ id: string; created_at: number }>(query, params);
+    // Convert created_at from potentially BigInt/string to number
+    return result.rows.map((r) => ({ ...r, created_at: Number(r.created_at) }));
   }
 
   // --- Private Helper Methods ---
@@ -350,7 +369,7 @@ export class SqliteEventRepository implements IEventRepository {
       { col: "events.created_at", op: ">=", val: filter.since },
       { col: "events.created_at", op: "<=", val: filter.until },
       {
-        sql: "events.id IN (SELECT id FROM events_fts WHERE events_fts MATCH ?)",
+        sql: "events.fts @@ websearch_to_tsquery('simple', ?)",
         params: searchQuery ? [searchQuery] : [],
       },
       ...Object.entries(filter).flatMap(([k, v]): FilterCondition[] =>
@@ -375,27 +394,35 @@ export class SqliteEventRepository implements IEventRepository {
     );
   }
 
-  private async findExisting(tx: SQL, event: Event): Promise<ExistingRow | undefined> {
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  private async findExisting(tx: any, event: Event): Promise<ExistingRow | undefined> {
     if (isReplaceable(event.kind)) {
-      return (
-        await tx<ExistingRow[]>`
+      const res = await tx.query(
+        `
         SELECT id, created_at FROM events
-        WHERE kind = ${event.kind} AND pubkey = ${event.pubkey}
+        WHERE kind = $1 AND pubkey = $2
         ORDER BY created_at DESC, id DESC LIMIT 1
-      `
-      )[0];
+      `,
+        [event.kind, event.pubkey],
+      ) as { rows: { id: string; created_at: number }[] };
+      const row = res.rows[0];
+      return row ? { ...row, created_at: Number(row.created_at) } : undefined;
     }
     if (isAddressable(event.kind)) {
       const dTag = event.tags.find((t) => t[0] === "d")?.[1] || "";
-      return (
-        await tx<ExistingRow[]>`
+      const res = await tx.query(
+        `
         SELECT id, created_at FROM events
-        WHERE kind = ${event.kind} AND pubkey = ${event.pubkey}
-        AND id IN (SELECT event_id FROM tags WHERE name = 'd' AND value = ${dTag})
+        WHERE kind = $1 AND pubkey = $2
+        AND id IN (SELECT event_id FROM tags WHERE name = 'd' AND value = $3)
         ORDER BY created_at DESC, id DESC LIMIT 1
-      `
-      )[0];
+      `,
+        [event.kind, event.pubkey, dTag],
+      ) as { rows: { id: string; created_at: number }[] };
+      const row = res.rows[0];
+      return row ? { ...row, created_at: Number(row.created_at) } : undefined;
     }
+    return undefined;
   }
 
   private buildTagRows(event: Event): TagRow[] {

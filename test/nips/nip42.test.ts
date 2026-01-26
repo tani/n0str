@@ -1,18 +1,26 @@
 import { expect, test, describe, beforeEach, afterEach } from "bun:test";
-import { relay } from "../../src/server.ts";
+import { createTestEnv } from "../utils/test_helper.ts";
 import { finalizeEvent, generateSecretKey } from "nostr-tools";
 
 describe("NIP-42 Authentication", () => {
   let server: any;
   let url: string;
+  let repository: any;
+  let relayService: any;
+  let db: any;
 
-  beforeEach(() => {
-    server = Bun.serve({ ...relay, port: 0 });
-    url = `ws://localhost:${server.port}`;
+  beforeEach(async () => {
+    const env = await createTestEnv();
+    server = env.server;
+    url = env.url;
+    repository = env.repository;
+    relayService = env.relayService;
+    db = env.db;
   });
 
-  afterEach(() => {
+  afterEach(async () => {
     server.stop();
+    await repository.close();
   });
 
   const sk = generateSecretKey();

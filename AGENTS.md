@@ -5,9 +5,9 @@
 **n0str** is a lightweight, reliable, and extensively tested **Nostr relay** implementation built on modern web technologies.
 
 * **Core Technology:** TypeScript, **Bun** runtime.
-* **Database:** **SQLite** (via `bun:sql`) for native performance and simplicity.
+* **Database:** **PGlite** (PostgreSQL in WASM) via `@electric-sql/pglite`.
 * **Key Features:**
-  * Full-Text Search (NIP-50) using SQLite FTS5.
+  * Full-Text Search (NIP-50) using PostgreSQL `tsvector`.
   * Comprehensive NIP support (see README for full list).
   * Configurable via `n0str.json`.
   * Implements security features like PoW (NIP-13) and Authentication (NIP-42).
@@ -74,7 +74,7 @@
 ## Development Conventions
 
 * **Database Access:**
-  * `src/sqlite.ts`: Initializes the SQLite connection and schema (including FTS5 triggers).
+  * `src/pglite.ts`: Initializes the PGlite connection and schema.
   * `src/repository.ts`: Encapsulates all data access logic (saving events, querying, NIP-09 deletion, NIP-40 expiration).
 * **Logging:**
   * Uses `console` wrappers for logging.
@@ -93,7 +93,7 @@
 * `n0str.json`: Configuration file.
 * `index.ts`: Application entry point.
 * `src/server.ts`: WebServer logic and routing (Bun.serve).
-* `src/sqlite.ts`: Database connection and schema initialization.
+* `src/pglite.ts`: Database connection and schema initialization.
 * `src/repository.ts`: Data Access Layer.
 * `src/message.ts`: Request handler for commands (EVENT, REQ, COUNT, etc.).
 * `src/nostr.ts`: Nostr protocol utilities (validation, types).

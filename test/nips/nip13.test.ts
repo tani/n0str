@@ -1,23 +1,27 @@
 import { test, describe, beforeAll, beforeEach, afterEach } from "bun:test";
-import { relay } from "../../src/server.ts";
-import { db } from "../../src/repository.ts";
+import { createTestEnv } from "../utils/test_helper.ts";
 
 describe("NIP-13 Proof of Work", () => {
-  const dbPath = "n0str.test.db";
   let server: any;
-
-  beforeAll(() => {
-    process.env.DATABASE_PATH = dbPath;
-  });
+  let url: string;
+  let repository: any;
+  let relayService: any;
+  let db: any;
+  let queryEvents: any;
 
   beforeEach(async () => {
-    await db`DELETE FROM events`;
-    await db`DELETE FROM tags`;
-    server = Bun.serve({ ...relay, port: 0 });
+    const env = await createTestEnv();
+    server = env.server;
+    url = env.url;
+    repository = env.repository;
+    relayService = env.relayService;
+    db = env.db;
+    queryEvents = repository.queryEvents.bind(repository);
   });
 
-  afterEach(() => {
+  afterEach(async () => {
     server.stop();
+    await repository.close();
   });
 
   test("NIP-13: PoW difficulty enforcement", async () => {

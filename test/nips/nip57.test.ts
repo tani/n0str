@@ -1,6 +1,5 @@
 import { expect, test, describe, beforeAll, beforeEach, afterEach } from "bun:test";
-import { relay } from "../../src/server.ts";
-import { db, queryEvents } from "../../src/repository.ts";
+import { createTestEnv } from "../utils/test_helper.ts";
 import { generateSecretKey, finalizeEvent } from "nostr-tools";
 
 async function consumeAuth(ws: WebSocket) {
@@ -13,23 +12,26 @@ async function consumeAuth(ws: WebSocket) {
 }
 
 describe("NIP-57: Lightning Zaps", () => {
-  const dbPath = "n0str.test.db";
   let server: any;
   let url: string;
-
-  beforeAll(() => {
-    process.env.DATABASE_PATH = dbPath;
-  });
+  let repository: any;
+  let relayService: any;
+  let db: any;
+  let queryEvents: any;
 
   beforeEach(async () => {
-    await db`DELETE FROM events`;
-    await db`DELETE FROM tags`;
-    server = Bun.serve({ ...relay, port: 0 });
-    url = `ws://localhost:${server.port}`;
+    const env = await createTestEnv();
+    server = env.server;
+    url = env.url;
+    repository = env.repository;
+    relayService = env.relayService;
+    db = env.db;
+    queryEvents = repository.queryEvents.bind(repository);
   });
 
-  afterEach(() => {
+  afterEach(async () => {
     server.stop();
+    await repository.close();
   });
 
   const sk = generateSecretKey();
@@ -59,7 +61,7 @@ describe("NIP-57: Lightning Zaps", () => {
       const stored = await queryEvents({ kinds: [kind] });
       expect(stored).toHaveLength(1);
       expect(stored[0]?.id).toBe(e.id);
-      await db`DELETE FROM events`;
+      await db.query("DELETE FROM events");
     }
 
     ws.close();

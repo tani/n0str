@@ -1,7 +1,7 @@
-import { SqliteEventRepository } from "./sqlite.ts";
+import { PgLiteEventRepository } from "./pglite.ts";
 import { config } from "./args.ts";
 
-export const repository = new SqliteEventRepository(config.database);
+export const repository = new PgLiteEventRepository(config.database);
 await repository.init();
 
 export const db = repository.db;

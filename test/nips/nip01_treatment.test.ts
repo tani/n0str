@@ -1,6 +1,5 @@
 import { expect, test, describe, beforeAll, beforeEach, afterEach } from "bun:test";
-import { relay } from "../../src/server.ts";
-import { db, queryEvents } from "../../src/repository.ts";
+import { createTestEnv } from "../utils/test_helper.ts";
 import { generateSecretKey, getPublicKey, finalizeEvent } from "nostr-tools";
 
 async function consumeAuth(ws: WebSocket) {
@@ -13,23 +12,26 @@ async function consumeAuth(ws: WebSocket) {
 }
 
 describe("Event Treatment (NIP-01)", () => {
-  const dbPath = "n0str.test.db";
   let server: any;
   let url: string;
-
-  beforeAll(() => {
-    process.env.DATABASE_PATH = dbPath;
-  });
+  let repository: any;
+  let relayService: any;
+  let db: any;
+  let queryEvents: any;
 
   beforeEach(async () => {
-    await db`DELETE FROM events`;
-    await db`DELETE FROM tags`;
-    server = Bun.serve({ ...relay, port: 0 });
-    url = `ws://localhost:${server.port}`;
+    const env = await createTestEnv();
+    server = env.server;
+    url = env.url;
+    repository = env.repository;
+    relayService = env.relayService;
+    db = env.db;
+    queryEvents = repository.queryEvents.bind(repository);
   });
 
-  afterEach(() => {
+  afterEach(async () => {
     server.stop();
+    await repository.close();
   });
 
   const sk1 = generateSecretKey();
@@ -197,9 +199,10 @@ describe("Event Treatment (NIP-01)", () => {
     // 5. Should still have 2, but one updated
     const finalStored = await queryEvents({ kinds: [30000] });
     expect(finalStored).toHaveLength(2);
-    expect(finalStored.find((e) => e.tags.find((t) => t[0] === "d" && t[1] === "a"))?.content).toBe(
-      "content-a-updated",
-    );
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    expect(
+      finalStored.find((e: any) => e.tags.find((t: any) => t[0] === "d" && t[1] === "a"))?.content,
+    ).toBe("content-a-updated");
 
     ws.close();
   });

@@ -1,33 +1,13 @@
-import { describe, expect, test, afterEach } from "bun:test";
+import { describe, expect, test } from "bun:test";
 import { generateSecretKey, finalizeEvent } from "nostr-tools";
 import { relayInfo } from "../../src/config.ts";
 import { NostrRelay } from "../../src/relay.ts";
-import { SqliteEventRepository } from "../../src/sqlite.ts";
-import { existsSync, unlinkSync } from "fs";
+import { PgLiteEventRepository } from "../../src/pglite.ts";
 
 describe("relay coverage", () => {
-  const dbPath = "n0str.relay.test.db";
-
-  afterEach(() => {
-    if (existsSync(dbPath)) {
-      try {
-        unlinkSync(dbPath);
-      } catch {
-        // ignore
-      }
-    }
-  });
-
   test("relay fetch branches and websocket message paths", async () => {
-    if (existsSync(dbPath)) {
-      try {
-        unlinkSync(dbPath);
-      } catch {
-        // ignore
-      }
-    }
-
-    await using repository = new SqliteEventRepository(dbPath);
+    // Use in-memory PGlite
+    await using repository = new PgLiteEventRepository();
     await using relayService = new NostrRelay(repository);
     await relayService.init();
 
