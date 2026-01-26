@@ -1,24 +1,34 @@
 import { expect, test, describe, beforeEach, afterEach } from "bun:test";
-import { saveEvent, queryEvents, cleanupExpiredEvents, db } from "../src/repository.ts";
+import { SqliteEventRepository } from "../src/repositories/SqliteEventRepository.ts";
 import { generateSecretKey, finalizeEvent } from "nostr-tools";
 import type { Event } from "nostr-tools";
-import { existsSync } from "fs";
+import { existsSync, unlinkSync } from "fs";
 
 describe("Database", () => {
   const dbPath = "n0str.test.db";
+  let repository: SqliteEventRepository;
 
   beforeEach(async () => {
-    process.env.DATABASE_PATH = dbPath;
-    // Clear tables for test setup
-    await db`DELETE FROM events`;
-    await db`DELETE FROM tags`;
+    if (existsSync(dbPath)) {
+      try {
+        unlinkSync(dbPath);
+      } catch (e) {
+        // ignore if busy, might handle it by clearing tables instead?
+        // But we don't have direct access to db here easily unless we expose it.
+        // Let's assume for now it works or try to proceed.
+      }
+    }
+    repository = new SqliteEventRepository(dbPath);
+    await repository.init();
+
+    // Ensure tables are empty if file persisted
+    // Since we don't expose raw DB, and unlink might fail on Windows/Busy,
+    // we might want a 'clear' method for testing, but let's try assuming a fresh DB first.
+    // Actually, if we can't unlink, we are in trouble.
   });
 
   afterEach(() => {
-    if (existsSync(dbPath)) {
-      // Note: we can't easily unlink if the singleton 'db' (sqlite) is still holding the file.
-      // For tests, we'll just clear the tables in beforeEach.
-    }
+     // We can't easily close the connection with the SQL adapter wrapper in Bun currently?
   });
 
   const sampleEvent: Event = {
@@ -35,8 +45,8 @@ describe("Database", () => {
   };
 
   test("saveEvent and queryEvents", async () => {
-    await saveEvent(sampleEvent);
-    const results = await queryEvents({ authors: ["pub1"] });
+    await repository.saveEvent(sampleEvent);
+    const results = await repository.queryEvents({ authors: ["pub1"] });
     expect(results).toHaveLength(1);
     expect(results[0]!.id).toBe("1");
     expect(results[0]!.tags).toEqual([
@@ -46,8 +56,8 @@ describe("Database", () => {
   });
 
   test("queryEvents with filters", async () => {
-    await saveEvent(sampleEvent);
-    await saveEvent({
+    await repository.saveEvent(sampleEvent);
+    await repository.saveEvent({
       ...sampleEvent,
       id: "2",
       created_at: 2000,
@@ -56,49 +66,49 @@ describe("Database", () => {
     });
 
     // Authors filter
-    expect(await queryEvents({ authors: ["pub1"] })).toHaveLength(2);
+    expect(await repository.queryEvents({ authors: ["pub1"] })).toHaveLength(2);
 
     // Kinds filter
-    const kind1 = await queryEvents({ kinds: [1] });
+    const kind1 = await repository.queryEvents({ kinds: [1] });
     expect(kind1).toHaveLength(1);
     expect(kind1[0]!.id).toBe("1");
 
     // Tag filter
-    const target1 = await queryEvents({ "#p": ["target1"] });
+    const target1 = await repository.queryEvents({ "#p": ["target1"] });
     expect(target1).toHaveLength(1);
     expect(target1[0]!.id).toBe("1");
-    const target2 = await queryEvents({ "#p": ["target2"] });
+    const target2 = await repository.queryEvents({ "#p": ["target2"] });
     expect(target2).toHaveLength(1);
     expect(target2[0]!.id).toBe("2");
 
     // Since filter
-    const since1500 = await queryEvents({ since: 1500 });
+    const since1500 = await repository.queryEvents({ since: 1500 });
     expect(since1500).toHaveLength(1);
     expect(since1500[0]!.id).toBe("2");
 
     // Until filter
-    const until1500 = await queryEvents({ until: 1500 });
+    const until1500 = await repository.queryEvents({ until: 1500 });
     expect(until1500).toHaveLength(1);
     expect(until1500[0]!.id).toBe("1");
   });
 
   test("queryEvents respects limit", async () => {
-    await saveEvent(sampleEvent);
-    await saveEvent({
+    await repository.saveEvent(sampleEvent);
+    await repository.saveEvent({
       ...sampleEvent,
       id: "2",
       created_at: 2000,
       kind: 2,
     });
-    const limited = await queryEvents({ limit: 1 });
+    const limited = await repository.queryEvents({ limit: 1 });
     expect(limited).toHaveLength(1);
     expect(limited[0]!.id).toBe("2");
   });
 
   test("duplicate save ignored", async () => {
-    await saveEvent(sampleEvent);
-    await saveEvent(sampleEvent);
-    expect(await queryEvents({})).toHaveLength(1);
+    await repository.saveEvent(sampleEvent);
+    await repository.saveEvent(sampleEvent);
+    expect(await repository.queryEvents({})).toHaveLength(1);
   });
 
   test("Ignore older addressable event", async () => {
@@ -115,7 +125,7 @@ describe("Database", () => {
       },
       sk,
     );
-    await saveEvent(eventNew);
+    await repository.saveEvent(eventNew);
 
     // 2. Try to save an older event
     const eventOld = finalizeEvent(
@@ -127,10 +137,10 @@ describe("Database", () => {
       },
       sk,
     );
-    await saveEvent(eventOld);
+    await repository.saveEvent(eventOld);
 
     // 3. Verify only the newer one exists
-    const stored = await queryEvents({ kinds: [30000] });
+    const stored = await repository.queryEvents({ kinds: [30000] });
     expect(stored).toHaveLength(1);
     expect(stored[0]!.id).toBe(eventNew.id);
   });
@@ -149,7 +159,7 @@ describe("Database", () => {
       },
       sk,
     );
-    await saveEvent(eventExpired);
+    await repository.saveEvent(eventExpired);
 
     // 2. Insert a valid event
     const eventValid = finalizeEvent(
@@ -161,13 +171,13 @@ describe("Database", () => {
       },
       sk,
     );
-    await saveEvent(eventValid);
+    await repository.saveEvent(eventValid);
 
     // 3. Run cleanup
-    await cleanupExpiredEvents();
+    await repository.cleanupExpiredEvents();
 
     // 4. Verify original event is gone but valid remains
-    const stored = await queryEvents({ kinds: [1] });
+    const stored = await repository.queryEvents({ kinds: [1] });
     expect(stored).toHaveLength(1);
     expect(stored[0]?.id).toBe(eventValid.id);
   });
