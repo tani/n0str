@@ -2,6 +2,7 @@ import { type } from "arktype";
 import type { Event, Filter } from "nostr-tools";
 import { verifyEvent } from "nostr-tools";
 import { logger } from "./logger";
+import { relayInfo } from "./config.ts";
 
 /**
  * Counts the number of leading zero bits in a hex string (NIP-13 PoW).
@@ -146,6 +147,14 @@ export async function validateEvent(
   if (!isSigValid) {
     void logger.debug`Signature verification failed for event ${validatedEvent.id}`;
     return { ok: false, reason: "invalid: signature verification failed" };
+  }
+
+  if (validatedEvent.tags.length > relayInfo.limitation.max_tag_count) {
+    void logger.debug`Too many tags for event ${validatedEvent.id}`;
+    return {
+      ok: false,
+      reason: `invalid: too many tags (max ${relayInfo.limitation.max_tag_count})`,
+    };
   }
 
   return { ok: true };

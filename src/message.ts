@@ -195,6 +195,19 @@ export class NostrMessageHandler {
       return;
     }
 
+    if (filters.length > relayInfo.limitation.max_filters) {
+      void logger.debug`Too many filters for ${ws.remoteAddress} (subId: ${subId})`;
+      ws.send(JSON.stringify(["CLOSED", subId, "error: too many filters"]));
+      return;
+    }
+
+    // Cap limit to max_limit
+    for (const filter of filters) {
+      if (filter.limit === undefined || filter.limit > relayInfo.limitation.max_limit) {
+        filter.limit = relayInfo.limitation.max_limit;
+      }
+    }
+
     ws.data.subscriptions.set(subId, filters);
 
     // Send historical events

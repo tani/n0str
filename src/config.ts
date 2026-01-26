@@ -26,6 +26,7 @@ export const defaultRelayInfo = {
     restricted_writes: false,
     created_at_lower_limit: 31536000,
     created_at_upper_limit: 3600,
+    max_tag_count: 100,
   },
 };
 
@@ -50,6 +51,7 @@ export const RelayInfoSchema = type({
     "restricted_writes?": "boolean",
     "created_at_lower_limit?": "number>=0",
     "created_at_upper_limit?": "number>=0",
+    "max_tag_count?": "number>0",
   },
 });
 
