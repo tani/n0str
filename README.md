@@ -11,8 +11,6 @@
   </p>
 </div>
 
----
-
 **n0str** (pronounced "nostra") is a modern [Nostr](https://github.com/nostr-protocol/nostr) relay designed for maximum simplicity without sacrificing power. It's a **single-binary**, **zero-dependency** solution that brings professional-grade relay features to anyone, anywhere.
 
 ## ✨ Why Choose n0str?
@@ -28,8 +26,6 @@ Most relays struggle with CJK (Chinese, Japanese, Korean) or complex scripts bec
 ### ⚡ Blazing Fast & Lightweight
 
 Built on the **Bun** runtime, n0str utilizes native high-speed WebSockets and the highly optimized SQLite engine. It handles high throughput with a tiny memory footprint, perfect for both Raspberry Pis and high-end servers.
-
----
 
 ## 🚀 Getting Started
 
@@ -57,8 +53,6 @@ chmod +x n0str-linux-x64
    ```bash
    bun start
    ```
-
----
 
 ## 🛠 Features & NIP Support
 
@@ -110,14 +104,14 @@ n0str is built to be a standard-compliant, feature-rich relay core.
 
 </details>
 
----
-
 ## ⚙️ Configuration
 
 n0str works out of the box with defaults, but can be fully customized via `n0str.json` or Environment Variables.
 
 ### n0str.json
+
 Create an `n0str.json` in the root directory:
+
 ```json
 {
   "name": "My n0str Relay",
@@ -138,8 +132,6 @@ Environment variables take precedence over the JSON config.
 - `ENGINE`: Database engine (`sqlite` or `pglite`, default: `sqlite`)
 - `DATABASE`: Database path or `:memory:` (default: `:memory:`)
 - `LOGLEVEL`: Logging level (`trace` to `error`, default: `info`)
-
----
 
 ## 🏗 Architecture
 
@@ -197,15 +189,11 @@ sequenceDiagram
     end
 ```
 
----
-
 ## 🧩 The n0str Philosophy
 
 1. **Zero Bloat**: No massive dependency trees. Keep it lean, mean, and fast.
 2. **Global First**: Nostr is for the world. If it doesn't work in Japanese or Arabic, it doesn't work.
 3. **Simplicity is a Feature**: A relay should be as easy to run as a hello-world script.
-
----
 
 ## 📄 License
 
