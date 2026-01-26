@@ -37,25 +37,17 @@ describe.each(engines)("Engine: %s > relay coverage", (engine) => {
     const failedUpgradeServer = {
       upgrade: () => false,
     };
-    const failedResult = relay.fetch(
-      upgradeReq,
-      failedUpgradeServer,
-    ) as Response;
+    const failedResult = relay.fetch(upgradeReq, failedUpgradeServer) as Response;
     expect(failedResult.status).toBe(400);
 
     const infoReq = new Request("http://localhost/", {
       headers: { Accept: "application/nostr+json" },
     });
     const infoResult = relay.fetch(infoReq, failedUpgradeServer) as Response;
-    expect(infoResult.headers.get("Content-Type")).toBe(
-      "application/nostr+json",
-    );
+    expect(infoResult.headers.get("Content-Type")).toBe("application/nostr+json");
 
     const defaultReq = new Request("http://localhost/");
-    const defaultResult = relay.fetch(
-      defaultReq,
-      failedUpgradeServer,
-    ) as Response;
+    const defaultResult = relay.fetch(defaultReq, failedUpgradeServer) as Response;
     expect(await defaultResult.text()).toContain("n0str Relay");
 
     await relay.websocket.message(ws, "not json");
@@ -65,16 +57,10 @@ describe.each(engines)("Engine: %s > relay coverage", (engine) => {
     await relay.websocket.message(ws, JSON.stringify(["CLOSE", closeSubId]));
     expect(ws.data.subscriptions.has(closeSubId)).toBe(false);
 
-    await relay.websocket.message(
-      ws,
-      "x".repeat(relayInfo.limitation.max_message_length + 1),
-    );
+    await relay.websocket.message(ws, "x".repeat(relayInfo.limitation.max_message_length + 1));
     expect(sent[sent.length - 1]).toContain("error: message too large");
 
-    await relay.websocket.message(
-      ws,
-      JSON.stringify(["COUNT", "sub-count", {}]),
-    );
+    await relay.websocket.message(ws, JSON.stringify(["COUNT", "sub-count", {}]));
     expect(sent.some((msg) => msg.includes('"COUNT"'))).toBe(true);
 
     const sk = generateSecretKey();
@@ -90,10 +76,7 @@ describe.each(engines)("Engine: %s > relay coverage", (engine) => {
     await relay.websocket.message(ws, JSON.stringify(["EVENT", event]));
     await relay.websocket.message(ws, JSON.stringify(["REQ", "sub-req", {}]));
 
-    await relay.websocket.message(
-      ws,
-      JSON.stringify(["AUTH", { id: "bad", kind: 1, tags: [] }]),
-    );
+    await relay.websocket.message(ws, JSON.stringify(["AUTH", { id: "bad", kind: 1, tags: [] }]));
     expect(sent.some((msg) => msg.includes('"OK"'))).toBe(true);
 
     // Cover default branch in match (unreachable with current ClientMessageSchema,

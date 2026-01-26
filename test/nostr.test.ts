@@ -22,20 +22,14 @@ describe.each(engines)("Engine: %s > Protocol", (engine) => {
   const pk = getPublicKey(sk);
 
   test("ClientMessageSchema handles invalid JSON", () => {
-    expect(ClientMessageSchema("invalid json") instanceof type.errors).toBe(
-      true,
-    );
+    expect(ClientMessageSchema("invalid json") instanceof type.errors).toBe(true);
   });
 
   test("ClientMessageSchema handles schema violations", () => {
-    expect(
-      ClientMessageSchema(JSON.stringify(["INVALID", {}])) instanceof
-        type.errors,
-    ).toBe(true);
-    expect(
-      ClientMessageSchema(JSON.stringify(["EVENT", { id: 123 }])) instanceof
-        type.errors,
-    ).toBe(true);
+    expect(ClientMessageSchema(JSON.stringify(["INVALID", {}])) instanceof type.errors).toBe(true);
+    expect(ClientMessageSchema(JSON.stringify(["EVENT", { id: 123 }])) instanceof type.errors).toBe(
+      true,
+    );
   });
 
   test("validateEvent handles ArkType errors", async () => {
@@ -81,9 +75,7 @@ describe.each(engines)("Engine: %s > Protocol", (engine) => {
     } as any;
 
     expect((await validateEvent(event, 10)).reason).not.toContain("pow");
-    expect((await validateEvent(event, 25)).reason).toContain(
-      "pow: difficulty 20 is less than 25",
-    );
+    expect((await validateEvent(event, 25)).reason).toContain("pow: difficulty 20 is less than 25");
 
     // Target commitment match
     const eventWithTarget = { ...event, tags: [["nonce", "1", "25"]] };
@@ -109,9 +101,7 @@ describe.each(engines)("Engine: %s > Protocol", (engine) => {
     expect(matchFilters([{ "#t": ["nostr"] }], event)).toBe(true);
     expect(matchFilters([{ "#t": ["other"] }], event)).toBe(false);
     expect(matchFilters([{ "#p": ["alice"] }], event)).toBe(true);
-    expect(matchFilters([{ "#p": ["bob"], "#t": ["nostr"] }], event)).toBe(
-      false,
-    );
+    expect(matchFilters([{ "#p": ["bob"], "#t": ["nostr"] }], event)).toBe(false);
   });
 
   describe("validateAuthEvent branches", () => {
@@ -127,11 +117,7 @@ describe.each(engines)("Engine: %s > Protocol", (engine) => {
       );
       const tampered = JSON.parse(JSON.stringify(event));
       tampered.sig = "0".repeat(128);
-      const res = await validateAuthEvent(
-        tampered,
-        "challenge",
-        "ws://localhost",
-      );
+      const res = await validateAuthEvent(tampered, "challenge", "ws://localhost");
       expect(res.ok).toBe(false);
       expect(res.reason).toContain("signature verification failed");
     });
@@ -163,9 +149,7 @@ describe.each(engines)("Engine: %s > Protocol", (engine) => {
       );
       const res = await validateAuthEvent(event, "challenge", "ws://localhost");
       expect(res.ok).toBe(false);
-      expect(res.reason).toBe(
-        "invalid: created_at is too far from current time",
-      );
+      expect(res.reason).toBe("invalid: created_at is too far from current time");
     });
 
     test("missing relay tag", async () => {

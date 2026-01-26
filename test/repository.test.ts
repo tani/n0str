@@ -1,12 +1,5 @@
 import { engines } from "./utils/engines.ts";
-import {
-  expect,
-  test,
-  describe,
-  beforeEach,
-  afterEach,
-  beforeAll,
-} from "bun:test";
+import { expect, test, describe, beforeEach, afterEach, beforeAll } from "bun:test";
 import {
   createRepository,
   initRepository,

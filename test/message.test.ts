@@ -54,10 +54,7 @@ describe.each(engines)("Engine: %s > message handling", (engine) => {
 
   test("handleMessage REQ and CLOSE", async () => {
     const subId = "sub1";
-    await handler.handleMessage(
-      mockWs,
-      JSON.stringify(["REQ", subId, { kinds: [1] }]),
-    );
+    await handler.handleMessage(mockWs, JSON.stringify(["REQ", subId, { kinds: [1] }]));
 
     // Should have sent EOSE at least
     expect(sent.some((m) => m[0] === "EOSE")).toBe(true);
@@ -81,10 +78,7 @@ describe.each(engines)("Engine: %s > message handling", (engine) => {
   });
 
   test("handleMessage COUNT", async () => {
-    await handler.handleMessage(
-      mockWs,
-      JSON.stringify(["COUNT", "c1", { kinds: [1] }]),
-    );
+    await handler.handleMessage(mockWs, JSON.stringify(["COUNT", "c1", { kinds: [1] }]));
     expect(sent).toHaveLength(1);
     expect(sent[0][0]).toBe("COUNT");
     expect(sent[0][1]).toBe("c1");
@@ -125,15 +119,10 @@ describe.each(engines)("Engine: %s > message handling", (engine) => {
       JSON.stringify(["NEG-OPEN", subId, { kinds: [1] }, initMsg]),
     );
     // Should have sent a NEG-MSG back or NEG-ERR
-    expect(sent.some((m) => m[0] === "NEG-MSG" || m[0] === "NEG-ERR")).toBe(
-      true,
-    );
+    expect(sent.some((m) => m[0] === "NEG-MSG" || m[0] === "NEG-ERR")).toBe(true);
 
     if (mockWs.data.negSubscriptions.has(subId)) {
-      await handler.handleMessage(
-        mockWs,
-        JSON.stringify(["NEG-MSG", subId, initMsg]),
-      );
+      await handler.handleMessage(mockWs, JSON.stringify(["NEG-MSG", subId, initMsg]));
       await handler.handleMessage(mockWs, JSON.stringify(["NEG-CLOSE", subId]));
       expect(mockWs.data.negSubscriptions.has(subId)).toBe(false);
     }
@@ -226,10 +215,7 @@ describe.each(engines)("Engine: %s > message handling", (engine) => {
     for (let i = 0; i < 20; i++) {
       mockWs.data.subscriptions.set(`sub${i}`, []);
     }
-    await handler.handleMessage(
-      mockWs,
-      JSON.stringify(["REQ", "too-many", {}]),
-    );
+    await handler.handleMessage(mockWs, JSON.stringify(["REQ", "too-many", {}]));
     expect(sent).toHaveLength(1);
     expect(sent[0][0]).toBe("CLOSED");
     expect(sent[0][2]).toContain("max subscriptions");

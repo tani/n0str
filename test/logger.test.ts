@@ -1,13 +1,5 @@
 import { engines } from "./utils/engines.ts";
-import {
-  describe,
-  test,
-  expect,
-  spyOn,
-  beforeEach,
-  afterEach,
-  beforeAll,
-} from "bun:test";
+import { describe, test, expect, spyOn, beforeEach, afterEach, beforeAll } from "bun:test";
 import { initRepository, getRepository } from "../src/repository.ts";
 import { relayService } from "../src/server.ts";
 import { logger } from "../src/logger.ts";
@@ -131,26 +123,20 @@ describe.each(engines)("Engine: %s > logger", (engine) => {
   test("handles Error objects", () => {
     const err = new Error("test error");
     void logger.error`Got error: ${err}`;
-    expect(errorSpy).toHaveBeenCalledWith(
-      expect.stringContaining("test error"),
-    );
+    expect(errorSpy).toHaveBeenCalledWith(expect.stringContaining("test error"));
   });
 
   test("handles JSON objects", () => {
     const obj = { foo: "bar" };
     void logger.info`Data: ${obj}`;
-    expect(infoSpy).toHaveBeenCalledWith(
-      expect.stringContaining('{"foo":"bar"}'),
-    );
+    expect(infoSpy).toHaveBeenCalledWith(expect.stringContaining('{"foo":"bar"}'));
   });
 
   test("handles circular JSON objects", () => {
     const obj: any = { foo: "bar" };
     obj.self = obj;
     void logger.info`Data: ${obj}`;
-    expect(infoSpy).toHaveBeenCalledWith(
-      expect.stringContaining("[object Object]"),
-    );
+    expect(infoSpy).toHaveBeenCalledWith(expect.stringContaining("[object Object]"));
   });
 
   test("handles direct log calls", () => {
