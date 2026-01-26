@@ -29,6 +29,15 @@ export class NostrRelay {
   }
 
   /**
+   * Updates the repository used by the relay and its message handler.
+   * @param repository - The new event repository.
+   */
+  public setRepository(repository: IEventRepository) {
+    this.repository = repository;
+    this.messageHandler.setRepository(repository);
+  }
+
+  /**
    * Initializes the relay by setting up the repository and starting maintenance tasks.
    */
   public async init() {

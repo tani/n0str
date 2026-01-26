@@ -1,3 +1,4 @@
+import { engines } from "../utils/engines.ts";
 import { expect, test, describe, beforeAll, beforeEach, afterEach } from "bun:test";
 import { generateSecretKey, finalizeEvent } from "nostr-tools";
 
@@ -10,15 +11,17 @@ async function consumeAuth(ws: WebSocket) {
   });
 }
 
-describe("NIP-44: Encrypted Payloads", () => {
+import { relay, relayService } from "../../src/server.ts";
+import { initRepository, getRepository } from "../../src/repository.ts";
+
+describe.each(engines)("Engine: %s > NIP-44: Encrypted Payloads", (engine) => {
+  beforeAll(async () => {
+    await initRepository(engine, ":memory:");
+    relayService.setRepository(getRepository());
+  });
+
   let server: any;
   let url: string;
-  let relay: any;
-  beforeAll(async () => {
-    // Dynamic import to ensure env var is set before DB init
-    const relayModule = await import("../../src/server.ts");
-    relay = relayModule.relay;
-  });
 
   beforeEach(async () => {
     const { clear } = await import("../../src/repository.ts");

@@ -1,7 +1,14 @@
-import { expect, test, describe, beforeEach, afterEach } from "bun:test";
-import { relay } from "../../src/server.ts";
+import { engines } from "../utils/engines.ts";
+import { expect, test, describe, beforeEach, afterEach, beforeAll } from "bun:test";
+import { relay, relayService } from "../../src/server.ts";
+import { initRepository, getRepository } from "../../src/repository.ts";
 
-describe("NIP-11 Relay Information Document", () => {
+describe.each(engines)("Engine: %s > NIP-11 Relay Information Document", (engine) => {
+  beforeAll(async () => {
+    await initRepository(engine, ":memory:");
+    relayService.setRepository(getRepository());
+  });
+
   let server: any;
   let url: string;
 

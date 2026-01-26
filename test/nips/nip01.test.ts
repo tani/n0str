@@ -1,7 +1,8 @@
-import { expect, test, describe, beforeEach, afterEach } from "bun:test";
-import { relay } from "../../src/server.ts";
-import { clear } from "../../src/repository.ts";
+import { expect, test, describe, beforeAll, beforeEach, afterEach } from "bun:test";
+import { relay, relayService } from "../../src/server.ts";
+import { clear, initRepository, getRepository } from "../../src/repository.ts";
 import { generateSecretKey, getPublicKey, finalizeEvent } from "nostr-tools";
+import { engines } from "../utils/engines.ts";
 
 async function consumeAuth(ws: WebSocket) {
   return new Promise((resolve) => {
@@ -12,9 +13,14 @@ async function consumeAuth(ws: WebSocket) {
   });
 }
 
-describe("NIP-01 Core Relay", () => {
+describe.each(engines)("Engine: %s > NIP-01: Basic Protocol", (engine) => {
   let server: any;
   let url: string;
+
+  beforeAll(async () => {
+    await initRepository(engine, ":memory:");
+    relayService.setRepository(getRepository());
+  });
 
   beforeEach(async () => {
     await clear();

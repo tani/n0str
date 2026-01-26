@@ -1,6 +1,7 @@
-import { expect, test, describe, beforeEach, afterEach } from "bun:test";
-import { relay } from "../../src/server.ts";
-import { clear } from "../../src/repository.ts";
+import { engines } from "../utils/engines.ts";
+import { expect, test, describe, beforeEach, afterEach, beforeAll } from "bun:test";
+import { relay, relayService } from "../../src/server.ts";
+import { clear, initRepository, getRepository } from "../../src/repository.ts";
 import { generateSecretKey, finalizeEvent } from "nostr-tools";
 
 async function consumeAuth(ws: WebSocket) {
@@ -12,7 +13,12 @@ async function consumeAuth(ws: WebSocket) {
   });
 }
 
-describe("NIP-10: Text Notes and Threads", () => {
+describe.each(engines)("Engine: %s > NIP-10: Text Notes and Threads", (engine) => {
+  beforeAll(async () => {
+    await initRepository(engine, ":memory:");
+    relayService.setRepository(getRepository());
+  });
+
   let server: any;
   let url: string;
 

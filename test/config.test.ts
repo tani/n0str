@@ -1,7 +1,7 @@
 import { describe, expect, test } from "bun:test";
 import { resolve } from "node:path";
 import * as fs from "node:fs";
-import { defaultRelayInfo, loadRelayInfo } from "../../src/config.ts";
+import { defaultRelayInfo, loadRelayInfo } from "../src/config.ts";
 
 describe("config coverage", () => {
   test("invalid schema falls back to defaults", async () => {

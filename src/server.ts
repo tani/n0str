@@ -1,12 +1,12 @@
 import { NostrRelay } from "./relay.ts";
 import { logger } from "./logger.ts";
-import { repository } from "./repository.ts";
+import { getRepository } from "./repository.ts";
 import { config } from "./args.ts";
 
 /**
  * The core NostrRelay service instance.
  */
-export const relayService = new NostrRelay(repository, config.port);
+export const relayService = new NostrRelay(getRepository(), config.port);
 await relayService.init();
 
 /**

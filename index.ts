@@ -1,9 +1,9 @@
 import { config } from "./src/args.ts";
 import { NostrRelay } from "./src/relay.ts";
 import { logger } from "./src/logger.ts";
-import { repository } from "./src/repository.ts";
+import { getRepository } from "./src/repository.ts";
 
-const relay = new NostrRelay(repository, config.port);
+const relay = new NostrRelay(getRepository(), config.port);
 await relay.init();
 
 const server = Bun.serve({

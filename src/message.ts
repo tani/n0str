@@ -37,12 +37,24 @@ export class NostrMessageHandler {
   ) {}
 
   /**
+   * Updates the repository used by the message handler.
+   * @param repository - The new event repository.
+   */
+  public setRepository(repository: IEventRepository) {
+    this.repository = repository;
+  }
+
+  /**
    * Handles an incoming raw WebSocket message.
    * @param ws - The server WebSocket connection.
    * @param rawMessage - The raw message data (string or Buffer).
    */
-  public async handleMessage(ws: ServerWebSocket<ClientData>, rawMessage: string | Buffer) {
-    const messageStr = typeof rawMessage === "string" ? rawMessage : rawMessage.toString();
+  public async handleMessage(
+    ws: ServerWebSocket<ClientData>,
+    rawMessage: string | Buffer,
+  ) {
+    const messageStr =
+      typeof rawMessage === "string" ? rawMessage : rawMessage.toString();
     void logger.trace`Received message: ${messageStr}`;
 
     if (messageStr.length > relayInfo.limitation.max_message_length) {
@@ -84,7 +96,14 @@ export class NostrMessageHandler {
     const event = EventSchema(rawEvent);
     if (event instanceof type.errors) {
       void logger.debug`Malformed event received from ${ws.remoteAddress}: ${event.summary}`;
-      ws.send(JSON.stringify(["OK", rawEvent?.id ?? "unknown", false, "error: malformed event"]));
+      ws.send(
+        JSON.stringify([
+          "OK",
+          rawEvent?.id ?? "unknown",
+          false,
+          "error: malformed event",
+        ]),
+      );
       return;
     }
 
@@ -96,7 +115,9 @@ export class NostrMessageHandler {
       const exp = parseInt(expirationTag[1]);
       if (!isNaN(exp) && exp < Math.floor(Date.now() / 1000)) {
         void logger.debug`Event ${event.id} expired on publish`;
-        ws.send(JSON.stringify(["OK", event.id, false, "error: event has expired"]));
+        ws.send(
+          JSON.stringify(["OK", event.id, false, "error: event has expired"]),
+        );
         return;
       }
     }
@@ -161,7 +182,12 @@ export class NostrMessageHandler {
         .flatMap((t) => (typeof t[1] === "string" ? [t[1]] : []));
 
       if (eventIds.length > 0 || identifiers.length > 0) {
-        await this.repository.deleteEvents(event.pubkey, eventIds, identifiers, event.created_at);
+        await this.repository.deleteEvents(
+          event.pubkey,
+          eventIds,
+          identifiers,
+          event.created_at,
+        );
         void logger.trace`Deleted events based on event ${event.id}`;
       }
     }
@@ -183,7 +209,9 @@ export class NostrMessageHandler {
 
     if (ws.data.subscriptions.size >= relayInfo.limitation.max_subscriptions) {
       void logger.debug`Max subscriptions reached for ${ws.remoteAddress} (subId: ${subId})`;
-      ws.send(JSON.stringify(["CLOSED", subId, "error: max subscriptions reached"]));
+      ws.send(
+        JSON.stringify(["CLOSED", subId, "error: max subscriptions reached"]),
+      );
       return;
     }
 
@@ -228,7 +256,11 @@ export class NostrMessageHandler {
     const event = payload[0];
     void logger.trace`AUTH received from ${ws.remoteAddress}`;
 
-    const result = await validateAuthEvent(event, ws.data.challenge, ws.data.relayUrl);
+    const result = await validateAuthEvent(
+      event,
+      ws.data.challenge,
+      ws.data.relayUrl,
+    );
     if (!result.ok) {
       void logger.debug`Auth validation failed: ${result.reason}`;
       ws.send(JSON.stringify(["OK", event.id, false, result.reason]));
@@ -287,7 +319,7 @@ export class NostrMessageHandler {
       }
       void logger.trace`NEG-OPEN processed for ${subId}`;
     } catch (err: any) {
-      void logger.error`NEG-OPEN error for ${subId}: ${err.message}`;
+      void logger.debug`NEG-OPEN error for ${subId}: ${err.message}`;
       ws.send(JSON.stringify(["NEG-ERR", subId, "error: " + err.message]));
     }
   }
@@ -303,7 +335,9 @@ export class NostrMessageHandler {
 
     if (!neg) {
       void logger.debug`NEG-MSG for unknown subscription: ${subId}`;
-      ws.send(JSON.stringify(["NEG-ERR", subId, "closed: subscription not found"]));
+      ws.send(
+        JSON.stringify(["NEG-ERR", subId, "closed: subscription not found"]),
+      );
       return;
     }
 
@@ -314,7 +348,7 @@ export class NostrMessageHandler {
         ws.send(JSON.stringify(["NEG-MSG", subId, outputMessage]));
       }
     } catch (err: any) {
-      void logger.error`NEG-MSG error for ${subId}: ${err.message}`;
+      void logger.debug`NEG-MSG error for ${subId}: ${err.message}`;
       ws.send(JSON.stringify(["NEG-ERR", subId, "error: " + err.message]));
     }
   }

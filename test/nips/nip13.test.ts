@@ -1,8 +1,14 @@
-import { test, describe, beforeEach, afterEach } from "bun:test";
-import { relay } from "../../src/server.ts";
-import { clear } from "../../src/repository.ts";
+import { engines } from "../utils/engines.ts";
+import { test, describe, beforeEach, afterEach, beforeAll } from "bun:test";
+import { relay, relayService } from "../../src/server.ts";
+import { clear, initRepository, getRepository } from "../../src/repository.ts";
 
-describe("NIP-13 Proof of Work", () => {
+describe.each(engines)("Engine: %s > NIP-13 Proof of Work", (engine) => {
+  beforeAll(async () => {
+    await initRepository(engine, ":memory:");
+    relayService.setRepository(getRepository());
+  });
+
   let server: any;
 
   beforeEach(async () => {

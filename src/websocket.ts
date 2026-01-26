@@ -10,6 +10,10 @@ import { logger } from "./logger.ts";
 export class WebSocketManager {
   private clients: Set<ServerWebSocket<ClientData>> = new Set();
 
+  constructor() {
+    void logger.debug`WebSocketManager initialized`;
+  }
+
   /**
    * Adds a new WebSocket client to the manager.
    * @param ws - The server WebSocket connection.
