@@ -11,12 +11,10 @@ async function consumeAuth(ws: WebSocket) {
 }
 
 describe("NIP-44: Encrypted Payloads", () => {
-  const dbPath = "n0str.test.db";
   let server: any;
   let url: string;
   let relay: any;
   beforeAll(async () => {
-    process.env.DATABASE_PATH = dbPath;
     // Dynamic import to ensure env var is set before DB init
     const relayModule = await import("../../src/server.ts");
     relay = relayModule.relay;

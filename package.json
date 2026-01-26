@@ -9,11 +9,14 @@
     "lint": "oxlint",
     "format": "oxfmt src/ test/",
     "prepare": "bun x simple-git-hooks",
+    "test": "bun run test:sqlite && bun run test:pglite",
+    "test:sqlite": "ENGINE=sqlite bun test",
+    "test:pglite": "ENGINE=pglite bun test --test-concurrency=1",
     "compile": "printf '%s\\n' linux-x64 linux-arm64 macos-x64 macos-arm64 windows-x64 | xargs -I% bun build --compile index.ts --target bun-% --outfile n0str-%"
   },
   "simple-git-hooks": {
     "pre-commit": "bun run format && bun run lint",
-    "pre-push": "bun run typecheck && bun test"
+    "pre-push": "bun run typecheck && bun run test"
   },
   "devDependencies": {
     "@types/bun": "^1.3.6",

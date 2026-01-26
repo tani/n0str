@@ -10,9 +10,10 @@
 
 - **Simplicity**: Codebase designed to be easy to understand and maintain.
 - **Extensively Tested**: comprehensive test suite ensuring high coverage and NIP compliance.
-- **Efficient Storage**: Uses **SQLite** for reliable database interactions.
-- **Full-Text Search**: Native support for NIP-50 search capability using SQLite FTS5.
-- **Configurable**: Easy configuration via `n0str.json`.
+- **Efficient Storage**: Support for multiple storage backends, including **SQLite** and **PGLite** (Postgres in WASM).
+- **Strictly In-Memory**: High-performance, ephemeral model with zero disk footprint.
+- **Full-Text Search**: Native support for NIP-50 search capability.
+- **Configurable**: Easy configuration via `n0str.json` or environment variables.
 - **Secure**: Implements NIP-13 (PoW), NIP-22 (Event Limits), and NIP-42 (Authentication).
 - **Type-Safe**: Fully typed with TypeScript.
 
@@ -128,11 +129,11 @@ See the default configuration in `src/config.ts` for all available options.
 
 ### Environment Variables
 
-You can also configure the relay using environment variables:
+You can configure the relay using the following environment variables:
 
 - `PORT`: The port to listen on (default: 3000).
-- `LOG_LEVEL`: The logging level (default: info). Available levels: `trace`, `debug`, `info`, `warn`, `error`.
-- `DATABASE_PATH`: The path to the SQLite database (default: `./n0str.db`).
+- `ENGINE`: The database engine to use (`sqlite` or `pglite`, default: `sqlite`).
+- `LOGLEVEL`: The logging level (default: `info`). Available levels: `trace`, `debug`, `info`, `warn`, `error`.
 
 ## Architecture & Flow
 
@@ -178,9 +179,11 @@ sequenceDiagram
 
 ### Component Roles
 
-- **NostrRelay (src/relay.ts)**: Entry point using Bun's native WebSocket. Manages connection lifecycle and NIP-11 requests.
+- **NostrRelay (src/server.ts)**: Entry point using Bun's native WebSocket. Manages connection lifecycle and NIP-11 requests.
 - **NostrMessageHandler (src/message.ts)**: Orchestrates message processing, validation, and storage logic.
-- **SqliteEventRepository (src/sqlite.ts)**: Handles persistence and indexing using SQLite FTS5 for search.
+- **Event Repository (src/repository.ts)**: Abstract storage layer with support for multiple backends.
+- **SQLite Support (src/sqlite.ts)**: High-performance SQLite implementation.
+- **PGLite Support (src/pglite.ts)**: Postgres in WASM for transient setups.
 - **WebSocketManager (src/websocket.ts)**: Tracks active connections and handles efficient event broadcasting.
 - **Validation (src/nostr.ts)**: Verifies signatures, PoW, and protocol compliance.
 

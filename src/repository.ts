@@ -16,7 +16,10 @@ export function createRepository(engine: string, path: string): IEventRepository
   return new SqliteEventRepository(path);
 }
 
+import { logger } from "./logger.ts";
+
 export const repository = createRepository(config.dbEngine, config.database);
+void logger.info`Initializing repository with engine: ${config.dbEngine}`;
 await repository.init();
 
 export const clear = repository.clear.bind(repository);

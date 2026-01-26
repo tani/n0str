@@ -1,14 +1,9 @@
-import { test, describe, beforeAll, beforeEach, afterEach } from "bun:test";
+import { test, describe, beforeEach, afterEach } from "bun:test";
 import { relay } from "../../src/server.ts";
 import { clear } from "../../src/repository.ts";
 
 describe("NIP-13 Proof of Work", () => {
-  const dbPath = "n0str.test.db";
   let server: any;
-
-  beforeAll(() => {
-    process.env.DATABASE_PATH = dbPath;
-  });
 
   beforeEach(async () => {
     await clear();

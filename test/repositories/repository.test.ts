@@ -1,30 +1,16 @@
 import { expect, test, describe, beforeEach, afterEach } from "bun:test";
-import { SqliteEventRepository } from "../../src/sqlite.ts";
+import { createRepository } from "../../src/repository.ts";
+import { config as defaultConfig } from "../../src/args.ts";
+import type { IEventRepository } from "../../src/types.ts";
 import { generateSecretKey, finalizeEvent } from "nostr-tools";
 import type { Event } from "nostr-tools";
-import { existsSync, unlinkSync } from "fs";
 
 describe("Database", () => {
-  const dbPath = "n0str.test.db";
-  let repository: SqliteEventRepository;
+  let repository: IEventRepository;
 
   beforeEach(async () => {
-    if (existsSync(dbPath)) {
-      try {
-        unlinkSync(dbPath);
-      } catch {
-        // ignore if busy, might handle it by clearing tables instead?
-        // But we don't have direct access to db here easily unless we expose it.
-        // Let's assume for now it works or try to proceed.
-      }
-    }
-    repository = new SqliteEventRepository(dbPath);
+    repository = createRepository(defaultConfig.dbEngine, ":memory:");
     await repository.init();
-
-    // Ensure tables are empty if file persisted
-    // Since we don't expose raw DB, and unlink might fail on Windows/Busy,
-    // we might want a 'clear' method for testing, but let's try assuming a fresh DB first.
-    // Actually, if we can't unlink, we are in trouble.
   });
 
   afterEach(() => {

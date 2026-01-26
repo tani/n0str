@@ -17,8 +17,8 @@ export class PgliteEventRepository implements IEventRepository {
    * Creates an instance of PgliteEventRepository.
    * @param dbPath - The path to the PGlite database directory.
    */
-  constructor(dbPath: string) {
-    this.db = new PGlite(dbPath);
+  constructor(dbPath?: string) {
+    this.db = new PGlite(dbPath === ":memory:" ? undefined : dbPath);
   }
 
   /**

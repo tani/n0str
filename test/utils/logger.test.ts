@@ -9,7 +9,9 @@ describe("logger", () => {
   let errorSpy: any;
 
   beforeEach(() => {
-    process.env = { ...originalEnv };
+    delete process.env.LOGLEVEL;
+    delete process.env.LOG_LEVEL;
+    delete process.env.IGNORED_LOG_LEVEL;
     debugSpy = spyOn(console, "debug").mockImplementation(() => {});
     infoSpy = spyOn(console, "info").mockImplementation(() => {});
     warnSpy = spyOn(console, "warn").mockImplementation(() => {});
@@ -25,7 +27,7 @@ describe("logger", () => {
   });
 
   test("debug logs", () => {
-    process.env.LOG_LEVEL = "debug";
+    process.env.LOGLEVEL = "debug";
     void logger.debug`test`;
     expect(debugSpy).toHaveBeenCalled();
   });
@@ -46,13 +48,13 @@ describe("logger", () => {
   });
 
   test("trace logs to debug", () => {
-    process.env.LOG_LEVEL = "trace";
+    process.env.LOGLEVEL = "trace";
     void logger.trace`test`;
     expect(debugSpy).toHaveBeenCalled();
   });
 
-  test("respects LOG_LEVEL=info", () => {
-    process.env.LOG_LEVEL = "info";
+  test("respects LOGLEVEL=info", () => {
+    process.env.LOGLEVEL = "info";
 
     void logger.trace`trace`;
     expect(debugSpy).not.toHaveBeenCalled(); // trace uses debug spy
@@ -70,8 +72,8 @@ describe("logger", () => {
     expect(errorSpy).toHaveBeenCalled();
   });
 
-  test("respects LOG_LEVEL=warn", () => {
-    process.env.LOG_LEVEL = "warn";
+  test("respects LOGLEVEL=warn", () => {
+    process.env.LOGLEVEL = "warn";
 
     void logger.info`info`;
     expect(infoSpy).not.toHaveBeenCalled();
@@ -80,8 +82,8 @@ describe("logger", () => {
     expect(warnSpy).toHaveBeenCalled();
   });
 
-  test("respects LOG_LEVEL=error", () => {
-    process.env.LOG_LEVEL = "error";
+  test("respects LOGLEVEL=error", () => {
+    process.env.LOGLEVEL = "error";
 
     void logger.warn`warn`;
     expect(warnSpy).not.toHaveBeenCalled();
@@ -91,11 +93,21 @@ describe("logger", () => {
   });
 
   test("defaults to info if invalid", () => {
-    process.env.LOG_LEVEL = "invalid";
+    process.env.LOGLEVEL = "invalid";
 
     void logger.debug`debug`;
     expect(debugSpy).not.toHaveBeenCalled();
 
+    void logger.info`info`;
+    expect(infoSpy).toHaveBeenCalled();
+  });
+
+  test("does not fall back to old log level names", () => {
+    process.env.LOG_LEVEL = "error";
+    process.env.IGNORED_LOG_LEVEL = "error";
+    void logger.debug`debug`;
+    // Should use default 'info' and ignore other env vars
+    expect(debugSpy).not.toHaveBeenCalled();
     void logger.info`info`;
     expect(infoSpy).toHaveBeenCalled();
   });

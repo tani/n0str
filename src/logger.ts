@@ -15,7 +15,7 @@ type LogLevel = keyof typeof LOG_LEVELS;
  * @returns The numeric priority of the current log level.
  */
 function getCurrentLogLevel(): number {
-  const envLevel = process.env.LOG_LEVEL?.toLowerCase();
+  const envLevel = process.env.LOGLEVEL?.toLowerCase();
   if (envLevel && envLevel in LOG_LEVELS) {
     return LOG_LEVELS[envLevel as LogLevel];
   }

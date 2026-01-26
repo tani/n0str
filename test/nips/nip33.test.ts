@@ -1,4 +1,4 @@
-import { expect, test, describe, beforeAll, beforeEach, afterEach } from "bun:test";
+import { expect, test, describe, beforeEach, afterEach } from "bun:test";
 import { relay } from "../../src/server.ts";
 import { clear, queryEvents } from "../../src/repository.ts";
 import { generateSecretKey, getPublicKey, finalizeEvent } from "nostr-tools";
@@ -13,13 +13,8 @@ async function consumeAuth(ws: WebSocket) {
 }
 
 describe("NIP-33: Parameterized Replaceable Events", () => {
-  const dbPath = "n0str.test.db";
   let server: any;
   let url: string;
-
-  beforeAll(() => {
-    process.env.DATABASE_PATH = dbPath;
-  });
 
   beforeEach(async () => {
     await clear();
