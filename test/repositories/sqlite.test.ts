@@ -1,5 +1,5 @@
 import { expect, test, describe, beforeEach, afterEach } from "bun:test";
-import { SqliteEventRepository } from "../../src/repositories/sqlite.ts";
+import { SqliteEventRepository } from "../../src/sqlite.ts";
 import { generateSecretKey, finalizeEvent } from "nostr-tools";
 import type { Event } from "nostr-tools";
 import { existsSync, unlinkSync } from "fs";

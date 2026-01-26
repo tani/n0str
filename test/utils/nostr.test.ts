@@ -5,7 +5,7 @@ import {
   matchFilter,
   countLeadingZeros,
   validateAuthEvent,
-} from "../../src/utils/nostr.ts";
+} from "../../src/nostr.ts";
 import { generateSecretKey, getPublicKey, finalizeEvent } from "nostr-tools";
 import { type } from "arktype";
 

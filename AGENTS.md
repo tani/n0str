@@ -33,7 +33,7 @@
   bun start
   ```
 
-  (Runs `src/index.ts`. Listens on `ws://localhost:3000` by default.)
+  (Runs `index.ts`. Listens on `ws://localhost:3000` by default.)
 
 * **Run Tests:**
 
@@ -52,6 +52,7 @@
   ```bash
   bun lint
   ```
+
   (Uses `oxlint`)
 
 * **Format Code:**
@@ -59,6 +60,7 @@
   ```bash
   bun format
   ```
+
   (Uses `oxfmt`)
 
 * **Compile Binary:**
@@ -72,7 +74,7 @@
 ## Development Conventions
 
 * **Database Access:**
-  * `src/db.ts`: Initializes the SQLite connection and schema (including FTS5 triggers).
+  * `src/sqlite.ts`: Initializes the SQLite connection and schema (including FTS5 triggers).
   * `src/repository.ts`: Encapsulates all data access logic (saving events, querying, NIP-09 deletion, NIP-40 expiration).
 * **Logging:**
   * Uses `console` wrappers for logging.
@@ -89,11 +91,11 @@
 ## Key Files
 
 * `n0str.json`: Configuration file.
-* `src/index.ts`: Application entry point.
+* `index.ts`: Application entry point.
 * `src/server.ts`: WebServer logic and routing (Bun.serve).
-* `src/db.ts`: Database connection and schema initialization.
+* `src/sqlite.ts`: Database connection and schema initialization.
 * `src/repository.ts`: Data Access Layer.
-* `src/handlers/`: Request handlers for specific commands (EVENT, REQ, COUNT, etc.).
+* `src/message.ts`: Request handler for commands (EVENT, REQ, COUNT, etc.).
 * `src/nostr.ts`: Nostr protocol utilities (validation, types).
 * `src/logger.ts`: Logger implementation.
 * `test/`: Contains integration/unit tests for various NIPs.

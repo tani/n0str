@@ -2,7 +2,7 @@ import { expect, test, describe, beforeEach, afterEach } from "bun:test";
 import { relay } from "../../src/server.ts";
 import { finalizeEvent, generateSecretKey } from "nostr-tools";
 import { saveEvent } from "../../src/repository.ts";
-import { Negentropy, NegentropyStorageVector } from "../../src/utils/negentropy.js";
+import { Negentropy, NegentropyStorageVector } from "../../src/negentropy.js";
 
 describe("NIP-77 Negentropy Syncing", () => {
   let server: any;

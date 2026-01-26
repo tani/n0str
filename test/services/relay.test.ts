@@ -1,8 +1,8 @@
 import { describe, expect, test, afterEach } from "bun:test";
 import { generateSecretKey, finalizeEvent } from "nostr-tools";
-import { relayInfo } from "../../src/config/index.ts";
-import { NostrRelay } from "../../src/services/relay.ts";
-import { SqliteEventRepository } from "../../src/repositories/sqlite.ts";
+import { relayInfo } from "../../src/config.ts";
+import { NostrRelay } from "../../src/relay.ts";
+import { SqliteEventRepository } from "../../src/sqlite.ts";
 import { existsSync, unlinkSync } from "fs";
 
 describe("relay coverage", () => {

@@ -1,6 +1,7 @@
-import { SqliteEventRepository } from "./repositories/sqlite.ts";
+import { SqliteEventRepository } from "./sqlite.ts";
+import { config } from "./args.ts";
 
-export const repository = new SqliteEventRepository(process.env.DATABASE_PATH || "n0str.db");
+export const repository = new SqliteEventRepository(config.database);
 await repository.init();
 
 export const db = repository.db;
@@ -12,4 +13,4 @@ export const countEvents = repository.countEvents.bind(repository);
 export const queryEventsForSync = repository.queryEventsForSync.bind(repository);
 
 // Re-export needed types
-export type { ExistingRow } from "./repositories/types.ts";
+export type { ExistingRow } from "./types.ts";

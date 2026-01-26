@@ -1,6 +1,6 @@
 import { type } from "arktype";
 import * as fs from "node:fs";
-import { logger as defaultLogger } from "../utils/logger.ts";
+import { logger as defaultLogger } from "./logger.ts";
 
 /** Default relay configuration following NIP-11 specification. */
 export const defaultRelayInfo = {

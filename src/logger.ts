@@ -10,6 +10,10 @@ const LOG_LEVELS = {
 
 type LogLevel = keyof typeof LOG_LEVELS;
 
+/**
+ * Gets the current log level from environment variables.
+ * @returns The numeric priority of the current log level.
+ */
 function getCurrentLogLevel(): number {
   const envLevel = process.env.LOG_LEVEL?.toLowerCase();
   if (envLevel && envLevel in LOG_LEVELS) {
@@ -18,6 +22,12 @@ function getCurrentLogLevel(): number {
   return LOG_LEVELS.info;
 }
 
+/**
+ * Creates a logging function for a specific log level.
+ * Handles both string messages and tagged template literals.
+ * @param level - The log level for the function.
+ * @returns A logging function.
+ */
 function createLogFn(level: LogLevel): LogFn {
   const consoleMethod = level === "trace" ? "debug" : level;
   const levelPriority = LOG_LEVELS[level];
@@ -54,6 +64,9 @@ function createLogFn(level: LogLevel): LogFn {
   };
 }
 
+/**
+ * Global logger instance providing methods for different log levels.
+ */
 export const logger = {
   debug: createLogFn("debug"),
   info: createLogFn("info"),

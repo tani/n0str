@@ -1,11 +1,14 @@
 import type { ServerWebSocket } from "bun";
-import { relayInfo } from "../config/index.ts";
-import { logger } from "../utils/logger.ts";
-import type { ClientData } from "../interfaces/types.ts";
-import type { IEventRepository } from "../repositories/types.ts";
-import { WebSocketManager } from "../managers/websocket.ts";
-import { NostrMessageHandler } from "../handlers/message.ts";
+import { relayInfo } from "./config.ts";
+import { logger } from "./logger.ts";
+import type { ClientData } from "./types.ts";
+import type { IEventRepository } from "./types.ts";
+import { WebSocketManager } from "./websocket.ts";
+import { NostrMessageHandler } from "./message.ts";
 
+/**
+ * NostrRelay handles the WebSocket server, message routing, and periodic maintenance tasks.
+ */
 export class NostrRelay {
   private repository: IEventRepository;
   private wsManager: WebSocketManager;
@@ -13,18 +16,32 @@ export class NostrRelay {
   private cleanupInterval: ReturnType<typeof setInterval> | null = null;
   private _port: number;
 
+  /**
+   * Creates an instance of NostrRelay.
+   * @param repository - The event repository for persistence.
+   * @param port - The port number to listen on (default: 3000).
+   */
   constructor(repository: IEventRepository, port: number = 3000) {
     this.repository = repository;
     this.wsManager = new WebSocketManager();
-    this.messageHandler = new NostrMessageHandler(this.repository, this.wsManager);
+    this.messageHandler = new NostrMessageHandler(
+      this.repository,
+      this.wsManager,
+    );
     this._port = port;
   }
 
+  /**
+   * Initializes the relay by setting up the repository and starting maintenance tasks.
+   */
   public async init() {
     await this.repository.init();
     this.startCleanupTask();
   }
 
+  /**
+   * Starts the periodic cleanup task for expired events.
+   */
   private startCleanupTask() {
     this.cleanupInterval = setInterval(
       async () => {
@@ -36,6 +53,9 @@ export class NostrRelay {
     ); // Hourly
   }
 
+  /**
+   * Stops the periodic cleanup task.
+   */
   public stop() {
     if (this.cleanupInterval) {
       clearInterval(this.cleanupInterval);
@@ -43,19 +63,31 @@ export class NostrRelay {
     }
   }
 
+  /**
+   * Gracefully shuts down the relay, stopping tasks and closing the repository.
+   */
   public async shutdown() {
     this.stop();
     await this.repository.close();
   }
 
+  /**
+   * Asynchronous disposal for the relay.
+   */
   public async [Symbol.asyncDispose]() {
     await this.shutdown();
   }
 
+  /**
+   * Gets the port number the relay is configured to listen on.
+   */
   public get port(): number {
     return this._port;
   }
 
+  /**
+   * Hook for Bun.serve fetch handler. Handles health checks, NIP-11 requests, and WebSocket upgrades.
+   */
   public get fetch() {
     return (req: Request, server: any) => {
       const url = new URL(req.url);
@@ -96,13 +128,19 @@ export class NostrRelay {
     };
   }
 
+  /**
+   * Hook for Bun.serve websocket handler. Defines handlers for open, message, and close events.
+   */
   public get websocket() {
     return {
       open: (ws: ServerWebSocket<ClientData>) => {
         this.wsManager.addClient(ws);
         ws.send(JSON.stringify(["AUTH", ws.data.challenge]));
       },
-      message: async (ws: ServerWebSocket<ClientData>, message: string | Buffer) => {
+      message: async (
+        ws: ServerWebSocket<ClientData>,
+        message: string | Buffer,
+      ) => {
         await this.messageHandler.handleMessage(ws, message);
       },
       close: (ws: ServerWebSocket<ClientData>) => {

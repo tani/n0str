@@ -1,7 +1,7 @@
 import type { ServerWebSocket } from "bun";
-import type { ClientData } from "../interfaces/types.ts";
-import type { IEventRepository } from "../repositories/types.ts";
-import type { WebSocketManager } from "../managers/websocket.ts";
+import type { ClientData } from "./types.ts";
+import type { IEventRepository } from "./types.ts";
+import type { WebSocketManager } from "./websocket.ts";
 import { type } from "arktype";
 import {
   EventSchema,
@@ -11,24 +11,42 @@ import {
   validateAuthEvent,
   ClientMessageSchema,
   type ClientMessage,
-} from "../utils/nostr.ts";
-import { logger } from "../utils/logger.ts";
+} from "./nostr.ts";
+import { logger } from "./logger.ts";
 import type { Filter } from "nostr-tools";
-import { relayInfo } from "../config/index.ts";
+import { relayInfo } from "./config.ts";
 // @ts-ignore
-import { Negentropy, NegentropyStorageVector } from "../utils/negentropy.js";
+import { Negentropy, NegentropyStorageVector } from "./negentropy.js";
 import { match } from "arktype";
 
 const MIN_DIFFICULTY = 0;
 
+/**
+ * NostrMessageHandler processes incoming Nostr messages (EVENT, REQ, CLOSE, etc.)
+ * and orchestrates responses, storage, and broadcasting.
+ */
 export class NostrMessageHandler {
+  /**
+   * Creates an instance of NostrMessageHandler.
+   * @param repository - The event repository for persistence.
+   * @param wsManager - The WebSocket manager for broadcasting.
+   */
   constructor(
     private repository: IEventRepository,
     private wsManager: WebSocketManager,
   ) {}
 
-  public async handleMessage(ws: ServerWebSocket<ClientData>, rawMessage: string | Buffer) {
-    const messageStr = typeof rawMessage === "string" ? rawMessage : rawMessage.toString();
+  /**
+   * Handles an incoming raw WebSocket message.
+   * @param ws - The server WebSocket connection.
+   * @param rawMessage - The raw message data (string or Buffer).
+   */
+  public async handleMessage(
+    ws: ServerWebSocket<ClientData>,
+    rawMessage: string | Buffer,
+  ) {
+    const messageStr =
+      typeof rawMessage === "string" ? rawMessage : rawMessage.toString();
     void logger.trace`Received message: ${messageStr}`;
 
     if (messageStr.length > relayInfo.limitation.max_message_length) {
@@ -60,12 +78,24 @@ export class NostrMessageHandler {
       })(msg);
   }
 
+  /**
+   * Processes a Nostr EVENT message.
+   * @param ws - The server WebSocket connection.
+   * @param payload - The message payload containing the event object.
+   */
   private async handleEvent(ws: ServerWebSocket<ClientData>, payload: any[]) {
     const rawEvent = payload[0];
     const event = EventSchema(rawEvent);
     if (event instanceof type.errors) {
       void logger.debug`Malformed event received from ${ws.remoteAddress}: ${event.summary}`;
-      ws.send(JSON.stringify(["OK", rawEvent?.id ?? "unknown", false, "error: malformed event"]));
+      ws.send(
+        JSON.stringify([
+          "OK",
+          rawEvent?.id ?? "unknown",
+          false,
+          "error: malformed event",
+        ]),
+      );
       return;
     }
 
@@ -77,7 +107,9 @@ export class NostrMessageHandler {
       const exp = parseInt(expirationTag[1]);
       if (!isNaN(exp) && exp < Math.floor(Date.now() / 1000)) {
         void logger.debug`Event ${event.id} expired on publish`;
-        ws.send(JSON.stringify(["OK", event.id, false, "error: event has expired"]));
+        ws.send(
+          JSON.stringify(["OK", event.id, false, "error: event has expired"]),
+        );
         return;
       }
     }
@@ -142,7 +174,12 @@ export class NostrMessageHandler {
         .flatMap((t) => (typeof t[1] === "string" ? [t[1]] : []));
 
       if (eventIds.length > 0 || identifiers.length > 0) {
-        await this.repository.deleteEvents(event.pubkey, eventIds, identifiers, event.created_at);
+        await this.repository.deleteEvents(
+          event.pubkey,
+          eventIds,
+          identifiers,
+          event.created_at,
+        );
         void logger.trace`Deleted events based on event ${event.id}`;
       }
     }
@@ -152,6 +189,11 @@ export class NostrMessageHandler {
     void logger.trace`Event ${event.id} broadcasted to ${broadcastCount} subscriptions`;
   }
 
+  /**
+   * Processes a Nostr REQ message to start a subscription.
+   * @param ws - The server WebSocket connection.
+   * @param payload - The message payload containing subId and filters.
+   */
   private async handleReq(ws: ServerWebSocket<ClientData>, payload: any[]) {
     const [subId, ...filters] = payload as [string, ...Filter[]];
 
@@ -159,7 +201,9 @@ export class NostrMessageHandler {
 
     if (ws.data.subscriptions.size >= relayInfo.limitation.max_subscriptions) {
       void logger.debug`Max subscriptions reached for ${ws.remoteAddress} (subId: ${subId})`;
-      ws.send(JSON.stringify(["CLOSED", subId, "error: max subscriptions reached"]));
+      ws.send(
+        JSON.stringify(["CLOSED", subId, "error: max subscriptions reached"]),
+      );
       return;
     }
 
@@ -182,6 +226,11 @@ export class NostrMessageHandler {
     ws.send(JSON.stringify(["EOSE", subId]));
   }
 
+  /**
+   * Processes a Nostr COUNT message.
+   * @param ws - The server WebSocket connection.
+   * @param payload - The message payload containing subId and filters.
+   */
   private async handleCount(ws: ServerWebSocket<ClientData>, payload: any[]) {
     const [subId, ...filters] = payload as [string, ...Filter[]];
     void logger.trace`COUNT received for subId: ${subId}`;
@@ -190,11 +239,20 @@ export class NostrMessageHandler {
     void logger.trace`COUNT result for ${subId}: ${count}`;
   }
 
+  /**
+   * Processes a Nostr AUTH message for client authentication.
+   * @param ws - The server WebSocket connection.
+   * @param payload - The message payload containing the auth event.
+   */
   private async handleAuth(ws: ServerWebSocket<ClientData>, payload: any[]) {
     const event = payload[0];
     void logger.trace`AUTH received from ${ws.remoteAddress}`;
 
-    const result = await validateAuthEvent(event, ws.data.challenge, ws.data.relayUrl);
+    const result = await validateAuthEvent(
+      event,
+      ws.data.challenge,
+      ws.data.relayUrl,
+    );
     if (!result.ok) {
       void logger.debug`Auth validation failed: ${result.reason}`;
       ws.send(JSON.stringify(["OK", event.id, false, result.reason]));
@@ -206,12 +264,22 @@ export class NostrMessageHandler {
     ws.send(JSON.stringify(["OK", event.id, true, ""]));
   }
 
+  /**
+   * Processes a Nostr CLOSE message to end a subscription.
+   * @param ws - The server WebSocket connection.
+   * @param payload - The message payload containing the subId to close.
+   */
   private handleClose(ws: ServerWebSocket<ClientData>, payload: any[]) {
     const subId = payload[0] as string;
     ws.data.subscriptions.delete(subId);
     void logger.trace`Subscription closed: ${subId}`;
   }
 
+  /**
+   * Processes a NIP-77 NEG-OPEN message for negentropy sync.
+   * @param ws - The server WebSocket connection.
+   * @param args - The message arguments for negentropy open.
+   */
   private async handleNegOpen(ws: ServerWebSocket<ClientData>, args: any[]) {
     const [subId, filter, initialMessage] = args;
 
@@ -248,13 +316,20 @@ export class NostrMessageHandler {
     }
   }
 
+  /**
+   * Processes a NIP-77 NEG-MSG message for negentropy sync.
+   * @param ws - The server WebSocket connection.
+   * @param args - The message arguments for negentropy sync.
+   */
   private async handleNegMsg(ws: ServerWebSocket<ClientData>, args: any[]) {
     const [subId, message] = args;
     const neg = ws.data.negSubscriptions.get(subId);
 
     if (!neg) {
       void logger.debug`NEG-MSG for unknown subscription: ${subId}`;
-      ws.send(JSON.stringify(["NEG-ERR", subId, "closed: subscription not found"]));
+      ws.send(
+        JSON.stringify(["NEG-ERR", subId, "closed: subscription not found"]),
+      );
       return;
     }
 
@@ -270,6 +345,11 @@ export class NostrMessageHandler {
     }
   }
 
+  /**
+   * Processes a NIP-77 NEG-CLOSE message to end negentropy sync.
+   * @param ws - The server WebSocket connection.
+   * @param args - The message arguments for negentropy close.
+   */
   private handleNegClose(ws: ServerWebSocket<ClientData>, args: any[]) {
     const [subId] = args;
     ws.data.negSubscriptions.delete(subId);

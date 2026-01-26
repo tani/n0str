@@ -124,7 +124,7 @@ n0str is configured via a `n0str.json` file in the root directory. If this file 
 }
 ```
 
-See the default configuration in `src/relay.ts` for all available options.
+See the default configuration in `src/config.ts` for all available options.
 
 ### Environment Variables
 
@@ -178,11 +178,11 @@ sequenceDiagram
 
 ### Component Roles
 
-- **NostrRelay (src/services/relay.ts)**: Entry point using Bun's native WebSocket. Manages connection lifecycle and NIP-11 requests.
-- **NostrMessageHandler (src/handlers/message.ts)**: Orchestrates message processing, validation, and storage logic.
-- **SqliteEventRepository (src/repositories/sqlite.ts)**: Handles persistence and indexing using SQLite FTS5 for search.
-- **WebSocketManager (src/managers/websocket.ts)**: Tracks active connections and handles efficient event broadcasting.
-- **Validation (src/utils/nostr.ts)**: Verifies signatures, PoW, and protocol compliance.
+- **NostrRelay (src/relay.ts)**: Entry point using Bun's native WebSocket. Manages connection lifecycle and NIP-11 requests.
+- **NostrMessageHandler (src/message.ts)**: Orchestrates message processing, validation, and storage logic.
+- **SqliteEventRepository (src/sqlite.ts)**: Handles persistence and indexing using SQLite FTS5 for search.
+- **WebSocketManager (src/websocket.ts)**: Tracks active connections and handles efficient event broadcasting.
+- **Validation (src/nostr.ts)**: Verifies signatures, PoW, and protocol compliance.
 
 ## License
 

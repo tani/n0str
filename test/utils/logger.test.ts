@@ -1,5 +1,5 @@
 import { describe, test, expect, spyOn, beforeEach, afterEach } from "bun:test";
-import { logger } from "../../src/utils/logger";
+import { logger } from "../../src/logger";
 
 describe("logger", () => {
   const originalEnv = process.env;

@@ -1,8 +1,8 @@
 import { SQL } from "bun";
 import type { Event, Filter } from "nostr-tools";
-import { isAddressable, isReplaceable } from "../utils/nostr.ts";
-import { logger } from "../utils/logger.ts";
-import { segmentForFts, segmentSearchQuery } from "../utils/fts.ts";
+import { isAddressable, isReplaceable } from "./nostr.ts";
+import { logger } from "./logger.ts";
+import { segmentForFts, segmentSearchQuery } from "./fts.ts";
 import type { IEventRepository, ExistingRow } from "./types.ts";
 
 type EventRow = {
@@ -26,12 +26,22 @@ type EventWithTagRow = EventRow & {
 };
 
 type SqlCondition = { sql: string; params: unknown[] };
-type FilterCondition = SqlCondition | { col: string; val: unknown; op?: string };
+type FilterCondition =
+  | SqlCondition
+  | { col: string; val: unknown; op?: string };
 
+/**
+ * SqliteEventRepository implements IEventRepository using Bun's SQL (SQLite) adapter.
+ * It handles event storage, retrieval, deletion, and search indexing.
+ */
 export class SqliteEventRepository implements IEventRepository {
   public db: SQL;
   private closed = false;
 
+  /**
+   * Creates an instance of SqliteEventRepository.
+   * @param dbPath - The path to the SQLite database file.
+   */
   constructor(dbPath: string) {
     this.db = new SQL({
       adapter: "sqlite",
@@ -39,16 +49,25 @@ export class SqliteEventRepository implements IEventRepository {
     });
   }
 
+  /**
+   * Closes the database connection.
+   */
   async close(): Promise<void> {
     if (this.closed) return;
     this.closed = true;
     await this.db.close();
   }
 
+  /**
+   * Asynchronously disposes of the repository.
+   */
   async [Symbol.asyncDispose](): Promise<void> {
     await this.close();
   }
 
+  /**
+   * Initializes the database schema, indexes, and search triggers.
+   */
   async init(): Promise<void> {
     await this.db`PRAGMA foreign_keys = ON`;
 
@@ -71,10 +90,13 @@ export class SqliteEventRepository implements IEventRepository {
         FOREIGN KEY(event_id) REFERENCES events(id) ON DELETE CASCADE
       );
     `;
-    await this.db`CREATE INDEX IF NOT EXISTS idx_events_pubkey ON events(pubkey);`;
-    await this.db`CREATE INDEX IF NOT EXISTS idx_events_created_at ON events(created_at);`;
+    await this
+      .db`CREATE INDEX IF NOT EXISTS idx_events_pubkey ON events(pubkey);`;
+    await this
+      .db`CREATE INDEX IF NOT EXISTS idx_events_created_at ON events(created_at);`;
     await this.db`CREATE INDEX IF NOT EXISTS idx_events_kind ON events(kind);`;
-    await this.db`CREATE INDEX IF NOT EXISTS idx_tags_name_value ON tags(name, value);`;
+    await this
+      .db`CREATE INDEX IF NOT EXISTS idx_tags_name_value ON tags(name, value);`;
 
     // NIP-50: FTS5 Search Capability
     await this.db`
@@ -94,6 +116,11 @@ export class SqliteEventRepository implements IEventRepository {
     `;
   }
 
+  /**
+   * Saves a Nostr event to the database and updates the search index.
+   * Handles replacement logic for replaceable and addressable events.
+   * @param event - The Nostr event to save.
+   */
   async saveEvent(event: Event): Promise<void> {
     await this.db.begin(async (tx) => {
       const existing = await this.findExisting(tx, event);
@@ -119,6 +146,14 @@ export class SqliteEventRepository implements IEventRepository {
     void logger.trace`Saved event ${event.id}`;
   }
 
+  /**
+   * Deletes events based on publication key, event IDs, and addressable identifiers.
+   * Used for NIP-09 event deletions.
+   * @param pubkey - The public key of the author requesting deletion.
+   * @param eventIds - List of event IDs to delete.
+   * @param identifiers - List of addressable event identifiers (kind:pubkey:d-tag).
+   * @param until - Optional timestamp limit for deletion.
+   */
   async deleteEvents(
     pubkey: string,
     eventIds: string[],
@@ -158,6 +193,10 @@ export class SqliteEventRepository implements IEventRepository {
     });
   }
 
+  /**
+   * Removes events that have expired based on their 'expiration' tag.
+   * Follows NIP-40.
+   */
   async cleanupExpiredEvents(): Promise<void> {
     const now = Math.floor(Date.now() / 1000);
     await this.db.begin(async (tx) => {
@@ -176,6 +215,12 @@ export class SqliteEventRepository implements IEventRepository {
     });
   }
 
+  /**
+   * Counts the number of events matching the given filters.
+   * Follows NIP-45.
+   * @param filters - List of Nostr filters.
+   * @returns The total number of matching events.
+   */
   async countEvents(filters: Filter[]): Promise<number> {
     let totalCount = 0;
     for (const filter of filters) {
@@ -188,6 +233,11 @@ export class SqliteEventRepository implements IEventRepository {
     return totalCount;
   }
 
+  /**
+   * Queries events matching a single Nostr filter.
+   * @param filter - The Nostr filter.
+   * @returns A list of matching Nostr events.
+   */
   async queryEvents(filter: Filter): Promise<Event[]> {
     const { clause, params } = this.buildWhereClause(filter);
     let baseQuery = `SELECT id, pubkey, created_at, kind, content, sig FROM events ${clause} ORDER BY created_at DESC`;
@@ -240,6 +290,11 @@ export class SqliteEventRepository implements IEventRepository {
     return result;
   }
 
+  /**
+   * Queries events for negentropy sync.
+   * @param filter - The Nostr filter.
+   * @returns A list of basic event info (id and created_at).
+   */
   async queryEventsForSync(filter: Filter): Promise<ExistingRow[]> {
     const { clause, params } = this.buildWhereClause(filter);
     const query = `
@@ -256,8 +311,10 @@ export class SqliteEventRepository implements IEventRepository {
   // --- Private Helper Methods ---
 
   private toSqlCondition(c: FilterCondition): SqlCondition[] {
-    if ("sql" in c) return c.params.length > 0 || c.sql.includes("expiration") ? [c] : [];
-    if (c.val === undefined || (Array.isArray(c.val) && c.val.length === 0)) return [];
+    if ("sql" in c)
+      return c.params.length > 0 || c.sql.includes("expiration") ? [c] : [];
+    if (c.val === undefined || (Array.isArray(c.val) && c.val.length === 0))
+      return [];
     if (Array.isArray(c.val)) {
       return [
         {
@@ -315,17 +372,23 @@ export class SqliteEventRepository implements IEventRepository {
       ),
     ];
 
-    return this.finalizeConditions(rawConditions.flatMap((c) => this.toSqlCondition(c)));
+    return this.finalizeConditions(
+      rawConditions.flatMap((c) => this.toSqlCondition(c)),
+    );
   }
 
   private isOlderEvent(candidate: Event, existing: ExistingRow) {
     return (
       candidate.created_at < existing.created_at ||
-      (candidate.created_at === existing.created_at && candidate.id > existing.id)
+      (candidate.created_at === existing.created_at &&
+        candidate.id > existing.id)
     );
   }
 
-  private async findExisting(tx: SQL, event: Event): Promise<ExistingRow | undefined> {
+  private async findExisting(
+    tx: SQL,
+    event: Event,
+  ): Promise<ExistingRow | undefined> {
     if (isReplaceable(event.kind)) {
       return (
         await tx<ExistingRow[]>`
