@@ -1,192 +1,212 @@
-# n0str
+<div align="center">
+  <h1>n0str</h1>
+  <p><strong>The Zero-Config, Multi-Language, High-Performance Nostr Relay</strong></p>
 
-**n0str** is a simple, reliable, and extensively tested [Nostr](https://github.com/nostr-protocol/nostr) relay implementation built on modern web technologies. Designed for simplicity and correctness, it leverages the power of **Bun**.
+  <p>
+    <a href="https://github.com/tani/n0str/releases/tag/nightly"><img src="https://img.shields.io/badge/Release-Nightly-orange.svg" alt="Release" /></a>
+    <a href="LICENSE"><img src="https://img.shields.io/badge/License-AGPLv3-blue.svg" alt="License" /></a>
+    <a href="https://bun.sh/"><img src="https://img.shields.io/badge/Bun-v1.3.5+-black?logo=bun" alt="Bun" /></a>
+    <img src="https://img.shields.io/badge/NIPs-30%20Supported-purple.svg" alt="NIPs" />
+    <a href="https://github.com/tani/n0str/actions"><img src="https://github.com/tani/n0str/workflows/CI/badge.svg" alt="CI" /></a>
+  </p>
+</div>
 
-![License](https://img.shields.io/badge/license-AGPLv3-blue.svg)
-![Bun](https://img.shields.io/badge/Bun-v1.3.5-black?logo=bun)
-![NIPs](https://img.shields.io/badge/NIPs-30%20Supported-purple.svg)
+---
 
-## Features
+**n0str** (pronounced "nostra") is a modern [Nostr](https://github.com/nostr-protocol/nostr) relay designed for maximum simplicity without sacrificing power. It's a **single-binary**, **zero-dependency** solution that brings professional-grade relay features to anyone, anywhere.
 
-- **Simplicity**: Codebase designed to be easy to understand and maintain.
-- **Extensively Tested**: comprehensive test suite ensuring high coverage and NIP compliance.
-- **Efficient Storage**: Support for multiple storage backends, including **SQLite** and **PGLite** (Postgres in WASM).
-- **Full-Text Search**: Native support for NIP-50 search capability.
-- **Configurable**: Easy configuration via `n0str.json` or environment variables.
-- **Secure**: Implements NIP-13 (PoW), NIP-22 (Event Limits), and NIP-42 (Authentication).
-- **Type-Safe**: Fully typed with TypeScript.
+## ✨ Why Choose n0str?
 
-## Tested NIPs
+### 📦 Single Binary, Zero Friction
 
-n0str is tested against a wide range of Nostr Implementation Possibilities (NIPs):
+Forget about complex Docker setups or external database migrations. n0str is a self-contained power tool. Download the binary, run it, and you're live. It embeds its own database (SQLite or PGLite), making it the ultimate "drop-in" relay.
 
-| NIP | Description | Status |
-| :--- | :--- | :--- |
-| **01** | Basic Protocol Flow (EVENT, REQ, CLOSE) | Yes |
-| **02** | Contact List and Petnames | Yes |
-| **03** | OpenTimestamps Attestations | Yes |
-| **05** | Mapping Nostr keys to DNS-based internet identifiers | Yes |
-| **09** | Event Deletion | Yes |
-| **10** | On "e" and "p" tags in Text Events | Yes |
-| **11** | Relay Information Document | Yes |
-| **12** | Generic Tag Queries | Yes |
-| **13** | Proof of Work | Yes |
-| **15** | Nostr Marketplace | Yes |
-| **16** | Event Treatment | Yes |
-| **17** | Private Direct Messages | Yes |
-| **18** | Reposts | Yes |
-| **20** | Command Results | Yes |
-| **22** | Event `created_at` Limits | Yes |
-| **23** | Long-form Content | Yes |
-| **25** | Reactions | Yes |
-| **28** | Public Chat | Yes |
-| **33** | Parameterized Replaceable Events | Yes |
-| **40** | Expiration Timestamp | Yes |
-| **42** | Authentication of Clients to Relays | Yes |
-| **44** | Encrypted Payloads (Versioned) | Yes |
-| **45** | Counting results | Yes |
-| **50** | Search Capability | Yes |
-| **51** | Lists | Yes |
-| **57** | Lightning Zaps | Yes |
-| **65** | Relay List Metadata | Yes |
-| **70** | Protected Events | Yes |
-| **77** | Negentropy Syncing | Yes |
-| **78** | Application-specific Data | Yes |
+### 🌏 True Global Full-Text Search
 
-## Getting Started
+Most relays struggle with CJK (Chinese, Japanese, Korean) or complex scripts because they rely on simple whitespace tokenization. **n0str is different.** We leverage the standard `Intl.Segmenter` API to provide **true language-aware indexing**. Whether you're posting in English, Japanese, or Arabic, search just works.
 
-### Quick Start with Nightly Binary
+### ⚡ Blazing Fast & Lightweight
 
-You can download the latest pre-compiled binary from the [Releases](https://github.com/tani/n0str/releases/tag/nightly) page.
+Built on the **Bun** runtime, n0str utilizes native high-speed WebSockets and the highly optimized SQLite engine. It handles high throughput with a tiny memory footprint, perfect for both Raspberry Pis and high-end servers.
 
-**Linux / macOS:**
+---
+
+## 🚀 Getting Started
+
+### Quick Start (Binary)
+
+Download the latest pre-compiled binary for your system from the [Releases](https://github.com/tani/n0str/releases/tag/nightly) page.
 
 ```bash
-# Download the binary for your platform (e.g., linux-x64)
+# macOS/Linux
 chmod +x n0str-linux-x64
 ./n0str-linux-x64
 ```
 
-**Windows:**
+### From Source
 
-Download `n0str-win-x64.exe` and run it from the terminal.
-
-```powershell
-.\n0str-win-x64.exe
-```
-
-### Prerequisites
-
-- [Bun](https://bun.sh/) (v1.3.5 or later)
-
-### Installation from Source
-
-1. Clone the repository:
+1. **Clone & Install**:
 
    ```bash
-   git clone https://github.com/tani/n0str.git
-   cd n0str
-   ```
-
-2. Install dependencies:
-
-   ```bash
+   git clone https://github.com/tani/n0str.git && cd n0str
    bun install
    ```
 
-### Running the Relay
+2. **Start**:
 
-Start the relay server:
+   ```bash
+   bun start
+   ```
 
-```bash
-bun start
-```
+---
 
-The relay will start listening on `ws://localhost:3000` (or the port defined in your configuration).
+## 🛠 Features & NIP Support
 
-## Configuration
+n0str is built to be a standard-compliant, feature-rich relay core.
 
-n0str is configured via a `n0str.json` file in the root directory. If this file does not exist, default values will be used.
+- **Embedded High-Performance DB**: Native support for **SQLite** and **PGLite** (PostgreSQL in WASM).
+- **Advanced Query Support**: Complex tag filtering and counting (NIP-45).
+- **Negentropy Syncing**: Lightning-fast state reconciliation (NIP-77).
+- **Security First**: Native support for PoW (NIP-13) and Auth (NIP-42).
 
-**Example `n0str.json`:**
+### Supported NIPs
 
+| NIP | Feature | Status |
+| :--- | :--- | :--- |
+| **01** | Basic Protocol Flow (EVENT, REQ, CLOSE) | ✅ |
+| **13** | Proof of Work | ✅ |
+| **42** | Client Authentication (AUTH) | ✅ |
+| **50** | **Human-Language Search (CJK Support)** | 💎 |
+| **77** | Negentropy Syncing | ✅ |
+| ... | *And 25+ more (see below for full list)* | ✅ |
+
+<details>
+<summary><b>View All 30+ Supported NIPS</b></summary>
+
+| NIP | Description |
+| :--- | :--- |
+| **02** | Contact List |
+| **03** | OpenTimestamps |
+| **05** | DNS-based Identifiers |
+| **09** | Deletions |
+| **11** | Relay Information |
+| **12** | Generic Tag Queries |
+| **15** | Nostr Marketplace |
+| **16** | Event Treatment |
+| **17** | Private DMs |
+| **20** | Command Results |
+| **22** | Timestamp Limits |
+| **23** | Long-form Content |
+| **25** | Reactions |
+| **28** | Public Chat |
+| **33** | Parameterized Replaceable Events |
+| **40** | Expiration |
+| **44** | Encrypted Payloads |
+| **51** | Lists |
+| **57** | Lightning Zaps |
+| **65** | Relay List Metadata |
+| **70** | Protected Events |
+| **78** | App-specific Data |
+
+</details>
+
+---
+
+## ⚙️ Configuration
+
+n0str works out of the box with defaults, but can be fully customized via `n0str.json` or Environment Variables.
+
+### n0str.json
+Create an `n0str.json` in the root directory:
 ```json
 {
-  "name": "My Custom Relay",
-  "description": "My personal Nostr relay",
-  "pubkey": "your-hex-pubkey-here",
-  "contact": "admin@example.com",
+  "name": "My n0str Relay",
+  "description": "Fast and multi-lingual",
+  "pubkey": "[Your hex pubkey]",
   "limitation": {
     "max_message_length": 65536,
-    "max_subscriptions": 20,
-    "auth_required": false
+    "max_subscriptions": 20
   }
 }
 ```
 
-See the default configuration in `src/config.ts` for all available options.
+### 🌍 Environment Variables
 
-### Environment Variables
+Environment variables take precedence over the JSON config.
 
-You can configure the relay using the following environment variables:
+- `PORT`: Listen port (default: `3000`)
+- `ENGINE`: Database engine (`sqlite` or `pglite`, default: `sqlite`)
+- `DATABASE`: Database path or `:memory:` (default: `:memory:`)
+- `LOGLEVEL`: Logging level (`trace` to `error`, default: `info`)
 
-- `PORT`: The port to listen on (default: 3000).
-- `ENGINE`: The database engine to use (`sqlite` or `pglite`, default: `sqlite`).
-- `DATABASE`: The path to the database or `:memory:` (default: `:memory:`).
-- `LOGLEVEL`: The logging level (default: `info`). Available levels: `trace`, `debug`, `info`, `warn`, `error`.
+---
 
-## Architecture & Flow
+## 🏗 Architecture
 
-n0str leverages a modular design where each component has a specific responsibility in the message lifecycle.
-
-### Internal Message Lifecycle
+n0str's architecture is built on a clean, message-driven flow designed for auditability and extension.
 
 ```mermaid
 sequenceDiagram
+    autonumber
     participant C as Client
     participant R as NostrRelay (Bun)
     participant H as NostrMessageHandler
     participant V as Validation (nostr.ts)
-    participant DB as SqliteEventRepository
+    participant DB as EventRepository
     participant W as WebSocketManager
 
-    Note over C,W: Event Publishing (EVENT)
-    C->>R: ["EVENT", event]
+    rect rgb(240, 240, 240)
+    Note over C,V: Event Publishing (EVENT)
+    C->>R: ["EVENT", {event}]
     R->>H: handleMessage(ws, msg)
-    H->>V: validateEvent(event)
-    V-->>H: { ok: true }
+    H->>V: ClientMessageSchema (ArkType)
+    H->>V: validateEvent (Schema, NIP-13 PoW, Sig)
+    H->>V: validateCreatedAt (NIP-22)
+    H->>H: Check Expiration (NIP-40)
+    H->>H: Check Protected Event (NIP-70)
+    
+    break Validation Failed
+        H->>C: ["OK", id, false, "error: ..."]
+    end
+
     alt is regular event
         H->>DB: saveEvent(event)
-        DB-->>H: success
+        Note right of DB: Handles NIP-01/33 Replaceable Logic
     end
-    H->>C: ["OK", event_id, true, ""]
+    
+    H->>C: ["OK", id, true, ""]
     H->>W: broadcast(event)
-    loop for each matching subscriber
-        W->>C: ["EVENT", sub_id, event]
+    W->>W: matchFilters(ws.subscriptions, event)
+    W->>C: ["EVENT", subId, event]
     end
 
-    Note over C,W: Event Subscription (REQ)
-    C->>R: ["REQ", sub_id, filter]
-    R->>H: handleMessage(ws, msg)
-    H->>W: update client filters
-    H->>DB: queryEvents(filter)
-    DB-->>H: event[]
-    loop for each event
-        H->>C: ["EVENT", sub_id, event]
+    rect rgb(245, 245, 245)
+    Note over C,DB: Subscription Flow (REQ)
+    C->>R: ["REQ", subId, filters...]
+    R->>H: handleReq(ws, payload)
+    H->>H: Store subscription in client data
+    loop for each filter
+        H->>DB: queryEvents(filter)
+        Note right of DB: FTS (NIP-50) with Intl.Segmenter
+        DB-->>H: events[]
+        loop for each unique event
+            H->>C: ["EVENT", subId, event]
+        end
     end
-    H->>C: ["EOSE", sub_id]
+    H->>C: ["EOSE", subId]
+    end
 ```
 
-### Component Roles
+---
 
-- **NostrRelay (src/server.ts)**: Entry point using Bun's native WebSocket. Manages connection lifecycle and NIP-11 requests.
-- **NostrMessageHandler (src/message.ts)**: Orchestrates message processing, validation, and storage logic.
-- **Event Repository (src/repository.ts)**: Abstract storage layer with support for multiple backends.
-- **SQLite Support (src/sqlite.ts)**: High-performance SQLite implementation.
-- **PGLite Support (src/pglite.ts)**: Postgres in WASM for transient setups.
-- **WebSocketManager (src/websocket.ts)**: Tracks active connections and handles efficient event broadcasting.
-- **Validation (src/nostr.ts)**: Verifies signatures, PoW, and protocol compliance.
+## 🧩 The n0str Philosophy
 
-## License
+1. **Zero Bloat**: No massive dependency trees. Keep it lean, mean, and fast.
+2. **Global First**: Nostr is for the world. If it doesn't work in Japanese or Arabic, it doesn't work.
+3. **Simplicity is a Feature**: A relay should be as easy to run as a hello-world script.
+
+---
+
+## 📄 License
 
 AGPLv3. See [LICENSE](LICENSE) for details.
