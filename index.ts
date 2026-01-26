@@ -1,6 +1,6 @@
+import { config } from "./src/args.ts";
 import { NostrRelay } from "./src/services/relay.ts";
 import { logger } from "./src/utils/logger.ts";
-import { config } from "./src/args.ts";
 import { SqliteEventRepository } from "./src/repositories/sqlite.ts";
 
 const repository = new SqliteEventRepository(config.database);
