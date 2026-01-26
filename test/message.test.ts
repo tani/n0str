@@ -5,13 +5,13 @@ import { NostrMessageHandler } from "../src/message.ts";
 import { WebSocketManager } from "../src/websocket.ts";
 import { finalizeEvent, generateSecretKey, getPublicKey } from "nostr-tools";
 
-describe.each(engines)("Engine: %s > message handling", (engine) => {
+describe.each(engines)("Engine: %s > message handling", () => {
   let handler: NostrMessageHandler;
   let wsManager: WebSocketManager;
   let sk = generateSecretKey();
 
   beforeAll(async () => {
-    await initRepository(engine, ":memory:");
+    await initRepository(":memory:");
     wsManager = new WebSocketManager();
     handler = new NostrMessageHandler(getRepository(), wsManager);
   });

@@ -17,7 +17,7 @@
 
 ### 📦 Single Binary, Zero Friction
 
-Forget about complex Docker setups or external database migrations. n0str is a self-contained power tool. Download the binary, run it, and you're live. It embeds its own database (SQLite or PGLite), making it the ultimate "drop-in" relay.
+Forget about complex Docker setups or external database migrations. n0str is a self-contained power tool. Download the binary, run it, and you're live. It embeds its own database (SQLite), making it the ultimate "drop-in" relay.
 
 ### 🌏 True Global Full-Text Search
 
@@ -54,7 +54,7 @@ chmod +x n0str-linux-x64
 
 n0str is built to be a standard-compliant, feature-rich relay core.
 
-- **Embedded High-Performance DB**: Native support for **SQLite** and **PGLite** (PostgreSQL in WASM).
+- **Embedded High-Performance DB**: Native support for **SQLite**.
 - **Advanced Query Support**: Complex tag filtering and counting (NIP-45).
 - **Negentropy Syncing**: Lightning-fast state reconciliation (NIP-77).
 - **Security First**: Native support for PoW (NIP-13) and Auth (NIP-42).
@@ -125,7 +125,6 @@ Create an `n0str.json` in the root directory:
 Environment variables take precedence over the JSON config.
 
 - `PORT`: Listen port (default: `3000`)
-- `ENGINE`: Database engine (`sqlite` or `pglite`, default: `sqlite`)
 - `DATABASE`: Database path or `:memory:` (default: `:memory:`)
 - `LOGLEVEL`: Logging level (`trace` to `error`, default: `info`)
 

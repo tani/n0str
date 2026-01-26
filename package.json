@@ -23,7 +23,6 @@
     "typescript": "^5"
   },
   "dependencies": {
-    "@electric-sql/pglite": "^0.3.15",
     "arktype": "^2.1.29",
     "eld": "^2.0.2",
     "nostr-tools": "^2.20.0"

@@ -13,9 +13,9 @@ async function consumeAuth(ws: WebSocket) {
   });
 }
 
-describe.each(engines)("Engine: %s > Event Treatment (NIP-01)", (engine) => {
+describe.each(engines)("Engine: %s > Event Treatment (NIP-01)", () => {
   beforeAll(async () => {
-    await initRepository(engine, ":memory:");
+    await initRepository(":memory:");
     relayService.setRepository(getRepository());
   });
 

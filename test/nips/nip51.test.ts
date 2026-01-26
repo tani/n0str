@@ -13,9 +13,9 @@ async function consumeAuth(ws: WebSocket) {
   });
 }
 
-describe.each(engines)("Engine: %s > NIP-51: Lists", (engine) => {
+describe.each(engines)("Engine: %s > NIP-51: Lists", () => {
   beforeAll(async () => {
-    await initRepository(engine, ":memory:");
+    await initRepository(":memory:");
     relayService.setRepository(getRepository());
   });
 

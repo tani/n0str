@@ -12,9 +12,9 @@ import { relayService } from "../src/server.ts";
 import { generateSecretKey, getPublicKey, finalizeEvent } from "nostr-tools";
 import { type } from "arktype";
 
-describe.each(engines)("Engine: %s > Protocol", (engine) => {
+describe.each(engines)("Engine: %s > Protocol", () => {
   beforeAll(async () => {
-    await initRepository(engine, ":memory:");
+    await initRepository(":memory:");
     relayService.setRepository(getRepository());
   });
 

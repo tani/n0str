@@ -5,9 +5,9 @@ import { generateSecretKey, finalizeEvent } from "nostr-tools";
 import { relayInfo } from "../src/config.ts";
 import { NostrRelay } from "../src/relay.ts";
 
-describe.each(engines)("Engine: %s > relay coverage", (engine) => {
+describe.each(engines)("Engine: %s > relay coverage", () => {
   test("relay fetch branches and websocket message paths", async () => {
-    await using repository = createRepository(engine, ":memory:");
+    await using repository = createRepository(":memory:");
     await using relay = new NostrRelay(repository);
     await relay.init();
 
@@ -102,7 +102,7 @@ describe.each(engines)("Engine: %s > relay coverage", (engine) => {
     };
 
     try {
-      await using repository = createRepository(engine, ":memory:");
+      await using repository = createRepository(":memory:");
       repository.cleanupExpiredEvents = async () => {
         throw new Error("mock cleanup error");
       };

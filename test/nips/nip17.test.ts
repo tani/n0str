@@ -13,9 +13,9 @@ async function consumeAuth(ws: WebSocket) {
   });
 }
 
-describe.each(engines)("Engine: %s > NIP-17: Private Direct Messages", (engine) => {
+describe.each(engines)("Engine: %s > NIP-17: Private Direct Messages", () => {
   beforeAll(async () => {
-    await initRepository(engine, ":memory:");
+    await initRepository(":memory:");
     relayService.setRepository(getRepository());
   });
 

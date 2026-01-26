@@ -1,34 +1,28 @@
 import { SqliteEventRepository } from "./sqlite.ts";
-import { PgliteEventRepository } from "./pglite.ts";
 import { config } from "./args.ts";
 import type { IEventRepository } from "./types.ts";
+import { logger } from "./logger.ts";
 
 /**
- * Creates an event repository based on the configured engine.
- * @param engine - The database engine to use ('sqlite' or 'pglite').
+ * Creates an event repository.
  * @param path - The path to the database.
  * @returns An instance of IEventRepository.
  */
-export function createRepository(engine: string, path: string): IEventRepository {
-  if (engine === "pglite") {
-    return new PgliteEventRepository(path);
-  }
+export function createRepository(path: string): IEventRepository {
   return new SqliteEventRepository(path);
 }
-
-import { logger } from "./logger.ts";
 
 let repository: IEventRepository;
 
 /**
  * Initializes the global repository singleton.
  */
-export async function initRepository(engine: string, database: string) {
-  void logger.info`Initializing repository with engine: ${engine}`;
+export async function initRepository(database: string) {
+  void logger.info`Initializing repository (sqlite)`;
   if (repository) {
     await repository.close();
   }
-  repository = createRepository(engine, database);
+  repository = createRepository(database);
   await repository.init();
 }
 
@@ -44,7 +38,7 @@ export const queryEventsForSync = (filter: any) => repository.queryEventsForSync
 export const close = () => repository.close();
 
 // Initialize with defaults from config
-await initRepository(config.dbEngine, config.database);
+await initRepository(config.database);
 
 /**
  * Returns the current repository instance.

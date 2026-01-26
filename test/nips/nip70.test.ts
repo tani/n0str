@@ -4,9 +4,9 @@ import { relay, relayService } from "../../src/server.ts";
 import { initRepository, getRepository } from "../../src/repository.ts";
 import { finalizeEvent, generateSecretKey } from "nostr-tools";
 
-describe.each(engines)("Engine: %s > NIP-70 Protected Events", (engine) => {
+describe.each(engines)("Engine: %s > NIP-70 Protected Events", () => {
   beforeAll(async () => {
-    await initRepository(engine, ":memory:");
+    await initRepository(":memory:");
     relayService.setRepository(getRepository());
   });
 

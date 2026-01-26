@@ -13,9 +13,9 @@ async function consumeAuth(ws: WebSocket) {
   });
 }
 
-describe.each(engines)("Engine: %s > NIP-15: Nostr Marketplace", (engine) => {
+describe.each(engines)("Engine: %s > NIP-15: Nostr Marketplace", () => {
   beforeAll(async () => {
-    await initRepository(engine, ":memory:");
+    await initRepository(":memory:");
     relayService.setRepository(getRepository());
   });
 

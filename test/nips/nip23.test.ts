@@ -13,9 +13,9 @@ async function consumeAuth(ws: WebSocket) {
   });
 }
 
-describe.each(engines)("Engine: %s > NIP-23: Long-form Content", (engine) => {
+describe.each(engines)("Engine: %s > NIP-23: Long-form Content", () => {
   beforeAll(async () => {
-    await initRepository(engine, ":memory:");
+    await initRepository(":memory:");
     relayService.setRepository(getRepository());
   });
 

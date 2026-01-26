@@ -5,7 +5,7 @@ import { NostrMessageHandler } from "../src/message.ts";
 import { WebSocketManager } from "../src/websocket.ts";
 import { finalizeEvent, generateSecretKey } from "nostr-tools";
 
-describe.each(engines)("Engine: %s > security resilience", (engine) => {
+describe.each(engines)("Engine: %s > security resilience", () => {
   let handler: NostrMessageHandler;
   let wsManager: WebSocketManager;
   let sk = generateSecretKey();
@@ -13,7 +13,7 @@ describe.each(engines)("Engine: %s > security resilience", (engine) => {
   beforeAll(async () => {
     // Use a fresh file for each engine to avoid interference if needed,
     // but :memory: is fine for these tests usually.
-    await initRepository(engine, `:memory:`);
+    await initRepository(`:memory:`);
     wsManager = new WebSocketManager();
     handler = new NostrMessageHandler(getRepository(), wsManager);
   });
@@ -145,7 +145,7 @@ describe.each(engines)("Engine: %s > security resilience", (engine) => {
 
     const hasResponse = sent.some((m) => m[0] === "NEG-MSG" || m[0] === "NEG-ERR");
     if (!hasResponse) {
-      console.warn(`[VULNERABILITY] Engine ${engine}: NEG-OPEN did not send any response`);
+      console.warn(`[VULNERABILITY] Engine sqlite: NEG-OPEN did not send any response`);
     }
     expect(hasResponse).toBe(true);
   });

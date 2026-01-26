@@ -3,9 +3,9 @@ import { test, describe, beforeEach, afterEach, beforeAll } from "bun:test";
 import { relay, relayService } from "../../src/server.ts";
 import { clear, initRepository, getRepository } from "../../src/repository.ts";
 
-describe.each(engines)("Engine: %s > NIP-13 Proof of Work", (engine) => {
+describe.each(engines)("Engine: %s > NIP-13 Proof of Work", () => {
   beforeAll(async () => {
-    await initRepository(engine, ":memory:");
+    await initRepository(":memory:");
     relayService.setRepository(getRepository());
   });
 

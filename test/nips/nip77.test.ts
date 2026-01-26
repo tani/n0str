@@ -5,9 +5,9 @@ import { finalizeEvent, generateSecretKey } from "nostr-tools";
 import { saveEvent, initRepository, getRepository } from "../../src/repository.ts";
 import { Negentropy, NegentropyStorageVector } from "../../src/negentropy.js";
 
-describe.each(engines)("Engine: %s > NIP-77 Negentropy Syncing", (engine) => {
+describe.each(engines)("Engine: %s > NIP-77 Negentropy Syncing", () => {
   beforeAll(async () => {
-    await initRepository(engine, ":memory:");
+    await initRepository(":memory:");
     relayService.setRepository(getRepository());
   });
 
