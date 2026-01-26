@@ -1,7 +1,7 @@
 import { describe, expect, test, beforeEach, afterEach } from "bun:test";
 import { generateSecretKey, finalizeEvent } from "nostr-tools";
 import { relayInfo } from "../src/config.ts";
-import { NostrRelay } from "../src/services/NostrRelay.ts";
+import { NostrRelay } from "../src/services/relay.ts";
 import { existsSync, unlinkSync } from "fs";
 
 describe("relay coverage", () => {

@@ -1,4 +1,4 @@
-import { NostrRelay } from "./src/services/NostrRelay.ts";
+import { NostrRelay } from "./src/services/relay.ts";
 import { logger } from "./src/logger.ts";
 
 const relay = new NostrRelay();

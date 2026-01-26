@@ -1,7 +1,7 @@
 import type { ServerWebSocket } from "bun";
 import type { ClientData } from "../types.ts";
-import type { IEventRepository } from "../repositories/IEventRepository.ts";
-import type { WebSocketManager } from "../managers/WebSocketManager.ts";
+import type { IEventRepository } from "../repositories/types.ts";
+import type { WebSocketManager } from "../managers/websocket.ts";
 import { type } from "arktype";
 import {
   EventSchema,

@@ -3,7 +3,7 @@ import type { Event, Filter } from "nostr-tools";
 import { isAddressable, isReplaceable } from "../nostr.ts";
 import { logger } from "../logger.ts";
 import { segmentForFts, segmentSearchQuery } from "../fts.ts";
-import type { IEventRepository, ExistingRow } from "./IEventRepository.ts";
+import type { IEventRepository, ExistingRow } from "./types.ts";
 
 type EventRow = {
   id: string;
