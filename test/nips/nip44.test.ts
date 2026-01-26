@@ -15,20 +15,17 @@ describe("NIP-44: Encrypted Payloads", () => {
   let server: any;
   let url: string;
   let relay: any;
-  let db: any;
-
   beforeAll(async () => {
     process.env.DATABASE_PATH = dbPath;
     // Dynamic import to ensure env var is set before DB init
     const relayModule = await import("../../src/server.ts");
     relay = relayModule.relay;
-    const dbModule = await import("../../src/repository.ts");
-    db = dbModule.db;
   });
 
   beforeEach(async () => {
-    await db`DELETE FROM events`;
-    await db`DELETE FROM tags`;
+    const { clear } = await import("../../src/repository.ts");
+    await clear();
+
     server = Bun.serve({ ...relay, port: 0 });
     url = `ws://localhost:${server.port}`;
   });

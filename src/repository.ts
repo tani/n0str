@@ -1,10 +1,25 @@
 import { SqliteEventRepository } from "./sqlite.ts";
+import { PgliteEventRepository } from "./pglite.ts";
 import { config } from "./args.ts";
+import type { IEventRepository } from "./types.ts";
 
-export const repository = new SqliteEventRepository(config.database);
+/**
+ * Creates an event repository based on the configured engine.
+ * @param engine - The database engine to use ('sqlite' or 'pglite').
+ * @param path - The path to the database.
+ * @returns An instance of IEventRepository.
+ */
+export function createRepository(engine: string, path: string): IEventRepository {
+  if (engine === "pglite") {
+    return new PgliteEventRepository(path);
+  }
+  return new SqliteEventRepository(path);
+}
+
+export const repository = createRepository(config.dbEngine, config.database);
 await repository.init();
 
-export const db = repository.db;
+export const clear = repository.clear.bind(repository);
 export const saveEvent = repository.saveEvent.bind(repository);
 export const queryEvents = repository.queryEvents.bind(repository);
 export const deleteEvents = repository.deleteEvents.bind(repository);

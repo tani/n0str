@@ -138,7 +138,18 @@ export class SqliteEventRepository implements IEventRepository {
         await tx`INSERT INTO tags ${tx(tagRows)}`;
       }
     });
-    void logger.trace`Saved event ${event.id}`;
+    void logger.trace`Saved event ${event.id} (pglite)`;
+  }
+
+  /**
+   * Clears all data from the database.
+   */
+  async clear(): Promise<void> {
+    await this.db.begin(async (tx) => {
+      await tx`DELETE FROM events`;
+      await tx`DELETE FROM tags`;
+      await tx`DELETE FROM events_fts`;
+    });
   }
 
   /**

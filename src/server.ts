@@ -1,15 +1,12 @@
 import { NostrRelay } from "./relay.ts";
 import { logger } from "./logger.ts";
-import { SqliteEventRepository } from "./sqlite.ts";
-
-const dbPath = process.env.DATABASE_PATH || "n0str.db";
-const port = parseInt(process.env.PORT || "3000");
-const repository = new SqliteEventRepository(dbPath);
+import { repository } from "./repository.ts";
+import { config } from "./args.ts";
 
 /**
  * The core NostrRelay service instance.
  */
-export const relayService = new NostrRelay(repository, port);
+export const relayService = new NostrRelay(repository, config.port);
 await relayService.init();
 
 /**

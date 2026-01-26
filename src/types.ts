@@ -33,6 +33,8 @@ export interface IEventRepository {
   queryEventsForSync(filter: Filter): Promise<ExistingRow[]>;
   /** Closes the repository connection. */
   close(): Promise<void>;
+  /** Clears all data from the repository (mainly for tests). */
+  clear(): Promise<void>;
   /** Asynchronous disposal. */
   [Symbol.asyncDispose](): Promise<void>;
 }

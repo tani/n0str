@@ -1,6 +1,6 @@
 import { test, describe, beforeAll, beforeEach, afterEach } from "bun:test";
 import { relay } from "../../src/server.ts";
-import { db } from "../../src/repository.ts";
+import { clear } from "../../src/repository.ts";
 
 describe("NIP-13 Proof of Work", () => {
   const dbPath = "n0str.test.db";
@@ -11,8 +11,8 @@ describe("NIP-13 Proof of Work", () => {
   });
 
   beforeEach(async () => {
-    await db`DELETE FROM events`;
-    await db`DELETE FROM tags`;
+    await clear();
+
     server = Bun.serve({ ...relay, port: 0 });
   });
 

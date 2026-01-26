@@ -1,6 +1,6 @@
 import { expect, test, describe, beforeAll, beforeEach, afterEach } from "bun:test";
 import { relay } from "../../src/server.ts";
-import { db } from "../../src/repository.ts";
+import { clear } from "../../src/repository.ts";
 import { generateSecretKey, finalizeEvent } from "nostr-tools";
 
 async function consumeAuth(ws: WebSocket) {
@@ -22,8 +22,8 @@ describe("NIP-45 Event Counts", () => {
   });
 
   beforeEach(async () => {
-    await db`DELETE FROM events`;
-    await db`DELETE FROM tags`;
+    await clear();
+
     server = Bun.serve({ ...relay, port: 0 });
     url = `ws://localhost:${server.port}`;
   });

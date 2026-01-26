@@ -1,9 +1,8 @@
 import { config } from "./src/args.ts";
 import { NostrRelay } from "./src/relay.ts";
 import { logger } from "./src/logger.ts";
-import { SqliteEventRepository } from "./src/sqlite.ts";
+import { repository } from "./src/repository.ts";
 
-const repository = new SqliteEventRepository(config.database);
 const relay = new NostrRelay(repository, config.port);
 await relay.init();
 

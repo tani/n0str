@@ -1,6 +1,6 @@
 import { expect, test, describe, beforeAll, beforeEach, afterEach } from "bun:test";
 import { relay } from "../../src/server.ts";
-import { db, queryEvents } from "../../src/repository.ts";
+import { clear, queryEvents } from "../../src/repository.ts";
 import { generateSecretKey, finalizeEvent } from "nostr-tools";
 
 async function consumeAuth(ws: WebSocket) {
@@ -22,8 +22,8 @@ describe("NIP-18: Reposts", () => {
   });
 
   beforeEach(async () => {
-    await db`DELETE FROM events`;
-    await db`DELETE FROM tags`;
+    await clear();
+
     server = Bun.serve({ ...relay, port: 0 });
     url = `ws://localhost:${server.port}`;
   });
@@ -59,7 +59,7 @@ describe("NIP-18: Reposts", () => {
       const stored = await queryEvents({ kinds: [kind] });
       expect(stored).toHaveLength(1);
       expect(stored[0]?.id).toBe(e.id);
-      await db`DELETE FROM events`;
+      await clear();
     }
 
     ws.close();
