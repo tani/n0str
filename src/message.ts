@@ -201,13 +201,6 @@ export class NostrMessageHandler {
       return;
     }
 
-    // Cap limit to max_limit
-    for (const filter of filters) {
-      if (filter.limit === undefined || filter.limit > relayInfo.limitation.max_limit) {
-        filter.limit = relayInfo.limitation.max_limit;
-      }
-    }
-
     ws.data.subscriptions.set(subId, filters);
 
     // Send historical events

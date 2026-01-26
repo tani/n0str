@@ -41,7 +41,7 @@ export const FilterSchema = type({
   "kinds?": "number[]",
   "since?": "number",
   "until?": "number",
-  "limit?": "number",
+  "limit?": `number<=${relayInfo.limitation.max_limit}`,
   "search?": "string",
   "[string]": "unknown", // Support #... tag filters loosely
 });
@@ -73,8 +73,8 @@ export function isAddressable(kind: number): boolean {
 const $ = type.scope({
   Event: EventSchema,
   Filter: FilterSchema,
-  ReqMsg: ["'REQ'", "string", "...", "Filter[]"],
-  CountMsg: ["'COUNT'", "string", "...", "Filter[]"],
+  ReqMsg: ["'REQ'", `string<=${relayInfo.limitation.max_subid_length}`, "...", "Filter[]"],
+  CountMsg: ["'COUNT'", `string<=${relayInfo.limitation.max_subid_length}`, "...", "Filter[]"],
   EventMsg: ["'EVENT'", "Event"],
   AuthMsg: ["'AUTH'", "Event"],
   CloseMsg: ["'CLOSE'", "string"],
