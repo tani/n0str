@@ -134,6 +134,56 @@ You can also configure the relay using environment variables:
 - `LOG_LEVEL`: The logging level (default: info). Available levels: `trace`, `debug`, `info`, `warn`, `error`.
 - `DATABASE_PATH`: The path to the SQLite database (default: `./n0str.db`).
 
+## Architecture & Flow
+
+n0str leverages a modular design where each component has a specific responsibility in the message lifecycle.
+
+### Internal Message Lifecycle
+
+```mermaid
+sequenceDiagram
+    participant C as Client
+    participant R as NostrRelay (Bun)
+    participant H as NostrMessageHandler
+    participant V as Validation (nostr.ts)
+    participant DB as SqliteEventRepository
+    participant W as WebSocketManager
+
+    Note over C,W: Event Publishing (EVENT)
+    C->>R: ["EVENT", event]
+    R->>H: handleMessage(ws, msg)
+    H->>V: validateEvent(event)
+    V-->>H: { ok: true }
+    alt is regular event
+        H->>DB: saveEvent(event)
+        DB-->>H: success
+    end
+    H->>C: ["OK", event_id, true, ""]
+    H->>W: broadcast(event)
+    loop for each matching subscriber
+        W->>C: ["EVENT", sub_id, event]
+    end
+
+    Note over C,W: Event Subscription (REQ)
+    C->>R: ["REQ", sub_id, filter]
+    R->>H: handleMessage(ws, msg)
+    H->>W: update client filters
+    H->>DB: queryEvents(filter)
+    DB-->>H: event[]
+    loop for each event
+        H->>C: ["EVENT", sub_id, event]
+    end
+    H->>C: ["EOSE", sub_id]
+```
+
+### Component Roles
+
+- **NostrRelay (src/services/relay.ts)**: Entry point using Bun's native WebSocket. Manages connection lifecycle and NIP-11 requests.
+- **NostrMessageHandler (src/handlers/message.ts)**: Orchestrates message processing, validation, and storage logic.
+- **SqliteEventRepository (src/repositories/sqlite.ts)**: Handles persistence and indexing using SQLite FTS5 for search.
+- **WebSocketManager (src/managers/websocket.ts)**: Tracks active connections and handles efficient event broadcasting.
+- **Validation (src/utils/nostr.ts)**: Verifies signatures, PoW, and protocol compliance.
+
 ## License
 
 AGPLv3. See [LICENSE](LICENSE) for details.
