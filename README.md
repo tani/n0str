@@ -1,6 +1,6 @@
 <div align="center">
   <h1>n0str</h1>
-  <p><strong>The Zero-Config, Multi-Language, High-Performance Nostr Relay</strong></p>
+  <p><strong>The Single Binary, Zero Friction, Multi-Language Nostr Relay</strong></p>
 
   <p>
     <a href="https://github.com/tani/n0str/releases/tag/nightly"><img src="https://img.shields.io/badge/Release-Nightly-orange.svg" alt="Release" /></a>
@@ -22,10 +22,6 @@ Forget about complex Docker setups or external database migrations. n0str is a s
 ### 🌏 True Global Full-Text Search
 
 Most relays struggle with CJK (Chinese, Japanese, Korean) or complex scripts because they rely on simple whitespace tokenization. **n0str is different.** We leverage the standard `Intl.Segmenter` API to provide **true language-aware indexing**. Whether you're posting in English, Japanese, or Arabic, search just works.
-
-### ⚡ Blazing Fast & Lightweight
-
-Built on the **Bun** runtime, n0str utilizes native high-speed WebSockets and the highly optimized SQLite engine. It handles high throughput with a tiny memory footprint, perfect for both Raspberry Pis and high-end servers.
 
 ## 🚀 Getting Started
 
