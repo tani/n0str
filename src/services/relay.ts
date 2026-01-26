@@ -48,6 +48,10 @@ export class NostrRelay {
     await this.repository.close();
   }
 
+  public async [Symbol.asyncDispose]() {
+    await this.shutdown();
+  }
+
   public get port(): number {
     return this._port;
   }

@@ -42,6 +42,10 @@ export class SqliteEventRepository implements IEventRepository {
     await this.db.close();
   }
 
+  async [Symbol.asyncDispose](): Promise<void> {
+    await this.close();
+  }
+
   async init(): Promise<void> {
     await this.db`PRAGMA foreign_keys = ON`;
 

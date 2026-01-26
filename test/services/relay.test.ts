@@ -7,24 +7,8 @@ import { existsSync, unlinkSync } from "fs";
 
 describe("relay coverage", () => {
   const dbPath = "n0str.relay.test.db";
-  let relayService: NostrRelay;
-  let repository: SqliteEventRepository;
 
-  beforeEach(async () => {
-    if (existsSync(dbPath)) {
-      try {
-        unlinkSync(dbPath);
-      } catch {
-        // ignore
-      }
-    }
-    repository = new SqliteEventRepository(dbPath);
-    relayService = new NostrRelay(repository);
-    await relayService.init();
-  });
-
-  afterEach(async () => {
-    await relayService.shutdown();
+  afterEach(() => {
     if (existsSync(dbPath)) {
       try {
         unlinkSync(dbPath);
@@ -35,6 +19,18 @@ describe("relay coverage", () => {
   });
 
   test("relay fetch branches and websocket message paths", async () => {
+    if (existsSync(dbPath)) {
+      try {
+        unlinkSync(dbPath);
+      } catch {
+        // ignore
+      }
+    }
+
+    await using repository = new SqliteEventRepository(dbPath);
+    await using relayService = new NostrRelay(repository);
+    await relayService.init();
+
     const sent: string[] = [];
     const ws = {
       send: (msg: string) => sent.push(msg),
