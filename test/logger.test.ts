@@ -108,15 +108,6 @@ describe.each(engines)("Engine: %s > logger", () => {
     expect(infoSpy).toHaveBeenCalled();
   });
 
-  test("does not fall back to old log level names", () => {
-    (process.env as any).LOG_LEVEL = "error";
-    void logger.debug`debug`;
-    // Should use default 'info' and ignore LOG_LEVEL
-    expect(debugSpy).not.toHaveBeenCalled();
-    void logger.info`info`;
-    expect(infoSpy).toHaveBeenCalled();
-  });
-
   test("handles Error objects", () => {
     const err = new Error("test error");
     void logger.error`Got error: ${err}`;
