@@ -5,6 +5,7 @@ import type { ClientData } from "./types.ts";
 import type { IEventRepository } from "./types.ts";
 import { WebSocketManager } from "./websocket.ts";
 import { NostrMessageHandler } from "./message.ts";
+import { getRelayUrl, getDisplayUrl } from "./proxy.ts";
 
 /**
  * NostrRelay handles the WebSocket server, message routing, and periodic maintenance tasks.
@@ -103,7 +104,8 @@ export class NostrRelay {
 
       if (req.headers.get("Upgrade")?.toLowerCase() === "websocket") {
         const challenge = crypto.randomUUID();
-        const relayUrl = req.url.replace(/^http/, "ws");
+        const relayUrl = getRelayUrl(req);
+
         if (
           server.upgrade(req, {
             data: {
@@ -130,7 +132,7 @@ export class NostrRelay {
         });
       }
 
-      return new Response(`n0str Relay (ws://localhost:${this.port})`);
+      return new Response(`n0str Relay (${getDisplayUrl(req)})`);
     };
   }
 

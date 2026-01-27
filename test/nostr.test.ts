@@ -166,5 +166,23 @@ describe.each(engines)("Engine: %s > Protocol", () => {
       expect(res.ok).toBe(false);
       expect(res.reason).toBe("invalid: missing relay tag");
     });
+
+    test("ws vs wss strict mismatch", async () => {
+      const event = finalizeEvent(
+        {
+          kind: 22242,
+          created_at: Math.floor(Date.now() / 1000),
+          tags: [
+            ["challenge", "challenge"],
+            ["relay", "wss://n0str.tani.cc"],
+          ],
+          content: "",
+        },
+        sk,
+      );
+      const res = await validateAuthEvent(event, "challenge", "ws://n0str.tani.cc/");
+      expect(res.ok).toBe(false);
+      expect(res.reason).toContain("relay tag mismatch");
+    });
   });
 });
