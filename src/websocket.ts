@@ -56,8 +56,22 @@ export class WebSocketManager {
   public broadcast(event: Event): number {
     let broadcastCount = 0;
     for (const client of this.clients) {
-      for (const [subId, filters] of client.data.subscriptions) {
-        if (matchFilters(filters, event)) {
+      for (const [subId, data] of client.data.subscriptions) {
+        // Bloom Filter Optimization: Fast skip if definitely no match
+        if (data.bloom) {
+          let mightMatch = data.bloom.test(event.id) || data.bloom.test(event.pubkey);
+          if (!mightMatch) {
+            for (const tag of event.tags) {
+              if (tag[1] && data.bloom.test(tag[1])) {
+                mightMatch = true;
+                break;
+              }
+            }
+          }
+          if (!mightMatch) continue;
+        }
+
+        if (matchFilters(data.filters, event)) {
           client.send(JSON.stringify(["EVENT", subId, event]));
           broadcastCount++;
         }

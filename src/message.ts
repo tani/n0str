@@ -12,7 +12,9 @@ import {
   ClientMessageSchema,
   type ClientMessage,
 } from "./nostr.ts";
+import { SimpleBloomFilter } from "./bloom.ts";
 import { logger } from "./logger.ts";
+
 import type { Filter } from "nostr-tools";
 import { relayInfo } from "./config.ts";
 // @ts-ignore
@@ -201,7 +203,8 @@ export class NostrMessageHandler {
       return;
     }
 
-    ws.data.subscriptions.set(subId, filters);
+    const bloom = this.buildBloomFilter(filters);
+    ws.data.subscriptions.set(subId, { filters, bloom });
 
     // Send historical events
     const sentEventIds = new Set<string>();
@@ -216,8 +219,39 @@ export class NostrMessageHandler {
         }
       }
     }
-    void logger.trace`Sent ${eventCount} stored events for subId: ${subId}`;
+    void logger.trace`Sent ${eventCount} stored events for subId: ${subId} (Bloom: ${!!bloom})`;
     ws.send(JSON.stringify(["EOSE", subId]));
+  }
+
+  /**
+   * Builds a Bloom Filter for a set of filters to optimize broadcassting.
+   * If any filter is too broad, it returns undefined to fallback to full matching.
+   */
+  private buildBloomFilter(filters: Filter[]): SimpleBloomFilter | undefined {
+    const items: string[] = [];
+    for (const f of filters) {
+      // If a filter has no specific identifiers, it's "broad".
+      const hasSpecific =
+        (f.ids?.length ?? 0) > 0 ||
+        (f.authors?.length ?? 0) > 0 ||
+        Object.keys(f).some((k) => k.startsWith("#"));
+
+      if (!hasSpecific) return undefined;
+
+      if (f.ids) items.push(...f.ids);
+      if (f.authors) items.push(...f.authors);
+      for (const [k, v] of Object.entries(f)) {
+        if (k.startsWith("#") && Array.isArray(v)) {
+          for (const val of v) if (typeof val === "string") items.push(val);
+        }
+      }
+    }
+
+    if (items.length === 0) return undefined;
+
+    const bloom = new SimpleBloomFilter(Math.max(items.length, 10));
+    for (const item of items) bloom.add(item);
+    return bloom;
   }
 
   /**

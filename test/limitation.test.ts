@@ -52,7 +52,7 @@ describe.each(engines)("Engine: %s > config limitation tests", () => {
   test("max_subscriptions", async () => {
     const maxSubs = relayInfo.limitation.max_subscriptions;
     for (let i = 0; i < maxSubs; i++) {
-      mockWs.data.subscriptions.set(`sub${i}`, []);
+      mockWs.data.subscriptions.set(`sub${i}`, { filters: [] });
     }
 
     await handler.handleMessage(mockWs, JSON.stringify(["REQ", "one-too-many", {}]));

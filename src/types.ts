@@ -1,4 +1,5 @@
 import type { Event, Filter } from "nostr-tools";
+import type { SimpleBloomFilter } from "./bloom.ts";
 
 /**
  * Represents a basic row for event sync, containing only the ID and timestamp.
@@ -40,10 +41,18 @@ export interface IEventRepository {
 }
 
 /**
+ * Metadata for a single subscription, including its filters and a Bloom Filter for optimization.
+ */
+export type SubscriptionData = {
+  filters: Filter[];
+  bloom?: SimpleBloomFilter;
+};
+
+/**
  * Data associated with a WebSocket client connection.
  */
 export type ClientData = {
-  subscriptions: Map<string, Filter[]>;
+  subscriptions: Map<string, SubscriptionData>;
   challenge: string;
   relayUrl: string;
   pubkey?: string;

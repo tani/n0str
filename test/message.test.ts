@@ -213,8 +213,9 @@ describe.each(engines)("Engine: %s > message handling", () => {
 
   test("handleMessage max subscriptions", async () => {
     for (let i = 0; i < 20; i++) {
-      mockWs.data.subscriptions.set(`sub${i}`, []);
+      mockWs.data.subscriptions.set(`sub${i}`, { filters: [] });
     }
+
     await handler.handleMessage(mockWs, JSON.stringify(["REQ", "too-many", {}]));
     expect(sent).toHaveLength(1);
     expect(sent[0][0]).toBe("CLOSED");
