@@ -5,13 +5,14 @@
 **n0str** is a lightweight, reliable, and extensively tested **Nostr relay** implementation built on modern web technologies.
 
 * **Core Technology:** TypeScript, **Bun** runtime.
-* **Storage:** Support for **SQLite** (persistent or in-memory) and **PGLite** (PostgreSQL in WASM).
+* **Storage:** Support for **SQLite** (persistent or in-memory).
 * **Key Features:**
-  * Full-Text Search (NIP-50).
+  * Full-Text Search (NIP-50) with CJK support via `Intl.Segmenter`.
   * Comprehensive NIP support (see README for full list).
   * Configurable via `n0str.json`.
   * Implements security features like PoW (NIP-13) and Authentication (NIP-42).
   * **NIP-77** Negentropy Syncing support.
+  * Extensible architecture with separated message handling, WebSocket management, and repository layers.
 
 ## Building and Running
 
@@ -41,7 +42,7 @@
   bun run test
   ```
 
-  (Sequentially runs tests for both backends: `ENGINE=sqlite` and `ENGINE=pglite`)
+  (Runs tests using Bun's built-in test runner.)
 
 * **Type Check:**
 
@@ -75,37 +76,37 @@
 
 ## Development Conventions
 
+* **Architecture:**
+  * `NostrRelay` (`src/relay.ts`): Main service orchestrating WebSocket and message handling.
+  * `NostrMessageHandler` (`src/message.ts`): Processes Nostr messages (EVENT, REQ, etc.) using ArkType `match`.
+  * `WebSocketManager` (`src/websocket.ts`): Manages active WebSocket connections and broadcasting.
+  * `IEventRepository` (`src/types.ts`): Interface for event persistence.
 * **Database Access:**
-  * `src/repository.ts`: Abstract storage layer.
+  * `src/repository.ts`: Repository singleton and initialization logic.
   * `src/sqlite.ts`: SQLite backend implementation.
-  * `src/pglite.ts`: PGLite (PostgreSQL) backend implementation.
 * **Configuration:**
-  * **DATABASE**: Path to the database or `:memory:` (default: `:memory:`).
-  * **ENGINE**: `sqlite` or `pglite` (default: `sqlite`).
-  * **PORT**: Relay port (default: `3000`).
-  * **LOGLEVEL**: `trace`, `debug`, `info`, `warn`, `error` (default: `info`).
+  * Environment variables via `src/args.ts`.
+  * Relay information and limits via `src/config.ts` (mapping to `n0str.json`).
 * **Logging:**
   * Uses `console` wrappers via `src/logger.ts`.
-  * **Style:** Use tagged template literals (e.g., `void logger.debug\`Message\``) or standard calls (e.g., `logger.info("Message")`).
-  * **Env:** Uses `LOGLEVEL` environment variable.
-  * **Levels:**
-    * `trace`: detailed per-message/per-query logs (mapped to `console.debug`).
-    * `debug`: state changes, validation failures, client auth.
-    * `info`: startup config, periodic maintenance summary.
-    * `warn`: protocol violations, resource limits.
-    * `error`: internal failures.
-* **Configuration:** The application reads from `n0str.json` at startup using `src/config.ts`.
-* **Git Hooks:** The project uses `simple-git-hooks` to enforce formatting and linting on commit, and type-checking/testing on push.
+  * **Style:** Prefer tagged template literals (e.g., `void logger.debug\`Message\``) for better integration with the logger.
+  * **Levels:** `trace`, `debug`, `info`, `warn`, `error`.
+* **Validation:**
+  * Uses **ArkType** for schema validation and message matching.
+* **Git Hooks:**
+  * Uses `simple-git-hooks` to enforce formatting, linting, and testing.
 
 ## Key Files
 
-* `n0str.json`: Configuration file.
+* `n0str.json`: Configuration file for relay metadata and limitations.
 * `index.ts`: Application entry point.
-* `src/server.ts`: WebServer logic and routing (Bun.serve).
-* `src/sqlite.ts`: SQLite backend.
-* `src/pglite.ts`: PGLite backend.
-* `src/repository.ts`: Data Access Layer abstraction.
-* `src/message.ts`: Request handler for commands (EVENT, REQ, COUNT, etc.).
-* `src/nostr.ts`: Nostr protocol utilities (validation, types).
+* `src/relay.ts`: Core relay service logic.
+* `src/message.ts`: Nostr protocol message handler.
+* `src/websocket.ts`: WebSocket connection management.
+* `src/repository.ts`: Data Access Layer entry point.
+* `src/sqlite.ts`: SQLite implementation for event storage.
+* `src/fts.ts`: Full-text search indexing logic (using `Intl.Segmenter`).
+* `src/language.ts`: Language detection for FTS.
+* `src/nostr.ts`: Nostr protocol utilities and ArkType schemas.
 * `src/logger.ts`: Logger implementation.
-* `test/`: Contains integration/unit tests for various NIPs.
+* `test/`: Comprehensive test suite for NIPs and core logic.
