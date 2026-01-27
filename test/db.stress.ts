@@ -101,9 +101,7 @@ describe("SQLite Database Stress Test", () => {
     await Promise.all([writePromise, ...reads]);
 
     const duration = Date.now() - startTime;
-    console.log(
-      `Mixed load: ${WRITE_COUNT} writes & ${READ_COUNT} reads in ${duration}ms`,
-    );
+    console.log(`Mixed load: ${WRITE_COUNT} writes & ${READ_COUNT} reads in ${duration}ms`);
   }, 20000);
 
   test("Massive deletion stress", async () => {
@@ -127,26 +125,20 @@ describe("SQLite Database Stress Test", () => {
     }
 
     const duration = Date.now() - startTime;
-    console.log(
-      `Deletion Stress: ${idsToDelete.length} events deleted in ${duration}ms`,
-    );
+    console.log(`Deletion Stress: ${idsToDelete.length} events deleted in ${duration}ms`);
 
     const count = await repo.countEvents([{ ids: idsToDelete }]);
     expect(count).toBe(0);
   });
 
   test("Large filter stress (many authors)", async () => {
-    const pubkeys = Array.from({ length: 100 }, (_, i) =>
-      i.toString(16).padStart(64, "0"),
-    );
+    const pubkeys = Array.from({ length: 100 }, (_, i) => i.toString(16).padStart(64, "0"));
     const startTime = Date.now();
 
     const results = await repo.queryEvents({ authors: pubkeys, limit: 100 });
     const duration = Date.now() - startTime;
 
-    console.log(
-      `Large filter: ${pubkeys.length} authors query in ${duration}ms`,
-    );
+    console.log(`Large filter: ${pubkeys.length} authors query in ${duration}ms`);
     expect(results.length).toBeGreaterThan(0);
   });
 

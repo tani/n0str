@@ -35,10 +35,7 @@ describe("Broadcast Stress Test", () => {
       const ws = createMockWs(`ws-${i}`);
       for (let j = 0; j < SUBS_PER_CLIENT; j++) {
         // Half of subscriptions have Bloom filters for a specific author
-        const author =
-          authorsWithBloom[
-            (i * SUBS_PER_CLIENT + j) % authorsWithBloom.length
-          ]!;
+        const author = authorsWithBloom[(i * SUBS_PER_CLIENT + j) % authorsWithBloom.length]!;
         const bloom = new SimpleBloomFilter();
         bloom.add(author);
 
