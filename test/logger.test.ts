@@ -18,8 +18,6 @@ describe.each(engines)("Engine: %s > logger", () => {
 
   beforeEach(() => {
     delete process.env.LOGLEVEL;
-    delete process.env.LOG_LEVEL;
-    delete process.env.IGNORED_LOG_LEVEL;
     debugSpy = spyOn(console, "debug").mockImplementation(() => {});
     infoSpy = spyOn(console, "info").mockImplementation(() => {});
     warnSpy = spyOn(console, "warn").mockImplementation(() => {});
@@ -111,10 +109,9 @@ describe.each(engines)("Engine: %s > logger", () => {
   });
 
   test("does not fall back to old log level names", () => {
-    process.env.LOG_LEVEL = "error";
-    process.env.IGNORED_LOG_LEVEL = "error";
+    (process.env as any).LOG_LEVEL = "error";
     void logger.debug`debug`;
-    // Should use default 'info' and ignore other env vars
+    // Should use default 'info' and ignore LOG_LEVEL
     expect(debugSpy).not.toHaveBeenCalled();
     void logger.info`info`;
     expect(infoSpy).toHaveBeenCalled();

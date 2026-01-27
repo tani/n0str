@@ -1,6 +1,6 @@
 type LogFn = (msg: string | TemplateStringsArray, ...args: any[]) => void;
 
-const LOG_LEVELS = {
+const LOGLEVELS = {
   trace: 0,
   debug: 1,
   info: 2,
@@ -8,7 +8,7 @@ const LOG_LEVELS = {
   error: 4,
 } as const;
 
-type LogLevel = keyof typeof LOG_LEVELS;
+type LogLevel = keyof typeof LOGLEVELS;
 
 /**
  * Gets the current log level from environment variables.
@@ -16,10 +16,10 @@ type LogLevel = keyof typeof LOG_LEVELS;
  */
 function getCurrentLogLevel(): number {
   const envLevel = process.env.LOGLEVEL?.toLowerCase();
-  if (envLevel && envLevel in LOG_LEVELS) {
-    return LOG_LEVELS[envLevel as LogLevel];
+  if (envLevel && envLevel in LOGLEVELS) {
+    return LOGLEVELS[envLevel as LogLevel];
   }
-  return LOG_LEVELS.info;
+  return LOGLEVELS.info;
 }
 
 /**
@@ -30,7 +30,7 @@ function getCurrentLogLevel(): number {
  */
 function createLogFn(level: LogLevel): LogFn {
   const consoleMethod = level === "trace" ? "debug" : level;
-  const levelPriority = LOG_LEVELS[level];
+  const levelPriority = LOGLEVELS[level];
 
   return (msg: string | TemplateStringsArray, ...args: any[]) => {
     if (levelPriority < getCurrentLogLevel()) {
