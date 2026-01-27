@@ -162,8 +162,67 @@ export class SqliteEventRepository implements IEventRepository {
       if (batch.length === 0) return;
 
       await this.db.begin(async (tx) => {
+        const eventsToInsert: Event[] = [];
+        const idsToDelete = new Set<string>();
+        const upsertQueue = new Map<string, Event>();
+
+        // 1. Filter events and identify replacements (handling both DB and intra-batch collisions)
         for (const event of batch) {
-          await this._saveEventInTransaction(tx, event);
+          const key = this.getEventKey(event);
+          if (key) {
+            const existingInBatch = upsertQueue.get(key);
+            if (existingInBatch) {
+              if (this.isOlderEvent(event, existingInBatch)) continue;
+              upsertQueue.set(key, event);
+            } else {
+              const existingInDb = await this.findExisting(tx, event);
+              if (existingInDb) {
+                if (this.isOlderEvent(event, existingInDb)) continue;
+                idsToDelete.add(existingInDb.id);
+                upsertQueue.set(key, event);
+              } else {
+                upsertQueue.set(key, event);
+              }
+            }
+          } else {
+            eventsToInsert.push(event);
+          }
+        }
+
+        // Merge batched replaceable events
+        eventsToInsert.push(...upsertQueue.values());
+
+        // 2. Bulk Delete replaced events
+        if (idsToDelete.size > 0) {
+          await tx`DELETE FROM events WHERE id IN ${Array.from(idsToDelete)}`;
+        }
+
+        // 3. Bulk Insert new events
+        if (eventsToInsert.length > 0) {
+          // Use RETURNING id to get actually inserted events (handling ON CONFLICT DO NOTHING for duplicates)
+          const insertedRows = await tx<{ id: string }[]>`
+            INSERT INTO events ${tx(eventsToInsert, "id", "pubkey", "created_at", "kind", "content", "sig")}
+            ON CONFLICT DO NOTHING
+            RETURNING id
+          `;
+
+          const insertedIds = new Set(insertedRows.map((r) => r.id));
+          const trulyInsertedEvents = eventsToInsert.filter((e) => insertedIds.has(e.id));
+
+          if (trulyInsertedEvents.length > 0) {
+            // 4. Bulk Insert FTS
+            const ftsRows = trulyInsertedEvents.map((e) => ({
+              id: e.id,
+              content: segmentForFts(e.content),
+            }));
+            await tx`INSERT INTO events_fts ${tx(ftsRows)}`;
+
+            // 5. Bulk Insert Tags
+            const tagRows = trulyInsertedEvents.flatMap((e) => this.buildTagRows(e));
+            if (tagRows.length > 0) {
+              await tx`INSERT INTO tags ${tx(tagRows)}`;
+            }
+          }
         }
       });
       void logger.info`Flushed ${batch.length} events to DB`;
@@ -171,28 +230,6 @@ export class SqliteEventRepository implements IEventRepository {
       void logger.error`Failed to flush events: ${err}`;
     } finally {
       this.flushPromise = null;
-    }
-  }
-
-  private async _saveEventInTransaction(tx: SQL, event: Event): Promise<void> {
-    const existing = await this.findExisting(tx, event);
-    if (existing) {
-      if (this.isOlderEvent(event, existing)) return;
-      await tx`DELETE FROM events WHERE id = ${existing.id}`;
-    }
-
-    const insertResult = await tx`
-        INSERT INTO events ${tx(event, "id", "pubkey", "created_at", "kind", "content", "sig")}
-        ON CONFLICT DO NOTHING
-      `;
-    if ((insertResult?.count ?? 0) > 0) {
-      const ftsContent = segmentForFts(event.content);
-      await tx`INSERT INTO events_fts(id, content) VALUES (${event.id}, ${ftsContent})`;
-    }
-
-    const tagRows = this.buildTagRows(event);
-    if (tagRows.length > 0) {
-      await tx`INSERT INTO tags ${tx(tagRows)}`;
     }
   }
 
@@ -370,6 +407,17 @@ export class SqliteEventRepository implements IEventRepository {
   }
 
   // --- Private Helper Methods ---
+
+  private getEventKey(event: Event): string | null {
+    if (isReplaceable(event.kind)) {
+      return `${event.kind}:${event.pubkey}`;
+    }
+    if (isAddressable(event.kind)) {
+      const dTag = event.tags.find((t) => t[0] === "d")?.[1] || "";
+      return `${event.kind}:${event.pubkey}:${dTag}`;
+    }
+    return null;
+  }
 
   private toSqlCondition(c: FilterCondition): SqlCondition[] {
     if ("sql" in c) return c.params.length > 0 || c.sql.includes("expiration") ? [c] : [];
