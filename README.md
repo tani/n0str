@@ -11,7 +11,7 @@
   </p>
 </div>
 
-`n0str` (pronounced /ˈnoʊ.stər/) is a modern [Nostr](https://github.com/nostr-protocol/nostr) relay designed for maximum simplicity without sacrificing power. It's a **single-binary**, **zero-dependency** solution that brings professional-grade relay features to anyone, anywhere.
+`n0str` (pronounced /ˈnoʊ.stər/) is a modern [Nostr](https://github.com/nostr-protocol/nostr) relay designed for maximum simplicity without sacrificing power. It's a **single-binary**, **zero-dependency** solution that brings professional-grade relay features to anyone, anywhere. You can try it out at `wss://n0str.tani.cc`.
 
 ## ✨ Why Choose `n0str`?
 
