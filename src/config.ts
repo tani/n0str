@@ -6,7 +6,7 @@ import { logger as defaultLogger } from "./logger.ts";
 export const defaultRelayInfo = {
   name: "n0str Relay",
   description: "A simple, reliable, and extensively tested Nostr relay.",
-  pubkey: "bf2bee5281149c7c350f5d12ae32f514c7864ff10805182f4178538c2c421007",
+  pubkey: "0000000000000000000000000000000000000000000000000000000000000000",
   contact: "hi@example.com",
   supported_nips: [
     1, 2, 3, 5, 9, 10, 11, 12, 13, 15, 16, 17, 18, 20, 22, 23, 25, 28, 33, 40, 42, 44, 45, 50, 51,
@@ -91,4 +91,17 @@ export function loadRelayInfo(configPath: string = "n0str.json", logger = defaul
 }
 
 /** Global relay configuration instance. */
-export const relayInfo = loadRelayInfo();
+export let relayInfo = loadRelayInfo();
+
+/**
+ * Updates the global relayInfo instance.
+ * @param newInfo - The new relay information to apply.
+ */
+export function updateRelayInfo(newInfo: RelayInfo) {
+  // Use Object.assign to keep the reference the same if we didn't use 'let'
+  // and already exported it, but since we use 'let', we can also reassign.
+  // However, many modules might have already imported the reference.
+  // So assigning property by property or using Object.assign on a 'const' is safer for some systems.
+  // Let's use Object.assign to be safe for all importers.
+  Object.assign(relayInfo, newInfo);
+}
