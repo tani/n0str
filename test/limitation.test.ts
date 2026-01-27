@@ -6,13 +6,13 @@ import { WebSocketManager } from "../src/websocket.ts";
 import { finalizeEvent, generateSecretKey } from "nostr-tools";
 import { relayInfo } from "../src/config.ts";
 
-describe.each(engines)("Engine: %s > config limitation tests", (engine) => {
+describe.each(engines)("Engine: %s > config limitation tests", () => {
   let handler: NostrMessageHandler;
   let wsManager: WebSocketManager;
   let sk = generateSecretKey();
 
   beforeAll(async () => {
-    await initRepository(engine, `:memory:`);
+    await initRepository(`:memory:`);
     wsManager = new WebSocketManager();
     handler = new NostrMessageHandler(getRepository(), wsManager);
   });

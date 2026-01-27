@@ -13,12 +13,12 @@ async function consumeAuth(ws: WebSocket) {
   });
 }
 
-describe.each(engines)("Engine: %s > NIP-01: Basic Protocol", (engine) => {
+describe.each(engines)("Engine: %s > NIP-01: Basic Protocol", () => {
   let server: any;
   let url: string;
 
   beforeAll(async () => {
-    await initRepository(engine, ":memory:");
+    await initRepository(":memory:");
     relayService.setRepository(getRepository());
   });
 

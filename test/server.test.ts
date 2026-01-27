@@ -3,9 +3,9 @@ import { engines } from "./utils/engines.ts";
 import { initRepository, getRepository } from "../src/repository.ts";
 import { relayService, relay, runCleanupTick } from "../src/server.ts";
 
-describe.each(engines)("Engine: %s > Server", (engine) => {
+describe.each(engines)("Engine: %s > Server", () => {
   beforeAll(async () => {
-    await initRepository(engine, ":memory:");
+    await initRepository(":memory:");
     relayService.setRepository(getRepository());
   });
 

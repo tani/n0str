@@ -1,1 +1,1 @@
-export const engines = ["sqlite", "pglite"];
+export const engines = ["sqlite"];

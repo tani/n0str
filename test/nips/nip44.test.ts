@@ -14,9 +14,9 @@ async function consumeAuth(ws: WebSocket) {
 import { relay, relayService } from "../../src/server.ts";
 import { initRepository, getRepository } from "../../src/repository.ts";
 
-describe.each(engines)("Engine: %s > NIP-44: Encrypted Payloads", (engine) => {
+describe.each(engines)("Engine: %s > NIP-44: Encrypted Payloads", () => {
   beforeAll(async () => {
-    await initRepository(engine, ":memory:");
+    await initRepository(":memory:");
     relayService.setRepository(getRepository());
   });
 

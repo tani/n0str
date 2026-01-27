@@ -1,4 +1,3 @@
-import { engines } from "./utils/engines.ts";
 import { expect, test, describe, beforeEach, beforeAll } from "bun:test";
 import {
   initRepository,
@@ -16,9 +15,9 @@ import { relayService } from "../src/server.ts";
 import { generateSecretKey, getPublicKey, finalizeEvent } from "nostr-tools";
 import type { Event } from "nostr-tools";
 
-describe.each(engines)("Engine: %s > Database", (engine) => {
+describe("Repository > Database", () => {
   beforeAll(async () => {
-    await initRepository(engine, ":memory:");
+    await initRepository(":memory:");
     relayService.setRepository(getRepository());
   });
 

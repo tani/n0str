@@ -5,7 +5,6 @@ describe("args coverage", () => {
   test("config has expected structure", () => {
     expect(typeof config.port).toBe("number");
     expect(typeof config.database).toBe("string");
-    expect(typeof config.dbEngine).toBe("string");
     expect(typeof config.logLevel).toBe("string");
   });
 
