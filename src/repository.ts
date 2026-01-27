@@ -36,6 +36,7 @@ export const cleanupExpiredEvents = () => repository.cleanupExpiredEvents();
 export const countEvents = (filter: any) => repository.countEvents(filter);
 export const queryEventsForSync = (filter: any) => repository.queryEventsForSync(filter);
 export const close = () => repository.close();
+export const flush = () => repository.flush();
 
 // Initialize with defaults from config
 await initRepository(config.database);

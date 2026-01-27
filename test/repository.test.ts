@@ -10,6 +10,7 @@ import {
   cleanupExpiredEvents,
   queryEventsForSync,
   close,
+  flush,
 } from "../src/repository.ts";
 import { relayService } from "../src/server.ts";
 import { generateSecretKey, getPublicKey, finalizeEvent } from "nostr-tools";
@@ -40,6 +41,7 @@ describe("Repository > Database", () => {
 
   test("saveEvent and queryEvents", async () => {
     await saveEvent(sampleEvent);
+    await flush();
     const results = await queryEvents({ ids: [sampleEvent.id] });
     expect(results).toHaveLength(1);
     expect(results[0]!.id).toBe(sampleEvent.id);
@@ -54,6 +56,7 @@ describe("Repository > Database", () => {
       kind: 2,
       tags: [["p", "target2"]],
     });
+    await flush();
 
     // Authors filter
     expect(await queryEvents({ authors: ["pub1"] })).toHaveLength(2);
@@ -122,6 +125,7 @@ describe("Repository > Database", () => {
       sk,
     );
     await saveEvent(eventToKeep);
+    await flush();
 
     // Verify initial state
     expect(await queryEvents({})).toHaveLength(3);
@@ -148,6 +152,7 @@ describe("Repository > Database", () => {
       created_at: 2000,
       kind: 2,
     });
+    await flush();
     const limited = await queryEvents({ limit: 1 });
     expect(limited).toHaveLength(1);
     expect(limited[0]!.id).toBe("2");
@@ -156,6 +161,7 @@ describe("Repository > Database", () => {
   test("duplicate save ignored", async () => {
     await saveEvent(sampleEvent);
     await saveEvent(sampleEvent);
+    await flush();
     expect(await queryEvents({})).toHaveLength(1);
   });
 
@@ -186,6 +192,7 @@ describe("Repository > Database", () => {
       sk,
     );
     await saveEvent(eventOld);
+    await flush();
 
     // 3. Verify only the newer one exists
     const stored = await queryEvents({ kinds: [30000] });
@@ -220,6 +227,7 @@ describe("Repository > Database", () => {
       sk,
     );
     await saveEvent(eventValid);
+    await flush();
 
     // 3. Run cleanup
     await cleanupExpiredEvents();
@@ -232,11 +240,13 @@ describe("Repository > Database", () => {
 
   test("countEvents works", async () => {
     await saveEvent(sampleEvent);
+    await flush();
     expect(await countEvents([{ ids: [sampleEvent.id] }])).toBe(1);
   });
 
   test("queryEventsForSync works", async () => {
     await saveEvent(sampleEvent);
+    await flush();
     const sync = await queryEventsForSync({ ids: [sampleEvent.id] });
     expect(sync).toHaveLength(1);
   });

@@ -36,6 +36,8 @@ export interface IEventRepository {
   close(): Promise<void>;
   /** Clears all data from the repository (mainly for tests). */
   clear(): Promise<void>;
+  /** Flushes any queued events to the database. */
+  flush(): Promise<void>;
   /** Asynchronous disposal. */
   [Symbol.asyncDispose](): Promise<void>;
 }

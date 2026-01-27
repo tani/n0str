@@ -35,6 +35,9 @@ type FilterCondition = SqlCondition | { col: string; val: unknown; op?: string }
 export class SqliteEventRepository implements IEventRepository {
   public db: SQL;
   private closed = false;
+  private queue: Event[] = [];
+  private flushTimer: ReturnType<typeof setInterval> | null = null;
+  private flushPromise: Promise<void> | null = null;
 
   /**
    * Creates an instance of SqliteEventRepository.
@@ -53,6 +56,13 @@ export class SqliteEventRepository implements IEventRepository {
   async close(): Promise<void> {
     if (this.closed) return;
     this.closed = true;
+
+    if (this.flushTimer) {
+      clearInterval(this.flushTimer);
+      this.flushTimer = null;
+    }
+    await this.flush();
+
     await this.db.close();
   }
 
@@ -110,6 +120,13 @@ export class SqliteEventRepository implements IEventRepository {
         DELETE FROM events_fts WHERE id = old.id;
       END;
     `;
+
+    // Start background flush timer
+    if (!this.flushTimer) {
+      this.flushTimer = setInterval(() => {
+        void this.flush();
+      }, 100);
+    }
   }
 
   /**
@@ -118,28 +135,65 @@ export class SqliteEventRepository implements IEventRepository {
    * @param event - The Nostr event to save.
    */
   async saveEvent(event: Event): Promise<void> {
-    await this.db.begin(async (tx) => {
-      const existing = await this.findExisting(tx, event);
-      if (existing) {
-        if (this.isOlderEvent(event, existing)) return;
-        await tx`DELETE FROM events WHERE id = ${existing.id}`;
-      }
+    this.queue.push(event);
+    if (this.queue.length >= 100) {
+      void this.flush();
+    }
+  }
 
-      const insertResult = await tx`
+  /**
+   * Flushes any queued events to the database in a single transaction.
+   */
+  async flush(): Promise<void> {
+    // Wait for any ongoing flush to complete
+    while (this.flushPromise) {
+      await this.flushPromise;
+    }
+
+    if (this.queue.length === 0) return;
+
+    this.flushPromise = this._performFlush();
+    await this.flushPromise;
+  }
+
+  private async _performFlush(): Promise<void> {
+    try {
+      const batch = this.queue.splice(0);
+      if (batch.length === 0) return;
+
+      await this.db.begin(async (tx) => {
+        for (const event of batch) {
+          await this._saveEventInTransaction(tx, event);
+        }
+      });
+      void logger.info`Flushed ${batch.length} events to DB`;
+    } catch (err) {
+      void logger.error`Failed to flush events: ${err}`;
+    } finally {
+      this.flushPromise = null;
+    }
+  }
+
+  private async _saveEventInTransaction(tx: SQL, event: Event): Promise<void> {
+    const existing = await this.findExisting(tx, event);
+    if (existing) {
+      if (this.isOlderEvent(event, existing)) return;
+      await tx`DELETE FROM events WHERE id = ${existing.id}`;
+    }
+
+    const insertResult = await tx`
         INSERT INTO events ${tx(event, "id", "pubkey", "created_at", "kind", "content", "sig")}
         ON CONFLICT DO NOTHING
       `;
-      if ((insertResult?.count ?? 0) > 0) {
-        const ftsContent = segmentForFts(event.content);
-        await tx`INSERT INTO events_fts(id, content) VALUES (${event.id}, ${ftsContent})`;
-      }
+    if ((insertResult?.count ?? 0) > 0) {
+      const ftsContent = segmentForFts(event.content);
+      await tx`INSERT INTO events_fts(id, content) VALUES (${event.id}, ${ftsContent})`;
+    }
 
-      const tagRows = this.buildTagRows(event);
-      if (tagRows.length > 0) {
-        await tx`INSERT INTO tags ${tx(tagRows)}`;
-      }
-    });
-    void logger.trace`Saved event ${event.id} (pglite)`;
+    const tagRows = this.buildTagRows(event);
+    if (tagRows.length > 0) {
+      await tx`INSERT INTO tags ${tx(tagRows)}`;
+    }
   }
 
   /**
