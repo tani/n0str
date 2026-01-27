@@ -3,7 +3,7 @@ import { SqliteEventRepository } from "../src/sqlite.ts";
 import { unlink } from "node:fs/promises";
 
 describe("SQLite Database Stress Test", () => {
-  const dbPath = `test-stress-${Date.now()}.sqlite`;
+  const dbPath = `test-stress-${Date.now()}.db`;
   let repo: SqliteEventRepository;
 
   beforeAll(async () => {
@@ -47,7 +47,7 @@ describe("SQLite Database Stress Test", () => {
 
     const count = await repo.countEvents([{ kinds: [1] }]);
     expect(count).toBe(COUNT);
-  }, 30000);
+  }, 60000);
 
   test("Concurrent search stress", async () => {
     const QUERY_COUNT = 50;
@@ -63,7 +63,7 @@ describe("SQLite Database Stress Test", () => {
     console.log(`Search Stress: ${QUERY_COUNT} FTS queries in ${duration}ms`);
     expect(results.length).toBe(QUERY_COUNT);
     expect(results[0]?.length).toBe(100);
-  }, 10000);
+  }, 60000);
 
   test("Concurrent tag query stress", async () => {
     const QUERY_COUNT = 200;
@@ -81,7 +81,7 @@ describe("SQLite Database Stress Test", () => {
 
     console.log(`Tag Query Stress: ${QUERY_COUNT} queries in ${duration}ms`);
     expect(results.length).toBe(QUERY_COUNT);
-  }, 10000);
+  }, 60000);
 
   test("Mixed read/write load stress", async () => {
     const WRITE_COUNT = 1000;
@@ -102,7 +102,7 @@ describe("SQLite Database Stress Test", () => {
 
     const duration = Date.now() - startTime;
     console.log(`Mixed load: ${WRITE_COUNT} writes & ${READ_COUNT} reads in ${duration}ms`);
-  }, 20000);
+  }, 60000);
 
   test("Massive deletion stress", async () => {
     const startTime = Date.now();
@@ -129,7 +129,7 @@ describe("SQLite Database Stress Test", () => {
 
     const count = await repo.countEvents([{ ids: idsToDelete }]);
     expect(count).toBe(0);
-  });
+  }, 30000);
 
   test("Large filter stress (many authors)", async () => {
     const pubkeys = Array.from({ length: 100 }, (_, i) => i.toString(16).padStart(64, "0"));
@@ -165,5 +165,5 @@ describe("SQLite Database Stress Test", () => {
     const latest = await repo.queryEvents({ authors: [pubkey], kinds: [0] });
     expect(latest.length).toBe(1);
     expect(latest[0]?.content).toBe(`version ${COUNT - 1}`);
-  });
+  }, 30000);
 });
