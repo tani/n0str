@@ -1,4 +1,4 @@
-import { eld } from "eld/large";
+import { LanguageDetector } from "./language.ts";
 
 const segmenters = new Map<string, Intl.Segmenter>();
 
@@ -25,9 +25,9 @@ function getSegmenter(locale: string) {
 function detectLocale(text: string) {
   const trimmed = text.trim();
   if (trimmed.length === 0) return "und";
-  const result = eld.detect(trimmed);
-  if (!result.language || !result.isReliable()) return "und";
-  return result.language;
+  const language = LanguageDetector.detect(trimmed);
+  if (language === "unknown") return "und";
+  return language;
 }
 
 /**
