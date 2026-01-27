@@ -49,9 +49,7 @@ describe("LanguageDetector", () => {
   });
 
   test("fallback to en for Latin script", () => {
-    expect(
-      LanguageDetector.detect("Random latin words without stopwords"),
-    ).toBe("en");
+    expect(LanguageDetector.detect("Random latin words without stopwords")).toBe("en");
   });
 
   test("instantiation for coverage (if constructor is counted)", () => {
