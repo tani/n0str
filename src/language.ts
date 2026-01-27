@@ -60,6 +60,8 @@ export class LanguageDetector {
   // --- 4. Fallback Script ---
   static readonly LATIN = /\p{sc=Latin}/u;
 
+  constructor() {}
+
   static cleanText(text: string): string {
     return text
       .normalize("NFC")
