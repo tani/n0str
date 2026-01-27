@@ -1,5 +1,5 @@
 <div align="center">
-  <h1>n0str</h1>
+  <h1>n&#x00D8;str</h1>
   <p><strong>The Single Binary, Zero Friction, Multi-Language Nostr Relay</strong></p>
 
   <p>
@@ -11,17 +11,17 @@
   </p>
 </div>
 
-**n0str** (pronounced /ˈnoʊ.stər/) is a modern [Nostr](https://github.com/nostr-protocol/nostr) relay designed for maximum simplicity without sacrificing power. It's a **single-binary**, **zero-dependency** solution that brings professional-grade relay features to anyone, anywhere.
+`n0str` (pronounced /ˈnoʊ.stər/) is a modern [Nostr](https://github.com/nostr-protocol/nostr) relay designed for maximum simplicity without sacrificing power. It's a **single-binary**, **zero-dependency** solution that brings professional-grade relay features to anyone, anywhere.
 
-## ✨ Why Choose n0str?
+## ✨ Why Choose `n0str`?
 
 ### 📦 Single Binary, Zero Friction
 
-Forget about complex Docker setups or external database migrations. n0str is a self-contained power tool. Download the binary, run it, and you're live. It embeds its own database (SQLite), making it the ultimate "drop-in" relay.
+Forget about complex Docker setups or external database migrations. `n0str` is a self-contained power tool. Download the binary, run it, and you're live. It embeds its own database (SQLite), making it the ultimate "drop-in" relay.
 
 ### 🌏 True Global Full-Text Search
 
-Most relays struggle with CJK (Chinese, Japanese, Korean) or complex scripts because they rely on simple whitespace tokenization. **n0str is different.** We leverage the standard `Intl.Segmenter` API to provide **true language-aware indexing**. Whether you're posting in English, Japanese, or Arabic, search just works.
+Most relays struggle with CJK (Chinese, Japanese, Korean) or complex scripts because they rely on simple whitespace tokenization. **`n0str` is different.** We leverage the standard `Intl.Segmenter` API to provide **true language-aware indexing**. Whether you're posting in English, Japanese, or Arabic, search just works.
 
 ## 🚀 Getting Started
 
@@ -52,7 +52,7 @@ chmod +x n0str-linux-x64
 
 ## 🛠 Features & NIP Support
 
-n0str is built to be a standard-compliant, feature-rich relay core.
+`n0str` is built to be a standard-compliant, feature-rich relay core.
 
 - **Embedded High-Performance DB**: Native support for **SQLite**.
 - **Advanced Query Support**: Complex tag filtering and counting (NIP-45).
@@ -102,7 +102,7 @@ n0str is built to be a standard-compliant, feature-rich relay core.
 
 ## ⚙️ Configuration
 
-n0str works out of the box with defaults, but can be fully customized via `n0str.json` or command-line arguments.
+`n0str` works out of the box with defaults, but can be fully customized via `n0str.json` or command-line arguments.
 
 ### n0str.json
 
@@ -137,7 +137,7 @@ Command-line arguments take precedence over the JSON config.
 
 ## 🏗 Architecture
 
-n0str's architecture is built on a clean, message-driven flow designed for auditability and extension.
+`n0str`'s architecture is built on a clean, message-driven flow designed for auditability and extension.
 
 ```mermaid
 sequenceDiagram
@@ -191,7 +191,7 @@ sequenceDiagram
     end
 ```
 
-## 🧩 The n0str Philosophy
+## 🧩 The `n0str` Philosophy
 
 1. **Zero Bloat**: No massive dependency trees. Keep it lean, mean, and fast.
 2. **Global First**: Nostr is for the world. If it doesn't work in Japanese or Arabic, it doesn't work.
