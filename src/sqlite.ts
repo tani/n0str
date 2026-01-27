@@ -67,6 +67,7 @@ export class SqliteEventRepository implements IEventRepository {
    * Initializes the database schema, indexes, and search triggers.
    */
   async init(): Promise<void> {
+    await this.db`PRAGMA journal_mode = WAL`;
     await this.db`PRAGMA foreign_keys = ON`;
 
     await this.db`
