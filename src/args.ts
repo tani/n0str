@@ -42,9 +42,9 @@ Usage:
   n0str [options]
 
 Options:
-  -p, --port <number>      Port to listen on (default: 3000, env: PORT)
-  -d, --database <path>    Database path or :memory: (default: :memory:, env: DATABASE)
-  -l, --loglevel <level>  Log level: trace, debug, info, warn, error (default: info, env: LOGLEVEL)
+  -p, --port <number>      Port to listen on (default: 3000)
+  -d, --database <path>    Database path or :memory: (default: :memory:)
+  -l, --loglevel <level>  Log level: trace, debug, info, warn, error (default: info)
   -h, --help               Show this help message
   -v, --version            Show version information
 
@@ -56,15 +56,14 @@ Configuration:
 }
 
 /**
- * Command-line and environment variable configuration for the relay.
+ * Command-line configuration for the relay.
  */
 export const config = {
-  port: parseInt((values.port as string) || process.env.PORT || "3000"),
-  database: (values.database as string) || process.env.DATABASE || ":memory:",
-  logLevel: (values.loglevel as string) || process.env.LOGLEVEL || "info",
+  port: parseInt((values.port as string) || "3000"),
+  database: (values.database as string) || ":memory:",
+  logLevel: (values.loglevel as string) || "info",
 };
 
-// Set environment variable for logger to pick up
-if (config.logLevel) {
-  process.env.LOGLEVEL = config.logLevel;
-}
+// Set logger level
+import { setLogLevel, type LogLevel } from "./logger.ts";
+setLogLevel(config.logLevel as LogLevel);

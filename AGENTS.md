@@ -85,7 +85,7 @@
   * `src/repository.ts`: Repository singleton and initialization logic.
   * `src/sqlite.ts`: SQLite backend implementation.
 * **Configuration:**
-  * Environment variables via `src/args.ts`.
+  * Command-line arguments via `src/args.ts`.
   * Relay information and limits via `src/config.ts` (mapping to `n0str.json`).
 * **Logging:**
   * Uses `console` wrappers via `src/logger.ts`.

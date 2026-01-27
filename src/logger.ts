@@ -8,18 +8,26 @@ const LOGLEVELS = {
   error: 4,
 } as const;
 
-type LogLevel = keyof typeof LOGLEVELS;
+export type LogLevel = keyof typeof LOGLEVELS;
+
+let currentLogLevelPriority: number = LOGLEVELS.info;
 
 /**
- * Gets the current log level from environment variables.
+ * Sets the current log level.
+ * @param level - The log level to set.
+ */
+export function setLogLevel(level: LogLevel): void {
+  if (level in LOGLEVELS) {
+    currentLogLevelPriority = LOGLEVELS[level];
+  }
+}
+
+/**
+ * Gets the current numeric log level priority.
  * @returns The numeric priority of the current log level.
  */
-function getCurrentLogLevel(): number {
-  const envLevel = process.env.LOGLEVEL?.toLowerCase();
-  if (envLevel && envLevel in LOGLEVELS) {
-    return LOGLEVELS[envLevel as LogLevel];
-  }
-  return LOGLEVELS.info;
+function getCurrentLogLevelPriority(): number {
+  return currentLogLevelPriority;
 }
 
 /**
@@ -33,7 +41,7 @@ function createLogFn(level: LogLevel): LogFn {
   const levelPriority = LOGLEVELS[level];
 
   return (msg: string | TemplateStringsArray, ...args: any[]) => {
-    if (levelPriority < getCurrentLogLevel()) {
+    if (levelPriority < getCurrentLogLevelPriority()) {
       return;
     }
 

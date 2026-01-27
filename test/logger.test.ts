@@ -2,7 +2,7 @@ import { engines } from "./utils/engines.ts";
 import { describe, test, expect, spyOn, beforeEach, afterEach, beforeAll } from "bun:test";
 import { initRepository, getRepository } from "../src/repository.ts";
 import { relayService } from "../src/server.ts";
-import { logger } from "../src/logger.ts";
+import { logger, setLogLevel } from "../src/logger.ts";
 
 describe.each(engines)("Engine: %s > logger", () => {
   beforeAll(async () => {
@@ -10,14 +10,13 @@ describe.each(engines)("Engine: %s > logger", () => {
     relayService.setRepository(getRepository());
   });
 
-  const originalEnv = process.env;
   let debugSpy: any;
   let infoSpy: any;
   let warnSpy: any;
   let errorSpy: any;
 
   beforeEach(() => {
-    delete process.env.LOGLEVEL;
+    setLogLevel("info");
     debugSpy = spyOn(console, "debug").mockImplementation(() => {});
     infoSpy = spyOn(console, "info").mockImplementation(() => {});
     warnSpy = spyOn(console, "warn").mockImplementation(() => {});
@@ -25,7 +24,6 @@ describe.each(engines)("Engine: %s > logger", () => {
   });
 
   afterEach(() => {
-    process.env = originalEnv;
     debugSpy.mockRestore();
     infoSpy.mockRestore();
     warnSpy.mockRestore();
@@ -33,7 +31,7 @@ describe.each(engines)("Engine: %s > logger", () => {
   });
 
   test("debug logs", () => {
-    process.env.LOGLEVEL = "debug";
+    setLogLevel("debug");
     void logger.debug`test`;
     expect(debugSpy).toHaveBeenCalled();
   });
@@ -54,13 +52,13 @@ describe.each(engines)("Engine: %s > logger", () => {
   });
 
   test("trace logs to debug", () => {
-    process.env.LOGLEVEL = "trace";
+    setLogLevel("trace");
     void logger.trace`test`;
     expect(debugSpy).toHaveBeenCalled();
   });
 
   test("respects LOGLEVEL=info", () => {
-    process.env.LOGLEVEL = "info";
+    setLogLevel("info");
 
     void logger.trace`trace`;
     expect(debugSpy).not.toHaveBeenCalled(); // trace uses debug spy
@@ -79,7 +77,7 @@ describe.each(engines)("Engine: %s > logger", () => {
   });
 
   test("respects LOGLEVEL=warn", () => {
-    process.env.LOGLEVEL = "warn";
+    setLogLevel("warn");
 
     void logger.info`info`;
     expect(infoSpy).not.toHaveBeenCalled();
@@ -89,7 +87,7 @@ describe.each(engines)("Engine: %s > logger", () => {
   });
 
   test("respects LOGLEVEL=error", () => {
-    process.env.LOGLEVEL = "error";
+    setLogLevel("error");
 
     void logger.warn`warn`;
     expect(warnSpy).not.toHaveBeenCalled();
@@ -99,7 +97,7 @@ describe.each(engines)("Engine: %s > logger", () => {
   });
 
   test("defaults to info if invalid", () => {
-    process.env.LOGLEVEL = "invalid";
+    setLogLevel("invalid" as any);
 
     void logger.debug`debug`;
     expect(debugSpy).not.toHaveBeenCalled();

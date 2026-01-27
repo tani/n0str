@@ -102,7 +102,7 @@ n0str is built to be a standard-compliant, feature-rich relay core.
 
 ## ⚙️ Configuration
 
-n0str works out of the box with defaults, but can be fully customized via `n0str.json` or Environment Variables.
+n0str works out of the box with defaults, but can be fully customized via `n0str.json` or command-line arguments.
 
 ### n0str.json
 
@@ -120,13 +120,20 @@ Create an `n0str.json` in the root directory:
 }
 ```
 
-### 🌍 Environment Variables
+### 💻 Command-Line Arguments
 
-Environment variables take precedence over the JSON config.
+Command-line arguments take precedence over the JSON config.
 
-- `PORT`: Listen port (default: `3000`)
-- `DATABASE`: Database path or `:memory:` (default: `:memory:`)
-- `LOGLEVEL`: Logging level (`trace` to `error`, default: `info`)
+```bash
+# Example: Run on port 8080 with a specific database
+./n0str --port 8080 --database ./relay.db --loglevel debug
+```
+
+- `-p, --port <number>`: Listen port (default: `3000`)
+- `-d, --database <path>`: Database path or `:memory:` (default: `:memory:`)
+- `-l, --loglevel <level>`: Logging level (`trace` to `error`, default: `info`)
+- `-h, --help`: Show help message
+- `-v, --version`: Show version information
 
 ## 🏗 Architecture
 
