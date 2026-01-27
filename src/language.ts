@@ -1,24 +1,39 @@
+/**
+ * LanguageDetector
+ * Optimized for full-text search engine pipelines.
+ * Prioritizes speed (Boolean logic) and specific script detection (CJK).
+ */
 export class LanguageDetector {
-  static SCRIPTS: { lang: string; reg: RegExp }[] = [
-    // --- 1. Unique Scripts ---
+  // --- 1. Unique Scripts (High Confidence) ---
+  // Regexes are pre-compiled for performance.
+  static readonly SCRIPTS = [
+    { lang: "ja", reg: /[\p{sc=Hiragana}\p{sc=Katakana}]/u }, // Hiragana/Katakana -> Japanese (Highest Priority in CJK)
+    { lang: "ko", reg: /\p{sc=Hangul}/u }, // Hangul -> Korean
+    { lang: "zh", reg: /\p{sc=Han}/u }, // Han -> Chinese (only if no Hiragana/Katakana/Hangul)
     { lang: "am", reg: /\p{sc=Ethiopic}/u }, // Ethiopia (Amharic)
-    { lang: "ar", reg: /\p{sc=Arabic}/u }, // North African countries (Arabic)
-    { lang: "ja", reg: /\p{sc=Hiragana}/u }, // (Existing Asian/European scripts)
-    { lang: "ko", reg: /\p{sc=Hangul}/u },
-    { lang: "zh", reg: /\p{sc=Han}/u },
-    { lang: "hi", reg: /\p{sc=Devanagari}/u },
-    { lang: "ru", reg: /\p{sc=Cyrillic}/u },
+    { lang: "ar", reg: /\p{sc=Arabic}/u }, // Arabic
+    { lang: "hi", reg: /\p{sc=Devanagari}/u }, // Hindi
+    { lang: "ru", reg: /\p{sc=Cyrillic}/u }, // Russian
+    // Vietnamese (Unique tone marks, high confidence - effectively a script check)
+    // Excludes common accents used in European languages (à, á, è, é, ì, í, ò, ó, ù, ú, ý)
+    // Excludes chars shared with Yoruba/Igbo (ẹ, ọ, ị, ụ) and Portuguese (ã, õ) to avoid false positives.
+    // Includes:
+    // - Breve: ă, ằ, ắ, ẳ, ẵ, ặ
+    // - Circumflex + Tone: ầ, ấ, ẩ, ẫ, ậ, ề, ế, ể, ễ, ệ, ồ, ố, ổ, ỗ, ộ
+    // - Horn: ư, ừ, ứ, ử, ữ, ự, ơ, ờ, ớ, ở, ỡ, ợ
+    // - Hook above: ả, ẻ, ỉ, ỏ, ủ, ỷ
+    // - Tilde (other than a/o): ẽ, ĩ, ũ, ỹ
+    // - Dot below (other than e/o/i/u): ạ
+    // - D bar: đ
+    { lang: "vi", reg: /[ăằắẳẵặâầấẩẫậêềếểễệôồốổỗộưừứửữựơờớởỡợđảẻỉỏủỷẽĩũỹạ]/i },
+  ];
 
-    // --- 2. Latin-based African languages (Special characters) ---
+  // --- 2. Latin-based Unique Characters (High Confidence) ---
+  static readonly UNIQUE_CHARS = [
     // Yoruba/Igbo (Nigeria, etc.): Characteristic under-dots (ẹ, ọ, ṣ)
     { lang: "yo", reg: /[ẹọṣ]/i },
     { lang: "ig", reg: /[ịọụ]/i },
-    // Vietnamese (Existing)
-    { lang: "vi", reg: /[àáảạăằắẳẵặâầấẩẫậèéẻẽẹêềếểễệìíỉĩịòóỏọôồốổỗộơờớởỡợùúủũụưừứửữựỳýỷỹỵ]/i },
-  ];
-
-  static UNIQUE_CHARS: { lang: string; reg: RegExp }[] = [
-    // Europe / Central Asia (Existing)
+    // Europe / Central Asia
     { lang: "de", reg: /[ß]/i },
     { lang: "es", reg: /[ñ¿¡]/i },
     { lang: "pt", reg: /[ãõ]/i },
@@ -26,27 +41,28 @@ export class LanguageDetector {
     { lang: "uz", reg: /(o'|g')/i },
   ];
 
-  static STOPWORDS: Record<string, RegExp> = {
-    // --- 3. African Languages Frequent Words ---
-    // Swahili (Largest language in East Africa)
+  // --- 3. Stopwords (Fallback) ---
+  static readonly STOPWORDS: Record<string, RegExp> = {
+    // African Languages
     sw: /\b(na|ya|wa|kwa|katika|ni|za)\b/i,
-    // Afrikaans (South Africa: derived from Dutch but distinct)
     af: /\b(die|en|nie|van|het|is|baie)\b/i,
-    // Hausa (West Africa: Nigeria, etc.)
     ha: /\b(da|na|ta|mai|ne|ce)\b/i,
-    // Zulu (South Africa: characteristic prefixes, but detected via frequent words)
     zu: /\b(ukuthi|ngu|na|kakhulu)\b/i,
 
     // Existing major languages
     en: /\b(the|and|with|this)\b/i,
-    fr: /\b(le|la|les|est|un|une)\b/i, // Important as official language in West/Central Africa
-    pt: /\b(do|da|os|as|com)\b/i, // Angola, Mozambique, etc.
+    fr: /\b(le|la|les|est|un|une)\b/i,
+    pt: /\b(do|da|os|as|com)\b/i,
     id: /\b(yang|di|dan|ini)\b/i,
     tl: /\b(mga|ang|ng|sa|po)\b/i,
   };
 
+  // --- 4. Fallback Script ---
+  static readonly LATIN = /\p{sc=Latin}/u;
+
   static cleanText(text: string): string {
     return text
+      .normalize("NFC")
       .replace(/https?:\/\/\S+|www\.\S+/gi, "")
       .replace(/@\S+|#\S+/g, "")
       .replace(/\d+/g, "")
@@ -59,10 +75,26 @@ export class LanguageDetector {
     const cleaned = this.cleanText(text);
     if (!cleaned) return "unknown";
 
-    for (const { lang, reg } of this.SCRIPTS) if (reg.test(cleaned)) return lang;
-    for (const { lang, reg } of this.UNIQUE_CHARS) if (reg.test(cleaned)) return lang;
-    for (const [lang, reg] of Object.entries(this.STOPWORDS)) if (reg.test(cleaned)) return lang;
+    // 1. Check Scripts (Immediate Return)
+    for (const { lang, reg } of this.SCRIPTS) {
+      if (reg.test(cleaned)) return lang;
+    }
 
-    return /\p{sc=Latin}/u.test(cleaned) ? "en" : "unknown";
+    // 2. Check Unique Characters (Immediate Return)
+    for (const { lang, reg } of this.UNIQUE_CHARS) {
+      if (reg.test(cleaned)) return lang;
+    }
+
+    // 3. Check Stopwords (Fallback)
+    for (const [lang, reg] of Object.entries(this.STOPWORDS)) {
+      if (reg.test(cleaned)) return lang;
+    }
+
+    // 4. Final Fallback
+    if (this.LATIN.test(cleaned)) {
+      return "en";
+    }
+
+    return "unknown";
   }
 }
