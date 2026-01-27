@@ -10,6 +10,7 @@
     "clean": "rm -f *.db n0str-*",
     "format": "oxfmt src/ test/",
     "prepare": "bun x simple-git-hooks",
+    "stress": "bun test ./test/*.stress.ts",
     "compile": "printf '%s\\n' linux-x64 linux-arm64 macos-x64 macos-arm64 windows-x64 | xargs -I% bun build --compile index.ts --target bun-% --outfile n0str-%"
   },
   "simple-git-hooks": {
