@@ -77,8 +77,17 @@ describe.each(engines)("Engine: %s > config limitation tests", () => {
     const maxLimit = relayInfo.limitation.max_limit;
 
     // Insert more than maxLimit events
+    const pubkey = "0".repeat(64);
     for (let i = 0; i < maxLimit + 5; i++) {
-      const event = finalizeEvent({ kind: 1, created_at: i, tags: [], content: `e${i}` }, sk);
+      const event = {
+        id: i.toString(16).padStart(64, "0"),
+        pubkey,
+        created_at: i,
+        kind: 1,
+        tags: [],
+        content: `e${i}`,
+        sig: "0".repeat(128),
+      };
       await getRepository().saveEvent(event);
     }
 

@@ -14,7 +14,7 @@ describe("SQLite WAL Mode", () => {
       await unlink(dbPath);
       await unlink(`${dbPath}-shm`).catch(() => {});
       await unlink(`${dbPath}-wal`).catch(() => {});
-    } catch (e) {
+    } catch {
       // ignore
     }
   });

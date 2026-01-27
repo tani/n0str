@@ -134,8 +134,17 @@ describe.each(engines)("Engine: %s > security resilience", () => {
   });
 
   test("Negentropy sync with huge number of events (OOM risk)", async () => {
+    const pubkey = "0".repeat(64);
     for (let i = 0; i < 1000; i++) {
-      const event = finalizeEvent({ kind: 1, created_at: i, tags: [], content: `e${i}` }, sk);
+      const event = {
+        id: i.toString(16).padStart(64, "0"),
+        pubkey,
+        created_at: i,
+        kind: 1,
+        tags: [],
+        content: `e${i}`,
+        sig: "0".repeat(128),
+      };
       await getRepository().saveEvent(event);
     }
 
