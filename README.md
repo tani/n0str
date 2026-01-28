@@ -125,13 +125,14 @@ Create an `n0str.json` in the root directory:
 Command-line arguments take precedence over the JSON config.
 
 ```bash
-# Example: Run on port 8080 with a specific database
-./n0str --port 8080 --database ./relay.db --loglevel debug
+# Example: Run on port 8080 with a specific database and config file
+./n0str --port 8080 --database ./relay.db --config ./custom-config.json --loglevel debug
 ```
 
 - `-p, --port <number>`: Listen port (default: `3000`)
 - `-d, --database <path>`: Database path or `:memory:` (default: `:memory:`)
 - `-l, --loglevel <level>`: Logging level (`trace` to `error`, default: `info`)
+- `-c, --config <path>`: Configuration file path (default: `n0str.json`)
 - `-h, --help`: Show help message
 - `-v, --version`: Show version information
 
