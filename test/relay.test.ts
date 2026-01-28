@@ -52,6 +52,26 @@ describe.each(engines)("Engine: %s > relay coverage", () => {
 
     await relay.websocket.message(ws, "not json");
 
+    const sk = generateSecretKey();
+    const event = finalizeEvent(
+      {
+        kind: 1,
+        created_at: Math.floor(Date.now() / 1000),
+        tags: [],
+        content: "hello",
+      },
+      sk,
+    );
+    await repository.saveEvent(event);
+
+    const welcomeWithEventsReq = new Request("http://localhost/");
+    const welcomeWithEventsResult = (await relay.fetch(
+      welcomeWithEventsReq,
+      failedUpgradeServer,
+    )) as Response;
+    const html = await welcomeWithEventsResult.text();
+    expect(html).toMatch(/<span[^>]*id="total-events"[^>]*>\s*1\s*<\/span>/);
+
     const closeSubId = "sub-close";
     ws.data.subscriptions.set(closeSubId, []);
     await relay.websocket.message(ws, JSON.stringify(["CLOSE", closeSubId]));
@@ -63,16 +83,6 @@ describe.each(engines)("Engine: %s > relay coverage", () => {
     await relay.websocket.message(ws, JSON.stringify(["COUNT", "sub-count", {}]));
     expect(sent.some((msg) => msg.includes('"COUNT"'))).toBe(true);
 
-    const sk = generateSecretKey();
-    const event = finalizeEvent(
-      {
-        kind: 1,
-        created_at: Math.floor(Date.now() / 1000),
-        tags: [],
-        content: "hello",
-      },
-      sk,
-    );
     await relay.websocket.message(ws, JSON.stringify(["EVENT", event]));
     await relay.websocket.message(ws, JSON.stringify(["REQ", "sub-req", {}]));
 

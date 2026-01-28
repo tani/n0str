@@ -235,6 +235,14 @@ describe("Repository > Database", () => {
     expect(await countEvents([{ ids: [sampleEvent.id] }])).toBe(1);
   });
 
+  test("countEvents behavior with empty filters vs empty object", async () => {
+    await saveEvent(sampleEvent);
+    // When passed an empty array, it iterates 0 times, returning 0.
+    expect(await countEvents([])).toBe(0);
+    // When passed an array with an empty object, it iterates 1 time, matching all (non-expired) events.
+    expect(await countEvents([{}])).toBe(1);
+  });
+
   test("queryEventsForSync works", async () => {
     await saveEvent(sampleEvent);
     const sync = await queryEventsForSync({ ids: [sampleEvent.id] });
