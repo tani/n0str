@@ -1,4 +1,5 @@
 import { SQL } from "bun";
+import { Database } from "bun:sqlite";
 import type { Event, Filter } from "nostr-tools";
 import { isAddressable, isReplaceable } from "../domain/nostr.ts";
 import { logger } from "../utils/logger.ts";
@@ -34,6 +35,8 @@ type FilterCondition = SqlCondition | { col: string; val: unknown; op?: string }
  */
 export class SqliteEventRepository implements IEventRepository {
   public db: SQL;
+  private nativeDb: Database | undefined;
+  private dbPath: string;
   private closed = false;
 
   /**
@@ -41,6 +44,7 @@ export class SqliteEventRepository implements IEventRepository {
    * @param dbPath - The path to the SQLite database file.
    */
   constructor(dbPath: string) {
+    this.dbPath = dbPath;
     this.db = new SQL({
       adapter: "sqlite",
       filename: dbPath,
@@ -53,6 +57,9 @@ export class SqliteEventRepository implements IEventRepository {
   async close(): Promise<void> {
     if (this.closed) return;
     this.closed = true;
+    if (this.nativeDb) {
+      this.nativeDb.close();
+    }
     await this.db.close();
   }
 
@@ -110,6 +117,10 @@ export class SqliteEventRepository implements IEventRepository {
         DELETE FROM events_fts WHERE id = old.id;
       END;
     `;
+
+    if (this.dbPath !== ":memory:") {
+      this.nativeDb = new Database(this.dbPath, { readonly: true });
+    }
   }
 
   /**
@@ -241,11 +252,11 @@ export class SqliteEventRepository implements IEventRepository {
   }
 
   /**
-   * Queries events matching a single Nostr filter.
+   * Queries events matching a single Nostr filter, returning an async iterable.
    * @param filter - The Nostr filter.
-   * @returns A list of matching Nostr events.
+   * @returns An async iterable of matching Nostr events.
    */
-  async queryEvents(filter: Filter): Promise<Event[]> {
+  async *queryEventsIter(filter: Filter): AsyncIterable<Event> {
     const { clause, params } = this.buildWhereClause(filter);
     let baseQuery = `SELECT id, pubkey, created_at, kind, content, sig FROM events ${clause} ORDER BY created_at DESC`;
     if (filter.limit !== undefined) {
@@ -265,36 +276,86 @@ export class SqliteEventRepository implements IEventRepository {
         t.value AS tag_value
       FROM (${baseQuery}) e
       LEFT JOIN tags t ON t.event_id = e.id
-      ORDER BY e.created_at DESC, t.id ASC
+      ORDER BY e.created_at DESC, e.id ASC, t.id ASC
     `;
 
-    const rows = await this.db.unsafe<EventWithTagRow[]>(query, params);
-    if (rows.length === 0) return [];
+    // Use native streaming if available (production mode)
+    if (this.nativeDb) {
+      const stmt = this.nativeDb.query(query);
+      const iter = stmt.iterate(params as any) as Iterable<EventWithTagRow>;
 
-    const events = new Map<string, Event>();
-    for (const row of rows) {
-      let event = events.get(row.id);
-      if (!event) {
-        event = {
-          id: row.id,
-          pubkey: row.pubkey,
-          created_at: row.created_at,
-          kind: row.kind,
-          content: row.content,
-          sig: row.sig,
-          tags: [],
-        };
-        events.set(row.id, event);
+      let currentEvent: Event | null = null;
+      for (const row of iter) {
+        if (currentEvent && row.id !== currentEvent.id) {
+          yield currentEvent;
+          currentEvent = null;
+        }
+
+        if (!currentEvent) {
+          currentEvent = {
+            id: row.id,
+            pubkey: row.pubkey,
+            created_at: row.created_at,
+            kind: row.kind,
+            content: row.content,
+            sig: row.sig,
+            tags: [],
+          };
+        }
+
+        if (row.tag_name !== null && row.tag_value !== null) {
+          currentEvent.tags.push([row.tag_name, row.tag_value]);
+        }
       }
 
-      if (row.tag_name !== null && row.tag_value !== null) {
-        event.tags.push([row.tag_name, row.tag_value]);
+      if (currentEvent) {
+        yield currentEvent;
+      }
+    } else {
+      // Fallback for :memory: or missing nativeDb (tests)
+      // Loads all rows into memory first
+      const rows = await this.db.unsafe<EventWithTagRow[]>(query, params);
+      if (rows.length === 0) return;
+
+      const events = new Map<string, Event>();
+      for (const row of rows) {
+        let event = events.get(row.id);
+        if (!event) {
+          event = {
+            id: row.id,
+            pubkey: row.pubkey,
+            created_at: row.created_at,
+            kind: row.kind,
+            content: row.content,
+            sig: row.sig,
+            tags: [],
+          };
+          events.set(row.id, event);
+        }
+
+        if (row.tag_name !== null && row.tag_value !== null) {
+          event.tags.push([row.tag_name, row.tag_value]);
+        }
+      }
+
+      for (const event of events.values()) {
+        yield event;
       }
     }
+  }
 
-    const result = Array.from(events.values());
-    void logger.trace`Query returned ${result.length} events`;
-    return result;
+  /**
+   * Queries events matching a single Nostr filter.
+   * @param filter - The Nostr filter.
+   * @returns A list of matching Nostr events.
+   */
+  async queryEvents(filter: Filter): Promise<Event[]> {
+    const events: Event[] = [];
+    for await (const event of this.queryEventsIter(filter)) {
+      events.push(event);
+    }
+    void logger.trace`Query returned ${events.length} events`;
+    return events;
   }
 
   /**

@@ -30,6 +30,8 @@ export interface IEventRepository {
   countEvents(filters: Filter[]): Promise<number>;
   /** Queries events matching a single filter. */
   queryEvents(filter: Filter): Promise<Event[]>;
+  /** Queries events matching a single filter, returning an async iterable. */
+  queryEventsIter(filter: Filter): AsyncIterable<Event>;
   /** Queries basic event info for negentropy sync. */
   queryEventsForSync(filter: Filter): Promise<ExistingRow[]>;
   /** Closes the repository connection. */
