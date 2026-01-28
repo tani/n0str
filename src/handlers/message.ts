@@ -211,8 +211,8 @@ export class NostrMessageHandler {
       if (filter.limit === undefined || filter.limit > relayInfo.limitation.max_limit) {
         filter.limit = relayInfo.limitation.max_limit;
       }
-      const events = await this.repository.queryEvents(filter);
-      for (const event of events) {
+
+      for await (const event of this.repository.queryEventsIter(filter)) {
         if (!sentEventIds.has(event.id)) {
           ws.send(JSON.stringify(["EVENT", subId, event]));
           sentEventIds.add(event.id);
