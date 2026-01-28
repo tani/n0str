@@ -21,8 +21,6 @@ import { relayInfo } from "../config/config.ts";
 import { Negentropy, NegentropyStorageVector } from "../libs/negentropy.js";
 import { match } from "arktype";
 
-const MIN_DIFFICULTY = 0;
-
 /**
  * NostrMessageHandler processes incoming Nostr messages (EVENT, REQ, CLOSE, etc.)
  * and orchestrates responses, storage, and broadcasting.
@@ -111,7 +109,7 @@ export class NostrMessageHandler {
       }
     }
 
-    const result = await validateEvent(event, MIN_DIFFICULTY);
+    const result = await validateEvent(event, relayInfo.limitation.min_pow_difficulty);
     if (!result.ok) {
       void logger.debug`Event ${event.id} validation failed: ${result.reason}`;
       ws.send(JSON.stringify(["OK", event.id, false, result.reason]));
@@ -210,6 +208,9 @@ export class NostrMessageHandler {
     const sentEventIds = new Set<string>();
     let eventCount = 0;
     for (const filter of filters) {
+      if (filter.limit === undefined || filter.limit > relayInfo.limitation.max_limit) {
+        filter.limit = relayInfo.limitation.max_limit;
+      }
       const events = await this.repository.queryEvents(filter);
       for (const event of events) {
         if (!sentEventIds.has(event.id)) {
@@ -314,6 +315,12 @@ export class NostrMessageHandler {
 
     try {
       void logger.trace`NEG-OPEN for ${subId}`;
+
+      // Apply limit for sync query to prevent OOM
+      if (filter.limit === undefined || filter.limit > relayInfo.limitation.max_limit) {
+        filter.limit = relayInfo.limitation.max_limit;
+      }
+
       const events = await this.repository.queryEventsForSync(filter);
       const storage = new NegentropyStorageVector();
 

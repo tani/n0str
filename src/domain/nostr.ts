@@ -41,7 +41,7 @@ export const FilterSchema = type({
   "kinds?": "number[]",
   "since?": "number",
   "until?": "number",
-  "limit?": `number<=${relayInfo.limitation.max_limit}`,
+  "limit?": "number",
   "search?": "string",
   "[string]": "unknown", // Support #... tag filters loosely
 });

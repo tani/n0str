@@ -309,6 +309,7 @@ export class SqliteEventRepository implements IEventRepository {
       FROM events
       ${clause}
       ORDER BY created_at ASC, id ASC
+      ${filter.limit ? `LIMIT ${filter.limit}` : ""}
     `;
     const result = await this.db.unsafe<ExistingRow[]>(query, params);
     void logger.trace`Sync query returned ${result.length} events`;

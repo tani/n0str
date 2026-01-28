@@ -77,12 +77,12 @@ describe.each(engines)("Engine: %s > config limitation tests", () => {
     const maxLimit = relayInfo.limitation.max_limit;
 
     // Insert more than maxLimit events
-    const pubkey = "0".repeat(64);
+    const pubkey = "0000000000000000000000000000000000000000000000000000000000000001";
     for (let i = 0; i < maxLimit + 5; i++) {
       const event = {
-        id: i.toString(16).padStart(64, "0"),
+        id: (i + 1).toString(16).padStart(64, "0"),
         pubkey,
-        created_at: i,
+        created_at: Math.floor(Date.now() / 1000) - i, // Use recent times
         kind: 1,
         tags: [],
         content: `e${i}`,
@@ -91,14 +91,23 @@ describe.each(engines)("Engine: %s > config limitation tests", () => {
       await getRepository().saveEvent(event);
     }
 
+    // Case 1: Limit exceeds max_limit
     sent = [];
     await handler.handleMessage(
       mockWs,
-      JSON.stringify(["REQ", "check-limit", { limit: maxLimit + 10 }]),
+      JSON.stringify(["REQ", "check-limit-huge", { limit: maxLimit + 10 }]),
     );
 
-    const events = sent.filter((m) => m[0] === "EVENT");
+    let events = sent.filter((m) => m[0] === "EVENT");
     expect(events.length).toBeLessThanOrEqual(maxLimit);
+    expect(events.length).toBe(maxLimit);
+
+    // Case 2: No limit specified (Implicit default to max_limit)
+    sent = [];
+    await handler.handleMessage(mockWs, JSON.stringify(["REQ", "check-limit-none", {}]));
+    events = sent.filter((m) => m[0] === "EVENT");
+    expect(events.length).toBeLessThanOrEqual(maxLimit);
+    expect(events.length).toBe(maxLimit);
   });
 
   test("max_subid_length", async () => {
@@ -163,5 +172,46 @@ describe.each(engines)("Engine: %s > config limitation tests", () => {
     await handler.handleMessage(mockWs, JSON.stringify(["EVENT", futureEvent]));
     expect(sent[0][2]).toBe(false);
     expect(sent[0][3]).toContain("too far in the future");
+  });
+  test("min_pow_difficulty", async () => {
+    // We must temporarily override the global config for this test case
+    const originalDifficulty = relayInfo.limitation.min_pow_difficulty;
+    relayInfo.limitation.min_pow_difficulty = 100; // Impressively high difficulty
+
+    // Event with no PoW
+    const event = finalizeEvent(
+      {
+        kind: 1,
+        created_at: Math.floor(Date.now() / 1000),
+        tags: [],
+        content: "no pow",
+      },
+      sk,
+    );
+
+    await handler.handleMessage(mockWs, JSON.stringify(["EVENT", event]));
+    expect(sent).toHaveLength(1);
+    expect(sent[0][0]).toBe("OK");
+    expect(sent[0][1]).toBe(event.id);
+    expect(sent[0][2]).toBe(false);
+    expect(sent[0][3]).toContain("pow: difficulty");
+
+    // Restore config
+    relayInfo.limitation.min_pow_difficulty = originalDifficulty;
+  });
+
+  test("auth_required", async () => {
+    /*
+     * Note: auth_required logic is not fully implemented in the handler yet in a way that blocks
+     * non-AUTH messages globally if set to true.
+     * NIP-42 is implemented for protected events (auth_required: false, but protected event needs auth).
+     *
+     * If the user intends for 'auth_required: true' to block ALL reads/writes until AUTH,
+     * that logic needs to be added to handleMessage or specific handlers.
+     *
+     * Currently, `relayInfo.limitation.auth_required` is defined but seemingly unused in checking connection state
+     * for general EVENT/REQ.
+     */
+    // Checking if it's implemented.
   });
 });
