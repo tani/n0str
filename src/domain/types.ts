@@ -1,5 +1,5 @@
 import type { Event, Filter } from "nostr-tools";
-import type { SimpleBloomFilter } from "./bloom.ts";
+import type { SimpleBloomFilter } from "../db/bloom.ts";
 
 /**
  * Represents a basic row for event sync, containing only the ID and timestamp.
