@@ -19,7 +19,7 @@ describe("Reverse Proxy Header Support", () => {
       },
     });
 
-    relay.fetch(req, fakeServer);
+    await relay.fetch(req, fakeServer);
 
     expect(capturedData).toBeDefined();
     // Protocol should be wss because x-forwarded-proto is https
@@ -41,7 +41,7 @@ describe("Reverse Proxy Header Support", () => {
       },
     });
 
-    relay.fetch(req, fakeServer);
+    await relay.fetch(req, fakeServer);
 
     expect(capturedData).toBeDefined();
     expect(capturedData.relayUrl).toBe("ws://localhost:3000/");
@@ -63,7 +63,7 @@ describe("Reverse Proxy Header Support", () => {
       },
     });
 
-    relay.fetch(req, fakeServer);
+    await relay.fetch(req, fakeServer);
 
     expect(capturedData.relayUrl).toBe("ws://internal-load-balancer/path");
   });
@@ -84,7 +84,7 @@ describe("Reverse Proxy Header Support", () => {
       },
     });
 
-    relay.fetch(req, fakeServer);
+    await relay.fetch(req, fakeServer);
 
     expect(capturedData.relayUrl).toBe("wss://localhost/path");
   });
@@ -92,10 +92,10 @@ describe("Reverse Proxy Header Support", () => {
   test("getDisplayUrl normalizes trailing slash", async () => {
     const fakeServer = { upgrade: () => true };
 
-    // relay.fetch for non-websocket/non-nip11 returns the display message
-    const req = new Request("http://localhost:3000");
-    const res = relay.fetch(req, fakeServer);
+    // relay.fetch for non-websocket/non-nip11 at non-root returns the display message
+    const req = new Request("http://localhost:3000/info");
+    const res = await relay.fetch(req, fakeServer);
     const text = await res?.text();
-    expect(text).toBe("n0str Relay (ws://localhost:3000/)");
+    expect(text).toBe("n0str Relay (ws://localhost:3000/info/)");
   });
 });

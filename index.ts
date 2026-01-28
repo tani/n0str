@@ -13,6 +13,7 @@ const server = Bun.serve({
 });
 
 void logger.info`n0str relay listening on ws://localhost:${server.port}`;
+void logger.info`n0str relay listening on http://localhost:${server.port}`;
 
 /**
  * Gracefully shuts down the server and the relay.

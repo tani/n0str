@@ -31,23 +31,23 @@ describe.each(engines)("Engine: %s > relay coverage", () => {
     const upgradeReq = new Request("http://localhost/", {
       headers: { Upgrade: "websocket" },
     });
-    const upgradeResult = relay.fetch(upgradeReq, upgradeServer);
+    const upgradeResult = await relay.fetch(upgradeReq, upgradeServer);
     expect(upgradeResult).toBeUndefined();
 
     const failedUpgradeServer = {
       upgrade: () => false,
     };
-    const failedResult = relay.fetch(upgradeReq, failedUpgradeServer) as Response;
+    const failedResult = (await relay.fetch(upgradeReq, failedUpgradeServer)) as Response;
     expect(failedResult.status).toBe(400);
 
     const infoReq = new Request("http://localhost/", {
       headers: { Accept: "application/nostr+json" },
     });
-    const infoResult = relay.fetch(infoReq, failedUpgradeServer) as Response;
+    const infoResult = (await relay.fetch(infoReq, failedUpgradeServer)) as Response;
     expect(infoResult.headers.get("Content-Type")).toBe("application/nostr+json");
 
     const defaultReq = new Request("http://localhost/");
-    const defaultResult = relay.fetch(defaultReq, failedUpgradeServer) as Response;
+    const defaultResult = (await relay.fetch(defaultReq, failedUpgradeServer)) as Response;
     expect(await defaultResult.text()).toContain("n0str Relay");
 
     await relay.websocket.message(ws, "not json");

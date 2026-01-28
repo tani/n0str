@@ -6,6 +6,7 @@ import type { IEventRepository } from "./types.ts";
 import { WebSocketManager } from "./websocket.ts";
 import { NostrMessageHandler } from "./message.ts";
 import { getRelayUrl, getDisplayUrl } from "./proxy.ts";
+import { renderWelcomePage } from "./welcome.tsx";
 
 /**
  * NostrRelay handles the WebSocket server, message routing, and periodic maintenance tasks.
@@ -96,8 +97,23 @@ export class NostrRelay {
    * Hook for Bun.serve fetch handler. Handles health checks, NIP-11 requests, and WebSocket upgrades.
    */
   public get fetch() {
-    return (req: Request, server: any) => {
+    return async (req: Request, server: any) => {
       const url = new URL(req.url);
+      if (
+        url.pathname === "/" &&
+        !req.headers.get("Upgrade") &&
+        req.headers.get("Accept") !== "application/nostr+json"
+      ) {
+        const [events, totalEvents] = await Promise.all([
+          this.repository.queryEvents({ kinds: [1], limit: 100 }),
+          this.repository.countEvents([]),
+        ]);
+        const html = renderWelcomePage(events, relayInfo, getRelayUrl(req), totalEvents);
+        return new Response(html, {
+          headers: { "Content-Type": "text/html" },
+        });
+      }
+
       if (url.pathname === "/health") {
         return new Response("OK");
       }

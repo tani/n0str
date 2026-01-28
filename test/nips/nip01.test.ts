@@ -189,7 +189,7 @@ describe.each(engines)("Engine: %s > NIP-01: Basic Protocol", () => {
     const req = new Request("http://localhost", {
       headers: { Upgrade: "websocket" },
     });
-    const res = relay.fetch(req, fakeServer);
+    const res = await relay.fetch(req, fakeServer);
     expect(res?.status).toBe(400);
     expect(await res?.text()).toBe("Upgrade failed");
   });
