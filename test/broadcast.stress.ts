@@ -1,7 +1,7 @@
 import { describe, test, expect } from "bun:test";
-import { WebSocketManager } from "../src/websocket.ts";
-import { SimpleBloomFilter } from "../src/bloom.ts";
-import type { ClientData, SubscriptionData } from "../src/types.ts";
+import { WebSocketManager } from "../src/handlers/websocket.ts";
+import { SimpleBloomFilter } from "../src/db/bloom.ts";
+import type { ClientData, SubscriptionData } from "../src/domain/types.ts";
 import type { ServerWebSocket } from "bun";
 
 describe("Broadcast Stress Test", () => {

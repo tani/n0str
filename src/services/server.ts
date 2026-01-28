@@ -1,7 +1,7 @@
 import { NostrRelay } from "./relay.ts";
-import { logger } from "./logger.ts";
-import { getRepository } from "./repository.ts";
-import { config } from "./args.ts";
+import { logger } from "../utils/logger.ts";
+import { getRepository } from "../db/repository.ts";
+import { config } from "../config/args.ts";
 
 /**
  * The core NostrRelay service instance.
@@ -22,6 +22,6 @@ export const relay = {
  * Manually triggers a cleanup of expired events.
  */
 export const runCleanupTick = async () => {
-  const { cleanupExpiredEvents } = await import("./repository.ts");
+  const { cleanupExpiredEvents } = await import("../db/repository.ts");
   await cleanupExpiredEvents().catch((err: unknown) => void logger.error`Cleanup error: ${err}`);
 };

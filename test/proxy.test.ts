@@ -1,5 +1,5 @@
 import { expect, test, describe } from "bun:test";
-import { relay } from "../src/server.ts";
+import { relay } from "../src/services/server.ts";
 
 describe("Reverse Proxy Header Support", () => {
   test("respects x-forwarded-proto and x-forwarded-host", async () => {

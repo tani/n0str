@@ -1,10 +1,10 @@
 import { expect, test, describe, beforeAll, beforeEach } from "bun:test";
 import { engines } from "./utils/engines.ts";
-import { initRepository, getRepository } from "../src/repository.ts";
-import { NostrMessageHandler } from "../src/message.ts";
-import { WebSocketManager } from "../src/websocket.ts";
+import { initRepository, getRepository } from "../src/db/repository.ts";
+import { NostrMessageHandler } from "../src/handlers/message.ts";
+import { WebSocketManager } from "../src/handlers/websocket.ts";
 import { finalizeEvent, generateSecretKey } from "nostr-tools";
-import { relayInfo } from "../src/config.ts";
+import { relayInfo } from "../src/config/config.ts";
 
 describe.each(engines)("Engine: %s > config limitation tests", () => {
   let handler: NostrMessageHandler;

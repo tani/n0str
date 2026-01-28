@@ -1,7 +1,7 @@
 import { engines } from "../utils/engines.ts";
 import { expect, test, describe, beforeEach, afterEach, beforeAll } from "bun:test";
-import { relay, relayService } from "../../src/server.ts";
-import { clear, initRepository, getRepository } from "../../src/repository.ts";
+import { relay, relayService } from "../../src/services/server.ts";
+import { clear, initRepository, getRepository } from "../../src/db/repository.ts";
 import { generateSecretKey, finalizeEvent } from "nostr-tools";
 
 async function consumeAuth(ws: WebSocket) {
@@ -102,7 +102,7 @@ describe.each(engines)("Engine: %s > NIP-40 Expiration", () => {
     );
 
     // Insert directly to DB to bypass handleEvent's publish-time rejection
-    const { saveEvent } = await import("../../src/repository.ts");
+    const { saveEvent } = await import("../../src/db/repository.ts");
     await saveEvent(expiredEvent);
 
     ws.send(JSON.stringify(["REQ", "sub1", {}]));

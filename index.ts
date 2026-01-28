@@ -1,7 +1,7 @@
-import { config } from "./src/args.ts";
-import { NostrRelay } from "./src/relay.ts";
-import { logger } from "./src/logger.ts";
-import { getRepository } from "./src/repository.ts";
+import { config } from "./src/config/args.ts";
+import { NostrRelay } from "./src/services/relay.ts";
+import { logger } from "./src/utils/logger.ts";
+import { getRepository } from "./src/db/repository.ts";
 
 const relay = new NostrRelay(getRepository(), config.port);
 await relay.init();

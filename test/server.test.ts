@@ -1,7 +1,7 @@
 import { expect, test, describe, beforeAll } from "bun:test";
 import { engines } from "./utils/engines.ts";
-import { initRepository, getRepository } from "../src/repository.ts";
-import { relayService, relay, runCleanupTick } from "../src/server.ts";
+import { initRepository, getRepository } from "../src/db/repository.ts";
+import { relayService, relay, runCleanupTick } from "../src/services/server.ts";
 
 describe.each(engines)("Engine: %s > Server", () => {
   beforeAll(async () => {
@@ -21,7 +21,7 @@ describe.each(engines)("Engine: %s > Server", () => {
   });
 
   test("runCleanupTick handles error", async () => {
-    const { logger } = await import("../src/logger.ts");
+    const { logger } = await import("../src/utils/logger.ts");
     const originalRepo = getRepository().cleanupExpiredEvents;
     const originalLogger = logger.error;
 

@@ -1,5 +1,5 @@
 import { expect, test, describe } from "bun:test";
-import { WebSocketManager } from "../src/websocket.ts";
+import { WebSocketManager } from "../src/handlers/websocket.ts";
 
 describe("websocket coverage", () => {
   test("WebSocketManager tracks clients", () => {

@@ -1,6 +1,6 @@
 import { expect, test, describe, beforeAll, beforeEach, afterEach } from "bun:test";
-import { relay, relayService } from "../../src/server.ts";
-import { clear, initRepository, getRepository } from "../../src/repository.ts";
+import { relay, relayService } from "../../src/services/server.ts";
+import { clear, initRepository, getRepository } from "../../src/db/repository.ts";
 import { generateSecretKey, getPublicKey, finalizeEvent } from "nostr-tools";
 import { engines } from "../utils/engines.ts";
 

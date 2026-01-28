@@ -1,5 +1,5 @@
 import { expect, test, describe } from "bun:test";
-import { LanguageDetector } from "../src/language.ts";
+import { LanguageDetector } from "../src/services/language.ts";
 
 describe("LanguageDetector", () => {
   test("cleanText removes URLs, mentions, and hashtags", () => {

@@ -10,8 +10,8 @@ import {
   cleanupExpiredEvents,
   queryEventsForSync,
   close,
-} from "../src/repository.ts";
-import { relayService } from "../src/server.ts";
+} from "../src/db/repository.ts";
+import { relayService } from "../src/services/server.ts";
 import { generateSecretKey, getPublicKey, finalizeEvent } from "nostr-tools";
 import type { Event } from "nostr-tools";
 

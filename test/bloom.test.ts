@@ -1,5 +1,5 @@
 import { expect, test, describe } from "bun:test";
-import { SimpleBloomFilter } from "../src/bloom.ts";
+import { SimpleBloomFilter } from "../src/db/bloom.ts";
 
 describe("SimpleBloomFilter", () => {
   test("basic add and test", () => {

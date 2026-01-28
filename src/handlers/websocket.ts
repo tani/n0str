@@ -1,8 +1,8 @@
 import type { ServerWebSocket } from "bun";
-import type { ClientData } from "./types.ts";
+import type { ClientData } from "../domain/types.ts";
 import type { Event } from "nostr-tools";
-import { matchFilters } from "./nostr.ts";
-import { logger } from "./logger.ts";
+import { matchFilters } from "../domain/nostr.ts";
+import { logger } from "../utils/logger.ts";
 
 /**
  * WebSocketManager tracks active WebSocket connections and handles event broadcasting.

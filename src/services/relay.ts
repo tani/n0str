@@ -1,12 +1,12 @@
 import type { ServerWebSocket } from "bun";
-import { relayInfo } from "./config.ts";
-import { logger } from "./logger.ts";
-import type { ClientData } from "./types.ts";
-import type { IEventRepository } from "./types.ts";
-import { WebSocketManager } from "./websocket.ts";
-import { NostrMessageHandler } from "./message.ts";
-import { getRelayUrl, getDisplayUrl } from "./proxy.ts";
-import { renderWelcomePage } from "./welcome.tsx";
+import { relayInfo } from "../config/config.ts";
+import { logger } from "../utils/logger.ts";
+import type { ClientData } from "../domain/types.ts";
+import type { IEventRepository } from "../domain/types.ts";
+import { WebSocketManager } from "../handlers/websocket.ts";
+import { NostrMessageHandler } from "../handlers/message.ts";
+import { getRelayUrl, getDisplayUrl } from "../utils/proxy.ts";
+import { renderWelcomePage } from "../views/welcome.tsx";
 
 /**
  * NostrRelay handles the WebSocket server, message routing, and periodic maintenance tasks.

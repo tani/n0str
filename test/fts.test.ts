@@ -1,5 +1,5 @@
 import { expect, test, describe } from "bun:test";
-import { segmentForFts, segmentSearchQuery } from "../src/fts.ts";
+import { segmentForFts, segmentSearchQuery } from "../src/db/fts.ts";
 
 describe("fts coverage", () => {
   test("segmentForFts English content", () => {

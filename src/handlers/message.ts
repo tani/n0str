@@ -1,6 +1,6 @@
 import type { ServerWebSocket } from "bun";
-import type { ClientData } from "./types.ts";
-import type { IEventRepository } from "./types.ts";
+import type { ClientData } from "../domain/types.ts";
+import type { IEventRepository } from "../domain/types.ts";
 import type { WebSocketManager } from "./websocket.ts";
 import { type } from "arktype";
 import {
@@ -11,14 +11,14 @@ import {
   validateAuthEvent,
   ClientMessageSchema,
   type ClientMessage,
-} from "./nostr.ts";
-import { SimpleBloomFilter } from "./bloom.ts";
-import { logger } from "./logger.ts";
+} from "../domain/nostr.ts";
+import { SimpleBloomFilter } from "../db/bloom.ts";
+import { logger } from "../utils/logger.ts";
 
 import type { Filter } from "nostr-tools";
-import { relayInfo } from "./config.ts";
+import { relayInfo } from "../config/config.ts";
 // @ts-ignore
-import { Negentropy, NegentropyStorageVector } from "./negentropy.js";
+import { Negentropy, NegentropyStorageVector } from "../libs/negentropy.js";
 import { match } from "arktype";
 
 const MIN_DIFFICULTY = 0;
