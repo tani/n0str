@@ -1,6 +1,6 @@
 import type { Event } from "nostr-tools";
-import type { RelayInfo } from "./config.ts";
-import { h, Fragment, escapeHtml } from "./jsx.ts";
+import type { RelayInfo } from "../config/config.ts";
+import { h, Fragment, escapeHtml } from "../utils/jsx.ts";
 
 /**
  * Renders an individual event card.

@@ -1,8 +1,8 @@
 import { expect, test, describe, beforeAll, beforeEach } from "bun:test";
 import { engines } from "./utils/engines.ts";
-import { initRepository, getRepository } from "../src/repository.ts";
-import { NostrMessageHandler } from "../src/message.ts";
-import { WebSocketManager } from "../src/websocket.ts";
+import { initRepository, getRepository } from "../src/db/repository.ts";
+import { NostrMessageHandler } from "../src/handlers/message.ts";
+import { WebSocketManager } from "../src/handlers/websocket.ts";
 import { finalizeEvent, generateSecretKey, getPublicKey } from "nostr-tools";
 
 describe.each(engines)("Engine: %s > message handling", () => {
@@ -133,7 +133,7 @@ describe.each(engines)("Engine: %s > message handling", () => {
     const initMsg = "000000";
 
     // Mock Negentropy to return empty outputMessage
-    const { Negentropy } = await import("../src/negentropy.js");
+    const { Negentropy } = await import("../src/libs/negentropy.js");
     const originalReconcile = Negentropy.prototype.reconcile;
     Negentropy.prototype.reconcile = async () => [null, [], []];
 

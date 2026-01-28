@@ -1,4 +1,4 @@
-import { LanguageDetector } from "./language.ts";
+import { LanguageDetector } from "../services/language.ts";
 
 const segmenters = new Map<string, Intl.Segmenter>();
 

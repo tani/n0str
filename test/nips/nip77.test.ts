@@ -1,9 +1,9 @@
 import { engines } from "../utils/engines.ts";
 import { expect, test, describe, beforeEach, afterEach, beforeAll } from "bun:test";
-import { relay, relayService } from "../../src/server.ts";
+import { relay, relayService } from "../../src/services/server.ts";
 import { finalizeEvent, generateSecretKey } from "nostr-tools";
-import { saveEvent, initRepository, getRepository } from "../../src/repository.ts";
-import { Negentropy, NegentropyStorageVector } from "../../src/negentropy.js";
+import { saveEvent, initRepository, getRepository } from "../../src/db/repository.ts";
+import { Negentropy, NegentropyStorageVector } from "../../src/libs/negentropy.js";
 
 describe.each(engines)("Engine: %s > NIP-77 Negentropy Syncing", () => {
   beforeAll(async () => {

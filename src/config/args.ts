@@ -75,5 +75,5 @@ import { loadRelayInfo, updateRelayInfo } from "./config.ts";
 updateRelayInfo(loadRelayInfo(config.configPath));
 
 // Set logger level
-import { setLogLevel, type LogLevel } from "./logger.ts";
+import { setLogLevel, type LogLevel } from "../utils/logger.ts";
 setLogLevel(config.logLevel as LogLevel);

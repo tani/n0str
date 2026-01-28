@@ -1,7 +1,7 @@
 import { SqliteEventRepository } from "./sqlite.ts";
-import { config } from "./args.ts";
-import type { IEventRepository } from "./types.ts";
-import { logger } from "./logger.ts";
+import { config } from "../config/args.ts";
+import type { IEventRepository } from "../domain/types.ts";
+import { logger } from "../utils/logger.ts";
 
 /**
  * Creates an event repository.
@@ -47,5 +47,5 @@ await initRepository(config.database);
 export const getRepository = () => repository;
 
 // Re-export needed types
-export type { ExistingRow } from "./types.ts";
+export type { ExistingRow } from "../domain/types.ts";
 export type { IEventRepository };

@@ -6,9 +6,9 @@ import {
   countLeadingZeros,
   validateAuthEvent,
   ClientMessageSchema,
-} from "../src/nostr.ts";
-import { initRepository, getRepository } from "../src/repository.ts";
-import { relayService } from "../src/server.ts";
+} from "../src/domain/nostr.ts";
+import { initRepository, getRepository } from "../src/db/repository.ts";
+import { relayService } from "../src/services/server.ts";
 import { generateSecretKey, getPublicKey, finalizeEvent } from "nostr-tools";
 import { type } from "arktype";
 

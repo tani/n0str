@@ -1,8 +1,8 @@
 import { engines } from "./utils/engines.ts";
 import { describe, test, expect, spyOn, beforeEach, afterEach, beforeAll } from "bun:test";
-import { initRepository, getRepository } from "../src/repository.ts";
-import { relayService } from "../src/server.ts";
-import { logger, setLogLevel } from "../src/logger.ts";
+import { initRepository, getRepository } from "../src/db/repository.ts";
+import { relayService } from "../src/services/server.ts";
+import { logger, setLogLevel } from "../src/utils/logger.ts";
 
 describe.each(engines)("Engine: %s > logger", () => {
   beforeAll(async () => {

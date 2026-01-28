@@ -1,8 +1,8 @@
 import { type } from "arktype";
 import type { Event, Filter } from "nostr-tools";
 import { verifyEvent } from "nostr-tools";
-import { logger } from "./logger";
-import { relayInfo } from "./config.ts";
+import { logger } from "../utils/logger.ts";
+import { relayInfo } from "../config/config.ts";
 
 /**
  * Counts the number of leading zero bits in a hex string (NIP-13 PoW).

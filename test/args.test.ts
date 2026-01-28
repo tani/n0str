@@ -1,5 +1,5 @@
 import { expect, test, describe } from "bun:test";
-import { config } from "../src/args.ts";
+import { config } from "../src/config/args.ts";
 
 describe("args coverage", () => {
   test("config has expected structure", () => {

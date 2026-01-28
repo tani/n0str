@@ -1,5 +1,5 @@
 import { describe, test, expect, afterAll } from "bun:test";
-import { SqliteEventRepository } from "../src/sqlite.ts";
+import { SqliteEventRepository } from "../src/db/sqlite.ts";
 import { unlink } from "node:fs/promises";
 
 describe("SQLite WAL Mode", () => {

@@ -1,9 +1,9 @@
 import { engines } from "./utils/engines.ts";
 import { describe, expect, test } from "bun:test";
-import { createRepository } from "../src/repository.ts";
+import { createRepository } from "../src/db/repository.ts";
 import { generateSecretKey, finalizeEvent } from "nostr-tools";
-import { relayInfo } from "../src/config.ts";
-import { NostrRelay } from "../src/relay.ts";
+import { relayInfo } from "../src/config/config.ts";
+import { NostrRelay } from "../src/services/relay.ts";
 
 describe.each(engines)("Engine: %s > relay coverage", () => {
   test("relay fetch branches and websocket message paths", async () => {
@@ -99,7 +99,7 @@ describe.each(engines)("Engine: %s > relay coverage", () => {
 
   test("relay cleanup task interval and error", async () => {
     const originalSetInterval = global.setInterval;
-    const { logger } = await import("../src/logger.ts");
+    const { logger } = await import("../src/utils/logger.ts");
     const originalLogger = logger.error;
     let intervalCallback: any;
 
