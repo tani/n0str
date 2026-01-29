@@ -55,32 +55,29 @@ export class WebSocketManager {
    */
   public broadcast(event: Event): number {
     const eventJson = JSON.stringify(event);
-    return Iterator.from(this.clients)
-      .flatMap((client) =>
-        Iterator.from(client.data.subscriptions.values()).map((data) => ({
-          client,
-          data,
-        })),
-      )
-      .filter(({ data }) => {
+    let count = 0;
+
+    for (const client of this.clients) {
+      for (const data of client.data.subscriptions.values()) {
         // Bloom Filter Optimization: Fast skip if definitely no match
         if (data.bloom) {
           const mightMatch =
             data.bloom.test(event.id) ||
             data.bloom.test(event.pubkey) ||
             event.tags.some((tag) => tag[1] && data.bloom!.test(tag[1]));
-          if (!mightMatch) return false;
+          if (!mightMatch) continue;
         }
 
-        return matchFilters(data.filters, event);
-      })
-      .map(({ client, data }) => {
-        // Construct the message string to avoid re-serializing the event object and subId.
-        const msg = `["EVENT",${data.subIdJson},${eventJson}]`;
-        client.send(msg);
-        return 1;
-      })
-      .reduce((acc, val) => acc + val, 0);
+        if (matchFilters(data.filters, event)) {
+          // Construct the message string to avoid re-serializing the event object and subId.
+          const msg = `["EVENT",${data.subIdJson},${eventJson}]`;
+          client.send(msg);
+          count++;
+        }
+      }
+    }
+
+    return count;
   }
 
   /**
