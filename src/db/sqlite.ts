@@ -16,11 +16,6 @@ type EventRow = {
 
 // Removed TagRow type to avoid allocations in saveEvent
 
-type EventWithTagRow = EventRow & {
-  tag_name: string | null;
-  tag_value: string | null;
-};
-
 type SqlCondition = { sql: string; params: unknown[] };
 type FilterCondition = SqlCondition | { col: string; val: unknown; op?: string };
 
@@ -85,6 +80,7 @@ export class SqliteEventRepository implements IEventRepository {
     this.db.run("CREATE INDEX IF NOT EXISTS idx_events_pubkey ON events(pubkey);");
     this.db.run("CREATE INDEX IF NOT EXISTS idx_events_created_at ON events(created_at);");
     this.db.run("CREATE INDEX IF NOT EXISTS idx_events_kind ON events(kind);");
+    this.db.run("CREATE INDEX IF NOT EXISTS idx_tags_event_id ON tags(event_id);");
     this.db.run("CREATE INDEX IF NOT EXISTS idx_tags_name_value ON tags(name, value);");
 
     // NIP-50: FTS5 Search Capability
@@ -112,10 +108,51 @@ export class SqliteEventRepository implements IEventRepository {
    */
   async saveEvent(event: Event): Promise<void> {
     this.db.transaction(() => {
-      const existing = this.findExisting(event);
-      if (existing) {
-        if (this.isOlderEvent(event, existing)) return;
-        this.db.prepare("DELETE FROM events WHERE id = ?").run(existing.id);
+      // Logic for replaceable and addressable events
+      if (isReplaceable(event.kind)) {
+        // Delete older versions
+        this.db
+          .prepare(
+            `DELETE FROM events WHERE kind = ? AND pubkey = ? AND (created_at < ? OR (created_at = ? AND id > ?))`,
+          )
+          .run(event.kind, event.pubkey, event.created_at, event.created_at, event.id);
+
+        // Check if a newer version already exists
+        const newerExists = this.db
+          .prepare(
+            `SELECT 1 FROM events WHERE kind = ? AND pubkey = ? AND (created_at > ? OR (created_at = ? AND id < ?)) LIMIT 1`,
+          )
+          .get(event.kind, event.pubkey, event.created_at, event.created_at, event.id);
+        if (newerExists) return;
+      } else if (isAddressable(event.kind)) {
+        const dTag = event.tags.find((t) => t[0] === "d")?.[1] || "";
+        // Delete older versions
+        this.db
+          .prepare(
+            `
+          DELETE FROM events 
+          WHERE kind = ? 
+            AND pubkey = ? 
+            AND id IN (SELECT event_id FROM tags WHERE name = 'd' AND value = ?)
+            AND (created_at < ? OR (created_at = ? AND id > ?))
+        `,
+          )
+          .run(event.kind, event.pubkey, dTag, event.created_at, event.created_at, event.id);
+
+        // Check if a newer version already exists
+        const newerExists = this.db
+          .prepare(
+            `
+          SELECT 1 FROM events 
+          WHERE kind = ? 
+            AND pubkey = ? 
+            AND id IN (SELECT event_id FROM tags WHERE name = 'd' AND value = ?)
+            AND (created_at > ? OR (created_at = ? AND id < ?))
+          LIMIT 1
+        `,
+          )
+          .get(event.kind, event.pubkey, dTag, event.created_at, event.created_at, event.id);
+        if (newerExists) return;
       }
 
       const insertResult = this.db
@@ -129,13 +166,13 @@ export class SqliteEventRepository implements IEventRepository {
         this.db
           .prepare("INSERT INTO events_fts(id, content) VALUES (?, ?)")
           .run(event.id, ftsContent);
-      }
 
-      for (const [name, value] of event.tags) {
-        if (name && value) {
-          this.db
-            .prepare("INSERT INTO tags (event_id, name, value) VALUES (?, ?, ?)")
-            .run(event.id, name, value);
+        for (const [name, value] of event.tags) {
+          if (name && value) {
+            this.db
+              .prepare("INSERT INTO tags (event_id, name, value) VALUES (?, ?, ?)")
+              .run(event.id, name, value);
+          }
         }
       }
     })();
@@ -168,22 +205,20 @@ export class SqliteEventRepository implements IEventRepository {
     until: number = Infinity,
   ): Promise<void> {
     this.db.transaction(() => {
+      // 1. Delete by IDs
       if (eventIds.length > 0) {
-        const placeholders = eventIds.map(() => "?").join(", ");
-        const res = this.db
-          .prepare(`DELETE FROM events WHERE pubkey = ? AND id IN (${placeholders})`)
-          .run(pubkey, ...eventIds);
-        void logger.trace`Deleted ${res.changes} events by IDs for ${pubkey}`;
+        this.db
+          .prepare(`DELETE FROM events WHERE pubkey = ? AND id IN (SELECT value FROM json_each(?))`)
+          .run(pubkey, JSON.stringify(eventIds));
+        void logger.trace`Deleted events by IDs for ${pubkey}`;
       }
 
+      // 2. Delete by Identifiers (kind:pubkey:d-tag)
       for (const addr of identifiers) {
         const parts = addr.split(":");
-        if (parts.length < 3) continue;
+        if (parts.length < 3 || parts[1] !== pubkey) continue;
         const kind = parseInt(parts[0]!);
-        const pk = parts[1]!;
         const dTag = parts[2]!;
-
-        if (pk !== pubkey) continue;
 
         const res = this.db
           .prepare(
@@ -236,17 +271,24 @@ export class SqliteEventRepository implements IEventRepository {
    * @returns The total number of matching events.
    */
   async countEvents(filters: Filter[]): Promise<number> {
-    let totalCount = 0;
+    if (filters.length === 0) return 0;
+
+    const queries: string[] = [];
+    const allParams: unknown[] = [];
+
     for (const filter of filters) {
       const { clause, params } = this.buildWhereClause(filter);
-      const queryStr = `SELECT COUNT(*) as count FROM events ${clause}`;
-      const result = this.db.prepare(queryStr).get(...(params as any[])) as {
-        count: number;
-      };
-      totalCount += result?.count ?? 0;
+      queries.push(`SELECT id FROM events ${clause}`);
+      allParams.push(...params);
     }
-    void logger.trace`Counted ${totalCount} events`;
-    return totalCount;
+
+    const queryStr = `SELECT COUNT(*) as count FROM ( ${queries.join(" UNION ")} )`;
+    const result = this.db.prepare(queryStr).get(...(allParams as any[])) as {
+      count: number;
+    };
+
+    void logger.trace`Counted ${result?.count ?? 0} events`;
+    return result?.count ?? 0;
   }
 
   /**
@@ -270,41 +312,25 @@ export class SqliteEventRepository implements IEventRepository {
         e.kind,
         e.content,
         e.sig,
-        t.name AS tag_name,
-        t.value AS tag_value
+        (SELECT json_group_array(json_array(name, value)) FROM tags WHERE event_id = e.id) AS tags_json
       FROM (${baseQuery}) e
-      LEFT JOIN tags t ON t.event_id = e.id
-      ORDER BY e.created_at DESC, t.id ASC
+      ORDER BY e.created_at DESC
     `;
 
-    const rows = this.db
-      .prepare(queryStr)
-      .iterate(...(params as any[])) as IterableIterator<EventWithTagRow>;
+    const rows = this.db.prepare(queryStr).iterate(...(params as any[])) as IterableIterator<
+      EventRow & { tags_json: string }
+    >;
 
-    let currentEvent: Event | undefined;
     for (const row of rows) {
-      if (!currentEvent || currentEvent.id !== row.id) {
-        if (currentEvent) {
-          yield currentEvent;
-        }
-        currentEvent = {
-          id: row.id,
-          pubkey: row.pubkey,
-          created_at: row.created_at,
-          kind: row.kind,
-          content: row.content,
-          sig: row.sig,
-          tags: [],
-        };
-      }
-
-      if (row.tag_name !== null && row.tag_value !== null) {
-        currentEvent.tags.push([row.tag_name, row.tag_value]);
-      }
-    }
-
-    if (currentEvent) {
-      yield currentEvent;
+      yield {
+        id: row.id,
+        pubkey: row.pubkey,
+        created_at: row.created_at,
+        kind: row.kind,
+        content: row.content,
+        sig: row.sig,
+        tags: JSON.parse(row.tags_json),
+      };
     }
   }
 
@@ -399,30 +425,5 @@ export class SqliteEventRepository implements IEventRepository {
     }
 
     return this.finalizeConditions(rawConditions.flatMap((c) => this.toSqlCondition(c)));
-  }
-
-  private isOlderEvent(candidate: Event, existing: ExistingRow) {
-    return (
-      candidate.created_at < existing.created_at ||
-      (candidate.created_at === existing.created_at && candidate.id > existing.id)
-    );
-  }
-
-  private findExisting(event: Event): ExistingRow | undefined {
-    if (isReplaceable(event.kind)) {
-      return this.db
-        .prepare(
-          "SELECT id, created_at FROM events WHERE kind = ? AND pubkey = ? ORDER BY created_at DESC, id DESC LIMIT 1",
-        )
-        .get(event.kind, event.pubkey) as ExistingRow | undefined;
-    }
-    if (isAddressable(event.kind)) {
-      const dTag = event.tags.find((t) => t[0] === "d")?.[1] || "";
-      return this.db
-        .prepare(
-          "SELECT id, created_at FROM events WHERE kind = ? AND pubkey = ? AND id IN (SELECT event_id FROM tags WHERE name = 'd' AND value = ?) ORDER BY created_at DESC, id DESC LIMIT 1",
-        )
-        .get(event.kind, event.pubkey, dTag) as ExistingRow | undefined;
-    }
   }
 }
