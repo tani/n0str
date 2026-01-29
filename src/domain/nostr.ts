@@ -249,8 +249,15 @@ export function matchFilter(filter: Filter, event: Event): boolean {
   for (const [key, values] of Object.entries(filter)) {
     if (key.startsWith("#") && Array.isArray(values)) {
       const tagName = key.substring(1);
-      const eventTags = event.tags.filter((t) => t[0] === tagName).map((t) => t[1]);
-      if (!values.some((v) => typeof v === "string" && eventTags.includes(v))) return false;
+      let match = false;
+      for (let i = 0; i < event.tags.length; i++) {
+        const tag = event.tags[i]!;
+        if (tag[0] === tagName && tag[1] !== undefined && (values as string[]).includes(tag[1])) {
+          match = true;
+          break;
+        }
+      }
+      if (!match) return false;
     }
   }
 

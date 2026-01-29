@@ -200,25 +200,31 @@ export class NostrMessageHandler {
       ws.send(JSON.stringify(["CLOSED", subId, "error: too many filters"]));
       return;
     }
-
     const bloom = this.buildBloomFilter(filters);
-    ws.data.subscriptions.set(subId, { filters, bloom });
+    ws.data.subscriptions.set(subId, {
+      filters,
+      bloom,
+      subIdJson: JSON.stringify(subId),
+    });
 
     // Send historical events
-    const sentEventIds = new Set<string>();
+    const useSet = filters.length > 1;
+    const sentEventIds = useSet ? new Set<string>() : null;
     let eventCount = 0;
+
     for (const filter of filters) {
       if (filter.limit === undefined || filter.limit > relayInfo.limitation.max_limit) {
         filter.limit = relayInfo.limitation.max_limit;
       }
       for await (const event of this.repository.queryEvents(filter)) {
-        if (!sentEventIds.has(event.id)) {
+        if (!sentEventIds || !sentEventIds.has(event.id)) {
           ws.send(JSON.stringify(["EVENT", subId, event]));
-          sentEventIds.add(event.id);
+          sentEventIds?.add(event.id);
           eventCount++;
         }
       }
     }
+
     void logger.trace`Sent ${eventCount} stored events for subId: ${subId} (Bloom: ${!!bloom})`;
     ws.send(JSON.stringify(["EOSE", subId]));
   }

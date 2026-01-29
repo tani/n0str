@@ -47,14 +47,14 @@ describe("websocket coverage", () => {
     const ws1 = {
       send: (msg: string) => sent1.push(msg),
       data: {
-        subscriptions: new Map([["sub1", { filters: [{ kinds: [1] }] }]]),
+        subscriptions: new Map([["sub1", { filters: [{ kinds: [1] }], subIdJson: '"sub1"' }]]),
       },
     } as any;
 
     const ws2 = {
       send: (msg: string) => sent2.push(msg),
       data: {
-        subscriptions: new Map([["sub2", { filters: [{ kinds: [2] }] }]]),
+        subscriptions: new Map([["sub2", { filters: [{ kinds: [2] }], subIdJson: '"sub2"' }]]),
       },
     } as any;
 

@@ -38,10 +38,12 @@ describe("Broadcast Stress Test", () => {
         const author = authorsWithBloom[(i * SUBS_PER_CLIENT + j) % authorsWithBloom.length]!;
         const bloom = new SimpleBloomFilter();
         bloom.add(author);
+        const subId = `sub-${j}`;
 
-        ws.data.subscriptions.set(`sub-${j}`, {
+        ws.data.subscriptions.set(subId, {
           filters: [{ authors: [author] }],
           bloom,
+          subIdJson: JSON.stringify(subId),
         });
       }
       manager.addClient(ws);
@@ -87,9 +89,10 @@ describe("Broadcast Stress Test", () => {
     for (let i = 0; i < CLIENT_COUNT; i++) {
       const ws = createMockWs(`ws-no-bloom-${i}`);
       for (let j = 0; j < SUBS_PER_CLIENT; j++) {
-        ws.data.subscriptions.set(`sub-${j}`, {
+        const subId = `sub-${j}`;
+        ws.data.subscriptions.set(subId, {
           filters: [{ kinds: [1] }],
-          // No bloom filter
+          subIdJson: JSON.stringify(subId),
         });
       }
       manager.addClient(ws);

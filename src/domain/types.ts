@@ -46,6 +46,7 @@ export interface IEventRepository {
 export type SubscriptionData = {
   filters: Filter[];
   bloom?: SimpleBloomFilter;
+  subIdJson: string; // Pre-serialized subId for broadcast speed
 };
 
 /**

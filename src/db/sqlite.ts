@@ -14,11 +14,7 @@ type EventRow = {
   sig: string;
 };
 
-type TagRow = {
-  event_id: string;
-  name: string;
-  value: string;
-};
+// Removed TagRow type to avoid allocations in saveEvent
 
 type EventWithTagRow = EventRow & {
   tag_name: string | null;
@@ -135,11 +131,12 @@ export class SqliteEventRepository implements IEventRepository {
           .run(event.id, ftsContent);
       }
 
-      const tagRows = this.buildTagRows(event);
-      for (const tag of tagRows) {
-        this.db
-          .prepare("INSERT INTO tags (event_id, name, value) VALUES (?, ?, ?)")
-          .run(tag.event_id, tag.name, tag.value);
+      for (const [name, value] of event.tags) {
+        if (name && value) {
+          this.db
+            .prepare("INSERT INTO tags (event_id, name, value) VALUES (?, ?, ?)")
+            .run(event.id, name, value);
+        }
       }
     })();
     void logger.trace`Saved event ${event.id}`;
@@ -426,11 +423,5 @@ export class SqliteEventRepository implements IEventRepository {
         )
         .get(event.kind, event.pubkey, dTag) as ExistingRow | undefined;
     }
-  }
-
-  private buildTagRows(event: Event): TagRow[] {
-    return event.tags.flatMap(([name, value]) =>
-      name && value ? [{ event_id: event.id, name, value }] : [],
-    );
   }
 }
