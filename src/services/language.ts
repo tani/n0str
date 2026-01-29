@@ -78,19 +78,18 @@ export class LanguageDetector {
     if (!cleaned) return "unknown";
 
     // 1. Check Scripts (Immediate Return)
-    for (const { lang, reg } of this.SCRIPTS) {
-      if (reg.test(cleaned)) return lang;
-    }
+    const scriptMatch = Iterator.from(this.SCRIPTS).find(({ reg }) => reg.test(cleaned));
+    if (scriptMatch) return scriptMatch.lang;
 
     // 2. Check Unique Characters (Immediate Return)
-    for (const { lang, reg } of this.UNIQUE_CHARS) {
-      if (reg.test(cleaned)) return lang;
-    }
+    const uniqueMatch = Iterator.from(this.UNIQUE_CHARS).find(({ reg }) => reg.test(cleaned));
+    if (uniqueMatch) return uniqueMatch.lang;
 
     // 3. Check Stopwords (Fallback)
-    for (const [lang, reg] of Object.entries(this.STOPWORDS)) {
-      if (reg.test(cleaned)) return lang;
-    }
+    const stopwordMatch = Iterator.from(Object.entries(this.STOPWORDS)).find(([, reg]) =>
+      reg.test(cleaned),
+    );
+    if (stopwordMatch) return stopwordMatch[0];
 
     // 4. Final Fallback
     if (this.LATIN.test(cleaned)) {
