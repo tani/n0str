@@ -60,8 +60,7 @@ export class WebSocketManager {
       for (const [_subId, data] of client.data.subscriptions) {
         // Bloom Filter Optimization: Fast skip if definitely no match
         if (data.bloom) {
-          let mightMatch =
-            data.bloom.test(event.id) || data.bloom.test(event.pubkey);
+          let mightMatch = data.bloom.test(event.id) || data.bloom.test(event.pubkey);
           if (!mightMatch) {
             for (let i = 0; i < event.tags.length; i++) {
               const tag = event.tags[i]!;
