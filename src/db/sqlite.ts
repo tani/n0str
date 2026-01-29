@@ -277,9 +277,10 @@ export class SqliteEventRepository implements IEventRepository {
       ORDER BY e.created_at DESC, t.id ASC
     `;
 
-    const rows = this.db
-      .prepare(queryStr)
-      .iterate(...(params as any[])) as IterableIterator<EventWithTagRow>;
+    // Use Iterator.from() to wrap the iterable
+    const rows = Iterator.from(
+      this.db.prepare(queryStr).iterate(...(params as any[])) as IterableIterator<EventWithTagRow>,
+    );
 
     let currentEvent: Event | undefined;
     for (const row of rows) {
@@ -325,15 +326,17 @@ export class SqliteEventRepository implements IEventRepository {
     if (filter.limit) {
       params.push(filter.limit);
     }
-    const rows = this.db
-      .prepare(queryStr)
-      .iterate(...(params as any[])) as IterableIterator<ExistingRow>;
+    const rows = Iterator.from(
+      this.db.prepare(queryStr).iterate(...(params as any[])) as IterableIterator<ExistingRow>,
+    );
 
     let count = 0;
-    for (const row of rows) {
-      yield row;
+    // Use iterator helpers (map) + yield *
+    yield* rows.map((row) => {
       count++;
-    }
+      return row;
+    });
+
     void logger.trace`Sync query returned ${count} events`;
   }
 
