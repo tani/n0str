@@ -328,6 +328,7 @@ export class SqliteEventRepository implements IEventRepository {
     const rows = this.db
       .prepare(queryStr)
       .iterate(...(params as any[])) as IterableIterator<ExistingRow>;
+
     let count = 0;
     for (const row of rows) {
       yield row;

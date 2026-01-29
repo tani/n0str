@@ -246,22 +246,13 @@ export function matchFilter(filter: Filter, event: Event): boolean {
   if (filter.since !== undefined && event.created_at < filter.since) return false;
   if (filter.until !== undefined && event.created_at > filter.until) return false;
 
-  for (const [key, values] of Object.entries(filter)) {
-    if (key.startsWith("#") && Array.isArray(values)) {
-      const tagName = key.substring(1);
-      let match = false;
-      for (let i = 0; i < event.tags.length; i++) {
-        const tag = event.tags[i]!;
-        if (tag[0] === tagName && tag[1] !== undefined && (values as string[]).includes(tag[1])) {
-          match = true;
-          break;
-        }
-      }
-      if (!match) return false;
-    }
-  }
-
-  return true;
+  return Object.entries(filter).every(([key, values]) => {
+    if (!key.startsWith("#") || !Array.isArray(values)) return true;
+    const tagName = key.substring(1);
+    return event.tags.some(
+      (tag) => tag[0] === tagName && tag[1] !== undefined && (values as string[]).includes(tag[1]),
+    );
+  });
 }
 
 /**

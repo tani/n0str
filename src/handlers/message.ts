@@ -234,24 +234,28 @@ export class NostrMessageHandler {
    * If any filter is too broad, it returns undefined to fallback to full matching.
    */
   private buildBloomFilter(filters: Filter[]): SimpleBloomFilter | undefined {
-    const items: string[] = [];
-    for (const f of filters) {
-      // If a filter has no specific identifiers, it's "broad".
-      const hasSpecific =
-        (f.ids?.length ?? 0) > 0 ||
-        (f.authors?.length ?? 0) > 0 ||
-        Object.keys(f).some((k) => k.startsWith("#"));
+    // If any filter is too broad (no IDs, authors, or tag filters), skip Bloom optimization
+    const isBroad = filters.some(
+      (f) =>
+        (f.ids?.length ?? 0) === 0 &&
+        (f.authors?.length ?? 0) === 0 &&
+        !Object.keys(f).some((k) => k.startsWith("#")),
+    );
+    if (isBroad) return undefined;
 
-      if (!hasSpecific) return undefined;
-
-      if (f.ids) items.push(...f.ids);
-      if (f.authors) items.push(...f.authors);
-      for (const [k, v] of Object.entries(f)) {
-        if (k.startsWith("#") && Array.isArray(v)) {
-          for (const val of v) if (typeof val === "string") items.push(val);
+    const items = Iterator.from(filters)
+      .flatMap((f) => {
+        const fItems: string[] = [];
+        if (f.ids) fItems.push(...f.ids);
+        if (f.authors) fItems.push(...f.authors);
+        for (const [k, v] of Object.entries(f)) {
+          if (k.startsWith("#") && Array.isArray(v)) {
+            for (const val of v) if (typeof val === "string") fItems.push(val);
+          }
         }
-      }
-    }
+        return fItems;
+      })
+      .toArray();
 
     if (items.length === 0) return undefined;
 
