@@ -59,7 +59,7 @@ describe.each(engines)("Engine: %s > NIP-25: Reactions", () => {
       };
     });
 
-    const stored = await queryEvents({ kinds: [7] });
+    const stored = await Array.fromAsync(queryEvents({ kinds: [7] }));
     expect(stored).toHaveLength(1);
     expect(stored[0]?.id).toBe(e.id);
 

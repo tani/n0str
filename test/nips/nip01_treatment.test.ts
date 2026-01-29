@@ -58,7 +58,7 @@ describe.each(engines)("Engine: %s > Event Treatment (NIP-01)", () => {
       };
     }); // Wait for OK
 
-    const stored = await queryEvents({ kinds: [20000] });
+    const stored = await Array.fromAsync(queryEvents({ kinds: [20000] }));
     expect(stored).toHaveLength(0);
 
     ws.close();
@@ -106,7 +106,7 @@ describe.each(engines)("Engine: %s > Event Treatment (NIP-01)", () => {
     });
 
     // 3. Verify only newer exists
-    const stored = await queryEvents({ kinds: [0], authors: [pk1] });
+    const stored = await Array.fromAsync(queryEvents({ kinds: [0], authors: [pk1] }));
     expect(stored).toHaveLength(1);
     expect(stored[0]?.content).toBe("new");
 
@@ -127,7 +127,7 @@ describe.each(engines)("Engine: %s > Event Treatment (NIP-01)", () => {
       };
     });
 
-    const storedAtEnd = await queryEvents({ kinds: [0], authors: [pk1] });
+    const storedAtEnd = await Array.fromAsync(queryEvents({ kinds: [0], authors: [pk1] }));
     expect(storedAtEnd).toHaveLength(1);
     expect(storedAtEnd[0]?.content).toBe("new");
 
@@ -176,7 +176,7 @@ describe.each(engines)("Engine: %s > Event Treatment (NIP-01)", () => {
     });
 
     // 3. Both should exist
-    expect(await queryEvents({ kinds: [30000] })).toHaveLength(2);
+    expect(await Array.fromAsync(queryEvents({ kinds: [30000] }))).toHaveLength(2);
 
     // 4. Update event d=a
     const eventA2 = finalizeEvent(
@@ -196,7 +196,7 @@ describe.each(engines)("Engine: %s > Event Treatment (NIP-01)", () => {
     });
 
     // 5. Should still have 2, but one updated
-    const finalStored = await queryEvents({ kinds: [30000] });
+    const finalStored = await Array.fromAsync(queryEvents({ kinds: [30000] }));
     expect(finalStored).toHaveLength(2);
     expect(finalStored.find((e) => e.tags.find((t) => t[0] === "d" && t[1] === "a"))?.content).toBe(
       "content-a-updated",

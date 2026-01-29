@@ -60,7 +60,7 @@ describe.each(engines)("Engine: %s > NIP-51: Lists", () => {
       };
     });
 
-    const stored = await queryEvents({ kinds: [kind], authors: [pk] });
+    const stored = await Array.fromAsync(queryEvents({ kinds: [kind], authors: [pk] }));
     expect(stored).toHaveLength(1);
     expect(stored[0]?.content).toBe("list content");
 

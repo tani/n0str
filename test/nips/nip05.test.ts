@@ -80,7 +80,7 @@ describe.each(engines)("Engine: %s > NIP-05: Identifying users", () => {
     });
 
     // 3. Verify only the newer one is stored
-    const stored = await queryEvents({ kinds: [0], authors: [pk] });
+    const stored = await Array.fromAsync(queryEvents({ kinds: [0], authors: [pk] }));
     expect(stored).toHaveLength(1);
     expect(stored[0]?.id).toBe(event2.id);
     const content = JSON.parse(stored[0]?.content || "{}");

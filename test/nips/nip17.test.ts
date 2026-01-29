@@ -57,7 +57,7 @@ describe.each(engines)("Engine: %s > NIP-17: Private Direct Messages", () => {
       };
     });
 
-    const stored = await queryEvents({ kinds: [1059] });
+    const stored = await Array.fromAsync(queryEvents({ kinds: [1059] }));
     expect(stored).toHaveLength(1);
     expect(stored[0]?.id).toBe(e.id);
 

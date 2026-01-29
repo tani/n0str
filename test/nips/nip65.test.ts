@@ -76,7 +76,7 @@ describe.each(engines)("Engine: %s > NIP-65: Relay List Metadata", () => {
       };
     });
 
-    const stored = await queryEvents({ kinds: [kind], authors: [pk] });
+    const stored = await Array.fromAsync(queryEvents({ kinds: [kind], authors: [pk] }));
     expect(stored).toHaveLength(1);
     expect(stored[0]?.tags).toHaveLength(1);
     expect(stored[0]?.tags[0]?.[1]).toBe("wss://relay2.com");

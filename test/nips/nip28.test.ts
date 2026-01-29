@@ -56,7 +56,7 @@ describe.each(engines)("Engine: %s > NIP-28: Public Chat", () => {
       };
     });
 
-    const stored = await queryEvents({ kinds: [40] });
+    const stored = await Array.fromAsync(queryEvents({ kinds: [40] }));
     expect(stored).toHaveLength(1);
     expect(stored[0]?.id).toBe(e.id);
 

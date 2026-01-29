@@ -60,7 +60,7 @@ describe.each(engines)("Engine: %s > NIP-09 Event Deletion", () => {
     }); // Wait for OK
 
     // 2. Verify it exists
-    expect(await queryEvents({ ids: [event.id] })).toHaveLength(1);
+    expect(await Array.fromAsync(queryEvents({ ids: [event.id] }))).toHaveLength(1);
 
     // 3. Publish a deletion request (kind 5)
     const deletion = finalizeEvent(
@@ -80,10 +80,10 @@ describe.each(engines)("Engine: %s > NIP-09 Event Deletion", () => {
     }); // Wait for OK
 
     // 4. Verify original event is gone
-    expect(await queryEvents({ ids: [event.id] })).toHaveLength(0);
+    expect(await Array.fromAsync(queryEvents({ ids: [event.id] }))).toHaveLength(0);
 
     // 5. Verify deletion request itself exists
-    expect(await queryEvents({ ids: [deletion.id] })).toHaveLength(1);
+    expect(await Array.fromAsync(queryEvents({ ids: [deletion.id] }))).toHaveLength(1);
 
     ws.close();
   });
@@ -128,7 +128,7 @@ describe.each(engines)("Engine: %s > NIP-09 Event Deletion", () => {
     });
 
     // 3. Verify original event STILL exists
-    expect(await queryEvents({ ids: [event.id] })).toHaveLength(1);
+    expect(await Array.fromAsync(queryEvents({ ids: [event.id] }))).toHaveLength(1);
 
     ws.close();
   });
@@ -156,7 +156,7 @@ describe.each(engines)("Engine: %s > NIP-09 Event Deletion", () => {
     });
 
     // 2. Verify it exists
-    expect(await queryEvents({ kinds: [30000] })).toHaveLength(1);
+    expect(await Array.fromAsync(queryEvents({ kinds: [30000] }))).toHaveLength(1);
 
     // 3. Publish deletion request with 'a' tag
     const deletion = finalizeEvent(
@@ -176,7 +176,7 @@ describe.each(engines)("Engine: %s > NIP-09 Event Deletion", () => {
     });
 
     // 4. Verify original event is gone
-    expect(await queryEvents({ kinds: [30000] })).toHaveLength(0);
+    expect(await Array.fromAsync(queryEvents({ kinds: [30000] }))).toHaveLength(0);
 
     ws.close();
   });

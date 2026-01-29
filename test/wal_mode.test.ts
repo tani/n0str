@@ -23,8 +23,10 @@ describe("SQLite WAL Mode", () => {
     repo = new SqliteEventRepository(dbPath);
     await repo.init();
 
-    const result = await repo.db`PRAGMA journal_mode`;
-    const mode = result[0]?.journal_mode;
+    const result = repo.db.query("PRAGMA journal_mode").get() as {
+      journal_mode: string;
+    };
+    const mode = result?.journal_mode;
 
     console.log("Current journal mode:", mode);
     expect(mode).toBe("wal");

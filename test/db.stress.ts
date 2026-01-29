@@ -57,7 +57,7 @@ describe("SQLite Database Stress Test", () => {
       return repo.queryEvents({ search: "BINGO", limit: 100 });
     });
 
-    const results = await Promise.all(tasks);
+    const results = await Promise.all(tasks.map((t) => Array.fromAsync(t)));
     const duration = Date.now() - startTime;
 
     console.log(`Search Stress: ${QUERY_COUNT} FTS queries in ${duration}ms`);
@@ -70,10 +70,12 @@ describe("SQLite Database Stress Test", () => {
     const startTime = Date.now();
 
     const tasks = Array.from({ length: QUERY_COUNT }, (_, i) => {
-      return repo.queryEvents({
-        "#idx": [(i * 10).toString()],
-        kinds: [1],
-      });
+      return Array.fromAsync(
+        repo.queryEvents({
+          "#idx": [(i * 10).toString()],
+          kinds: [1],
+        }),
+      );
     });
 
     const results = await Promise.all(tasks);
@@ -89,7 +91,7 @@ describe("SQLite Database Stress Test", () => {
     const startTime = Date.now();
 
     const reads = Array.from({ length: READ_COUNT }, () => {
-      return repo.queryEvents({ kinds: [1], limit: 10 });
+      return Array.fromAsync(repo.queryEvents({ kinds: [1], limit: 10 }));
     });
 
     const writePromise = (async () => {
@@ -135,7 +137,7 @@ describe("SQLite Database Stress Test", () => {
     const pubkeys = Array.from({ length: 100 }, (_, i) => i.toString(16).padStart(64, "0"));
     const startTime = Date.now();
 
-    const results = await repo.queryEvents({ authors: pubkeys, limit: 100 });
+    const results = await Array.fromAsync(repo.queryEvents({ authors: pubkeys, limit: 100 }));
     const duration = Date.now() - startTime;
 
     console.log(`Large filter: ${pubkeys.length} authors query in ${duration}ms`);
@@ -162,7 +164,7 @@ describe("SQLite Database Stress Test", () => {
     const duration = Date.now() - startTime;
     console.log(`Replaceable overwrite: ${COUNT} versions in ${duration}ms`);
 
-    const latest = await repo.queryEvents({ authors: [pubkey], kinds: [0] });
+    const latest = await Array.fromAsync(repo.queryEvents({ authors: [pubkey], kinds: [0] }));
     expect(latest.length).toBe(1);
     expect(latest[0]?.content).toBe(`version ${COUNT - 1}`);
   }, 30000);

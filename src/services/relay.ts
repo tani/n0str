@@ -105,7 +105,7 @@ export class NostrRelay {
         req.headers.get("Accept") !== "application/nostr+json"
       ) {
         const [events, totalEvents] = await Promise.all([
-          this.repository.queryEvents({ kinds: [1], limit: 100 }),
+          Array.fromAsync(this.repository.queryEvents({ kinds: [1], limit: 100 })),
           this.repository.countEvents([{}]),
         ]);
         const html = renderWelcomePage(events, relayInfo, getRelayUrl(req), totalEvents);

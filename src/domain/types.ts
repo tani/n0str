@@ -29,9 +29,9 @@ export interface IEventRepository {
   /** Counts events matching filters (NIP-45). */
   countEvents(filters: Filter[]): Promise<number>;
   /** Queries events matching a single filter. */
-  queryEvents(filter: Filter): Promise<Event[]>;
+  queryEvents(filter: Filter): AsyncIterableIterator<Event>;
   /** Queries basic event info for negentropy sync. */
-  queryEventsForSync(filter: Filter): Promise<ExistingRow[]>;
+  queryEventsForSync(filter: Filter): AsyncIterableIterator<ExistingRow>;
   /** Closes the repository connection. */
   close(): Promise<void>;
   /** Clears all data from the repository (mainly for tests). */

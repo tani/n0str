@@ -76,7 +76,7 @@ describe.each(engines)("Engine: %s > NIP-33: Parameterized Replaceable Events", 
       };
     });
 
-    const stored = await queryEvents({ kinds: [kind], authors: [pk] });
+    const stored = await Array.fromAsync(queryEvents({ kinds: [kind], authors: [pk] }));
     expect(stored).toHaveLength(1);
     expect(stored[0]?.content).toBe("v2");
 

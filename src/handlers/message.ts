@@ -211,8 +211,7 @@ export class NostrMessageHandler {
       if (filter.limit === undefined || filter.limit > relayInfo.limitation.max_limit) {
         filter.limit = relayInfo.limitation.max_limit;
       }
-      const events = await this.repository.queryEvents(filter);
-      for (const event of events) {
+      for await (const event of this.repository.queryEvents(filter)) {
         if (!sentEventIds.has(event.id)) {
           ws.send(JSON.stringify(["EVENT", subId, event]));
           sentEventIds.add(event.id);
@@ -321,10 +320,9 @@ export class NostrMessageHandler {
         filter.limit = relayInfo.limitation.max_limit;
       }
 
-      const events = await this.repository.queryEventsForSync(filter);
       const storage = new NegentropyStorageVector();
 
-      for (const event of events) {
+      for await (const event of this.repository.queryEventsForSync(filter)) {
         storage.insert(event.created_at, event.id);
       }
       storage.seal();

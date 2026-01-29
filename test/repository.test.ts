@@ -40,7 +40,7 @@ describe("Repository > Database", () => {
 
   test("saveEvent and queryEvents", async () => {
     await saveEvent(sampleEvent);
-    const results = await queryEvents({ ids: [sampleEvent.id] });
+    const results = await Array.fromAsync(queryEvents({ ids: [sampleEvent.id] }));
     expect(results).toHaveLength(1);
     expect(results[0]!.id).toBe(sampleEvent.id);
   });
@@ -56,28 +56,28 @@ describe("Repository > Database", () => {
     });
 
     // Authors filter
-    expect(await queryEvents({ authors: ["pub1"] })).toHaveLength(2);
+    expect(await Array.fromAsync(queryEvents({ authors: ["pub1"] }))).toHaveLength(2);
 
     // Kinds filter
-    const byKind = await queryEvents({ kinds: [1] });
+    const byKind = await Array.fromAsync(queryEvents({ kinds: [1] }));
     expect(byKind).toHaveLength(1);
     expect(byKind[0]!.id).toBe("1");
 
     // Tag filter
-    const target1 = await queryEvents({ "#p": ["target1"] });
+    const target1 = await Array.fromAsync(queryEvents({ "#p": ["target1"] }));
     expect(target1).toHaveLength(1);
     expect(target1[0]!.id).toBe("1");
-    const target2 = await queryEvents({ "#p": ["target2"] });
+    const target2 = await Array.fromAsync(queryEvents({ "#p": ["target2"] }));
     expect(target2).toHaveLength(1);
     expect(target2[0]!.id).toBe("2");
 
     // Since filter
-    const since1500 = await queryEvents({ since: 1500 });
+    const since1500 = await Array.fromAsync(queryEvents({ since: 1500 }));
     expect(since1500).toHaveLength(1);
     expect(since1500[0]!.id).toBe("2");
 
     // Until filter
-    const until1500 = await queryEvents({ until: 1500 });
+    const until1500 = await Array.fromAsync(queryEvents({ until: 1500 }));
     expect(until1500).toHaveLength(1);
     expect(until1500[0]!.id).toBe("1");
   });
@@ -124,7 +124,7 @@ describe("Repository > Database", () => {
     await saveEvent(eventToKeep);
 
     // Verify initial state
-    expect(await queryEvents({})).toHaveLength(3);
+    expect(await Array.fromAsync(queryEvents({}))).toHaveLength(3);
 
     // Perform deletion
     await deleteEvents(
@@ -135,7 +135,7 @@ describe("Repository > Database", () => {
     );
 
     // Verify events are deleted
-    const remainingEvents = await queryEvents({});
+    const remainingEvents = await Array.fromAsync(queryEvents({}));
     expect(remainingEvents).toHaveLength(1);
     expect(remainingEvents[0]!.id).toBe(eventToKeep.id);
   });
@@ -148,7 +148,7 @@ describe("Repository > Database", () => {
       created_at: 2000,
       kind: 2,
     });
-    const limited = await queryEvents({ limit: 1 });
+    const limited = await Array.fromAsync(queryEvents({ limit: 1 }));
     expect(limited).toHaveLength(1);
     expect(limited[0]!.id).toBe("2");
   });
@@ -156,7 +156,7 @@ describe("Repository > Database", () => {
   test("duplicate save ignored", async () => {
     await saveEvent(sampleEvent);
     await saveEvent(sampleEvent);
-    expect(await queryEvents({})).toHaveLength(1);
+    expect(await Array.fromAsync(queryEvents({}))).toHaveLength(1);
   });
 
   test("Ignore older addressable event", async () => {
@@ -188,7 +188,7 @@ describe("Repository > Database", () => {
     await saveEvent(eventOld);
 
     // 3. Verify only the newer one exists
-    const stored = await queryEvents({ kinds: [30000] });
+    const stored = await Array.fromAsync(queryEvents({ kinds: [30000] }));
     expect(stored).toHaveLength(1);
     expect(stored[0]!.id).toBe(eventNew.id);
   });
@@ -225,7 +225,7 @@ describe("Repository > Database", () => {
     await cleanupExpiredEvents();
 
     // 4. Verify original event is gone but valid remains
-    const stored = await queryEvents({ kinds: [1] });
+    const stored = await Array.fromAsync(queryEvents({ kinds: [1] }));
     expect(stored).toHaveLength(1);
     expect(stored[0]?.id).toBe(eventValid.id);
   });
@@ -245,7 +245,7 @@ describe("Repository > Database", () => {
 
   test("queryEventsForSync works", async () => {
     await saveEvent(sampleEvent);
-    const sync = await queryEventsForSync({ ids: [sampleEvent.id] });
+    const sync = await Array.fromAsync(queryEventsForSync({ ids: [sampleEvent.id] }));
     expect(sync).toHaveLength(1);
   });
 

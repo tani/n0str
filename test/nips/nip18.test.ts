@@ -57,7 +57,7 @@ describe.each(engines)("Engine: %s > NIP-18: Reposts", () => {
         };
       });
 
-      const stored = await queryEvents({ kinds: [kind] });
+      const stored = await Array.fromAsync(queryEvents({ kinds: [kind] }));
       expect(stored).toHaveLength(1);
       expect(stored[0]?.id).toBe(e.id);
       await clear();

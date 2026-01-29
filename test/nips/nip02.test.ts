@@ -81,7 +81,7 @@ describe.each(engines)("Engine: %s > NIP-02: Follow List", () => {
     });
 
     // 3. Verify only the newer one is stored
-    const stored = await queryEvents({ kinds: [3], authors: [pk] });
+    const stored = await Array.fromAsync(queryEvents({ kinds: [3], authors: [pk] }));
     expect(stored).toHaveLength(1);
     expect(stored[0]?.id).toBe(event2.id);
     expect(stored[0]?.tags).toHaveLength(2);
