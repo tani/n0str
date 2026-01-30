@@ -22,52 +22,42 @@ type FilterCondition = SqlCondition | { col: string; val: unknown; op?: string }
 /**
  * SqliteEventRepository implements IEventRepository using Bun's native SQLite (bun:sqlite).
  * It handles event storage, retrieval, deletion, and search indexing with row-level streaming.
+ * Maximizes SQLite's JSON features for performance and simplicity.
  */
 export class SqliteEventRepository implements IEventRepository {
   public db: Database;
   private closed = false;
 
-  /**
-   * Creates an instance of SqliteEventRepository.
-   * @param dbPath - The path to the SQLite database file.
-   */
   constructor(dbPath: string) {
     this.db = new Database(dbPath);
   }
 
-  /**
-   * Closes the database connection.
-   */
   async close(): Promise<void> {
     if (this.closed) return;
     this.closed = true;
     this.db.close();
   }
 
-  /**
-   * Asynchronously disposes of the repository.
-   */
   async [Symbol.asyncDispose](): Promise<void> {
     await this.close();
   }
 
-  /**
-   * Initializes the database schema, indexes, and search triggers.
-   */
   async init(): Promise<void> {
     this.db.run("PRAGMA journal_mode = WAL");
     this.db.run("PRAGMA foreign_keys = ON");
 
+    // Maximize JSON features: Use GENERATED columns and STRICT mode
     this.db.run(`
       CREATE TABLE IF NOT EXISTS events (
         id TEXT PRIMARY KEY,
-        pubkey TEXT NOT NULL,
-        created_at INTEGER NOT NULL,
-        kind INTEGER NOT NULL,
-        content TEXT NOT NULL,
-        sig TEXT NOT NULL
-      );
+        event_json TEXT NOT NULL,
+        pubkey TEXT GENERATED ALWAYS AS (json_extract(event_json, '$.pubkey')) VIRTUAL,
+        created_at INTEGER GENERATED ALWAYS AS (json_extract(event_json, '$.created_at')) VIRTUAL,
+        kind INTEGER GENERATED ALWAYS AS (json_extract(event_json, '$.kind')) VIRTUAL,
+        content TEXT GENERATED ALWAYS AS (json_extract(event_json, '$.content')) VIRTUAL
+      ) STRICT;
     `);
+
     this.db.run(`
       CREATE TABLE IF NOT EXISTS tags (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -75,8 +65,9 @@ export class SqliteEventRepository implements IEventRepository {
         name TEXT NOT NULL,
         value TEXT NOT NULL,
         FOREIGN KEY(event_id) REFERENCES events(id) ON DELETE CASCADE
-      );
+      ) STRICT;
     `);
+
     this.db.run("CREATE INDEX IF NOT EXISTS idx_events_pubkey ON events(pubkey);");
     this.db.run("CREATE INDEX IF NOT EXISTS idx_events_created_at ON events(created_at);");
     this.db.run("CREATE INDEX IF NOT EXISTS idx_events_kind ON events(kind);");
@@ -91,34 +82,35 @@ export class SqliteEventRepository implements IEventRepository {
       );
     `);
 
-    // Triggers for FTS5 sync
+    // Triggers for automatic tag indexing and FTS sync
+    this.db.run("DROP TRIGGER IF EXISTS events_ai");
+    this.db.run(`
+      CREATE TRIGGER events_ai AFTER INSERT ON events BEGIN
+        INSERT INTO tags (event_id, name, value)
+        SELECT new.id, json_extract(value, '$[0]'), json_extract(value, '$[1]')
+        FROM json_each(new.event_json, '$.tags')
+        WHERE json_extract(value, '$[0]') IS NOT NULL AND json_extract(value, '$[1]') IS NOT NULL;
+      END;
+    `);
+
     this.db.run("DROP TRIGGER IF EXISTS events_ad");
     this.db.run(`
       CREATE TRIGGER events_ad AFTER DELETE ON events BEGIN
         DELETE FROM events_fts WHERE id = old.id;
       END;
     `);
-    this.db.run("DROP TRIGGER IF EXISTS events_fts_cleanup");
   }
 
-  /**
-   * Saves a Nostr event to the database and updates the search index.
-   * Handles replacement logic for replaceable and addressable events.
-   * @param event - The Nostr event to save.
-   */
   async saveEvent(event: Event): Promise<void> {
     void logger.trace`Saving event ${event.id} (kind: ${event.kind})`;
     this.db.transaction(() => {
-      // Logic for replaceable and addressable events
       if (isReplaceable(event.kind)) {
-        // Delete older versions
         this.db
           .prepare(
             `DELETE FROM events WHERE kind = ? AND pubkey = ? AND (created_at < ? OR (created_at = ? AND id > ?))`,
           )
           .run(event.kind, event.pubkey, event.created_at, event.created_at, event.id);
 
-        // Check if a newer version already exists
         const newerExists = this.db
           .prepare(
             `SELECT 1 FROM events WHERE kind = ? AND pubkey = ? AND (created_at > ? OR (created_at = ? AND id < ?)) LIMIT 1`,
@@ -127,7 +119,6 @@ export class SqliteEventRepository implements IEventRepository {
         if (newerExists) return;
       } else if (isAddressable(event.kind)) {
         const dTag = event.tags.find((t) => t[0] === "d")?.[1] || "";
-        // Delete older versions
         this.db
           .prepare(
             `
@@ -140,7 +131,6 @@ export class SqliteEventRepository implements IEventRepository {
           )
           .run(event.kind, event.pubkey, dTag, event.created_at, event.created_at, event.id);
 
-        // Check if a newer version already exists
         const newerExists = this.db
           .prepare(
             `
@@ -157,32 +147,19 @@ export class SqliteEventRepository implements IEventRepository {
       }
 
       const insertResult = this.db
-        .prepare(
-          "INSERT INTO events (id, pubkey, created_at, kind, content, sig) VALUES (?, ?, ?, ?, ?, ?) ON CONFLICT DO NOTHING",
-        )
-        .run(event.id, event.pubkey, event.created_at, event.kind, event.content, event.sig);
+        .prepare("INSERT INTO events (id, event_json) VALUES (?, ?) ON CONFLICT DO NOTHING")
+        .run(event.id, JSON.stringify(event));
 
       if (insertResult.changes > 0) {
-        const ftsContent = segmentForFts(event.content);
+        // FTS still needs manual segmenting for now
         this.db
           .prepare("INSERT INTO events_fts(id, content) VALUES (?, ?)")
-          .run(event.id, ftsContent);
-
-        for (const [name, value] of event.tags) {
-          if (name && value) {
-            this.db
-              .prepare("INSERT INTO tags (event_id, name, value) VALUES (?, ?, ?)")
-              .run(event.id, name, value);
-          }
-        }
+          .run(event.id, segmentForFts(event.content));
       }
     })();
     void logger.trace`Saved event ${event.id}`;
   }
 
-  /**
-   * Clears all data from the database.
-   */
   async clear(): Promise<void> {
     this.db.transaction(() => {
       this.db.run("DELETE FROM events");
@@ -191,14 +168,6 @@ export class SqliteEventRepository implements IEventRepository {
     })();
   }
 
-  /**
-   * Deletes events based on publication key, event IDs, and addressable identifiers.
-   * Used for NIP-09 event deletions.
-   * @param pubkey - The public key of the author requesting deletion.
-   * @param eventIds - List of event IDs to delete.
-   * @param identifiers - List of addressable event identifiers (kind:pubkey:d-tag).
-   * @param until - Optional timestamp limit for deletion.
-   */
   async deleteEvents(
     pubkey: string,
     eventIds: string[],
@@ -206,22 +175,19 @@ export class SqliteEventRepository implements IEventRepository {
     until: number = Infinity,
   ): Promise<void> {
     this.db.transaction(() => {
-      // 1. Delete by IDs
       if (eventIds.length > 0) {
         this.db
           .prepare(`DELETE FROM events WHERE pubkey = ? AND id IN (SELECT value FROM json_each(?))`)
           .run(pubkey, JSON.stringify(eventIds));
-        void logger.trace`Deleted events by IDs for ${pubkey}`;
       }
 
-      // 2. Delete by Identifiers (kind:pubkey:d-tag)
       for (const addr of identifiers) {
         const parts = addr.split(":");
         if (parts.length < 3 || parts[1] !== pubkey) continue;
         const kind = parseInt(parts[0]!);
         const dTag = parts[2]!;
 
-        const res = this.db
+        this.db
           .prepare(
             `
           DELETE FROM events
@@ -232,17 +198,10 @@ export class SqliteEventRepository implements IEventRepository {
         `,
           )
           .run(kind, pubkey, until, dTag);
-        if (res.changes > 0) {
-          void logger.trace`Deleted ${res.changes} addressable events for ${pubkey} (${addr})`;
-        }
       }
     })();
   }
 
-  /**
-   * Removes events that have expired based on their 'expiration' tag.
-   * Follows NIP-40.
-   */
   async cleanupExpiredEvents(): Promise<void> {
     const now = Math.floor(Date.now() / 1000);
     this.db.transaction(() => {
@@ -265,15 +224,8 @@ export class SqliteEventRepository implements IEventRepository {
     })();
   }
 
-  /**
-   * Counts the number of events matching the given filters.
-   * Follows NIP-45.
-   * @param filters - List of Nostr filters.
-   * @returns The total number of matching events.
-   */
   async countEvents(filters: Filter[]): Promise<number> {
     if (filters.length === 0) return 0;
-
     const queries: string[] = [];
     const allParams: unknown[] = [];
 
@@ -287,60 +239,29 @@ export class SqliteEventRepository implements IEventRepository {
     const result = this.db.prepare(queryStr).get(...(allParams as any[])) as {
       count: number;
     };
-
-    void logger.trace`Counted ${result?.count ?? 0} events`;
     return result?.count ?? 0;
   }
 
-  /**
-   * Queries events matching a single Nostr filter.
-   * @param filter - The Nostr filter.
-   * @returns An async iterator of matching Nostr events.
-   */
   async *queryEvents(filter: Filter): AsyncIterableIterator<Event> {
     const { clause, params } = this.buildWhereClause(filter);
-    void logger.trace`Querying events: ${clause} (params: ${JSON.stringify(params)})`;
-    let baseQuery = `SELECT id, pubkey, created_at, kind, content, sig FROM events ${clause} ORDER BY created_at DESC`;
+    let baseQuery = `SELECT event_json FROM events ${clause} ORDER BY created_at DESC`;
     if (filter.limit !== undefined) {
       baseQuery += ` LIMIT ?`;
       params.push(filter.limit);
     }
 
-    const queryStr = `
-      SELECT
-        e.id,
-        e.pubkey,
-        e.created_at,
-        e.kind,
-        e.content,
-        e.sig,
-        (SELECT json_group_array(json_array(name, value)) FROM tags WHERE event_id = e.id) AS tags_json
-      FROM (${baseQuery}) e
-      ORDER BY e.created_at DESC
-    `;
-
-    const rows = this.db.prepare(queryStr).iterate(...(params as any[])) as IterableIterator<
-      EventRow & { tags_json: string }
-    >;
-
-    for (const row of rows) {
-      yield {
-        id: row.id,
-        pubkey: row.pubkey,
-        created_at: row.created_at,
-        kind: row.kind,
-        content: row.content,
-        sig: row.sig,
-        tags: JSON.parse(row.tags_json),
-      };
+    const stmt = this.db.prepare(baseQuery);
+    try {
+      for (const row of stmt.iterate(...(params as any[])) as IterableIterator<{
+        event_json: string;
+      }>) {
+        yield JSON.parse(row.event_json);
+      }
+    } finally {
+      stmt.finalize();
     }
   }
 
-  /**
-   * Queries events for negentropy sync.
-   * @param filter - The Nostr filter.
-   * @returns An async iterator of basic event info (id and created_at).
-   */
   async *queryEventsForSync(filter: Filter): AsyncIterableIterator<ExistingRow> {
     const { clause, params } = this.buildWhereClause(filter);
     const queryStr = `
@@ -353,19 +274,15 @@ export class SqliteEventRepository implements IEventRepository {
     if (filter.limit) {
       params.push(filter.limit);
     }
-    const rows = this.db
-      .prepare(queryStr)
-      .iterate(...(params as any[])) as IterableIterator<ExistingRow>;
-
-    let count = 0;
-    for (const row of rows) {
-      yield row;
-      count++;
+    const stmt = this.db.prepare(queryStr);
+    try {
+      for (const row of stmt.iterate(...(params as any[])) as IterableIterator<ExistingRow>) {
+        yield row;
+      }
+    } finally {
+      stmt.finalize();
     }
-    void logger.trace`Sync query returned ${count} events`;
   }
-
-  // --- Private Helper Methods ---
 
   private toSqlCondition(c: FilterCondition): SqlCondition[] {
     if ("sql" in c) return c.params.length > 0 || c.sql.includes("expiration") ? [c] : [];
@@ -373,12 +290,12 @@ export class SqliteEventRepository implements IEventRepository {
     if (Array.isArray(c.val)) {
       return [
         {
-          sql: `${c.col} IN (SELECT value FROM json_each(?))`,
+          sql: `events.${c.col} IN (SELECT value FROM json_each(?))`,
           params: [JSON.stringify(c.val)],
         },
       ];
     }
-    return [{ sql: `${c.col} ${c.op ?? "="} ?`, params: [c.val] }];
+    return [{ sql: `events.${c.col} ${c.op ?? "="} ?`, params: [c.val] }];
   }
 
   private finalizeConditions(conditions: SqlCondition[]) {
@@ -402,11 +319,11 @@ export class SqliteEventRepository implements IEventRepository {
         sql: "events.id NOT IN (SELECT event_id FROM tags WHERE name = 'expiration' AND CAST(value AS INTEGER) < ?)",
         params: [now],
       },
-      { col: "events.id", val: filter.ids },
-      { col: "events.pubkey", val: filter.authors },
-      { col: "events.kind", val: filter.kinds },
-      { col: "events.created_at", op: ">=", val: filter.since },
-      { col: "events.created_at", op: "<=", val: filter.until },
+      { col: "id", val: filter.ids },
+      { col: "pubkey", val: filter.authors },
+      { col: "kind", val: filter.kinds },
+      { col: "created_at", op: ">=", val: filter.since },
+      { col: "created_at", op: "<=", val: filter.until },
       ...Object.entries(filter).flatMap(([k, v]): FilterCondition[] => {
         if (!k.startsWith("#") || !Array.isArray(v) || v.length === 0) return [];
         return [

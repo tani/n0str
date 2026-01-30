@@ -355,6 +355,10 @@ export class NostrMessageHandler {
       const storage = new NegentropyStorageVector();
 
       for await (const event of this.repository.queryEventsForSync(filter)) {
+        if (abortController.signal.aborted) {
+          void logger.trace`NEG-OPEN query for ${subId} aborted`;
+          return;
+        }
         storage.insert(event.created_at, event.id);
       }
       storage.seal();
