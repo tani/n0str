@@ -4,8 +4,14 @@ import { WebSocketManager } from "../src/handlers/websocket.ts";
 describe("websocket coverage", () => {
   test("WebSocketManager tracks clients", () => {
     const manager = new WebSocketManager();
-    const ws1 = { send: () => {} } as any;
-    const ws2 = { send: () => {} } as any;
+    const ws1 = {
+      send: () => {},
+      data: { subscriptions: new Map(), negSubscriptions: new Map() },
+    } as any;
+    const ws2 = {
+      send: () => {},
+      data: { subscriptions: new Map(), negSubscriptions: new Map() },
+    } as any;
 
     manager.addClient(ws1);
     expect(manager.getClientCount()).toBe(1);
@@ -47,14 +53,32 @@ describe("websocket coverage", () => {
     const ws1 = {
       send: (msg: string) => sent1.push(msg),
       data: {
-        subscriptions: new Map([["sub1", { filters: [{ kinds: [1] }], subIdJson: '"sub1"' }]]),
+        subscriptions: new Map([
+          [
+            "sub1",
+            {
+              filters: [{ kinds: [1] }],
+              subIdJson: '"sub1"',
+              abortController: new AbortController(),
+            },
+          ],
+        ]),
       },
     } as any;
 
     const ws2 = {
       send: (msg: string) => sent2.push(msg),
       data: {
-        subscriptions: new Map([["sub2", { filters: [{ kinds: [2] }], subIdJson: '"sub2"' }]]),
+        subscriptions: new Map([
+          [
+            "sub2",
+            {
+              filters: [{ kinds: [2] }],
+              subIdJson: '"sub2"',
+              abortController: new AbortController(),
+            },
+          ],
+        ]),
       },
     } as any;
 

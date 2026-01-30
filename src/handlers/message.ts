@@ -200,11 +200,20 @@ export class NostrMessageHandler {
       ws.send(JSON.stringify(["CLOSED", subId, "error: too many filters"]));
       return;
     }
+    // If subscription exists, abort the previous one
+    const existing = ws.data.subscriptions.get(subId);
+    if (existing) {
+      existing.abortController.abort();
+      void logger.trace`Aborted existing subscription: ${subId}`;
+    }
+
+    const abortController = new AbortController();
     const bloom = this.buildBloomFilter(filters);
     ws.data.subscriptions.set(subId, {
       filters,
       bloom,
       subIdJson: JSON.stringify(subId),
+      abortController,
     });
     void logger.trace`Subscription created: ${subId} (Bloom: ${!!bloom})`;
 
@@ -218,6 +227,10 @@ export class NostrMessageHandler {
         filter.limit = relayInfo.limitation.max_limit;
       }
       for await (const event of this.repository.queryEvents(filter)) {
+        if (abortController.signal.aborted) {
+          void logger.trace`Historical query for ${subId} aborted`;
+          return;
+        }
         if (!sentEventIds || !sentEventIds.has(event.id)) {
           ws.send(JSON.stringify(["EVENT", subId, event]));
           sentEventIds?.add(event.id);
@@ -306,8 +319,12 @@ export class NostrMessageHandler {
    */
   private handleClose(ws: ServerWebSocket<ClientData>, payload: any[]) {
     const subId = payload[0] as string;
-    ws.data.subscriptions.delete(subId);
-    void logger.trace`Subscription closed: ${subId}`;
+    const sub = ws.data.subscriptions.get(subId);
+    if (sub) {
+      sub.abortController.abort();
+      ws.data.subscriptions.delete(subId);
+      void logger.trace`Subscription closed and aborted: ${subId}`;
+    }
   }
 
   /**
@@ -318,10 +335,14 @@ export class NostrMessageHandler {
   private async handleNegOpen(ws: ServerWebSocket<ClientData>, args: any[]) {
     const [subId, filter, initialMessage] = args;
 
-    if (ws.data.negSubscriptions.has(subId)) {
+    const existing = ws.data.negSubscriptions.get(subId);
+    if (existing) {
       void logger.debug`Replacing existing neg subscription: ${subId}`;
+      existing.abortController.abort();
       ws.data.negSubscriptions.delete(subId);
     }
+
+    const abortController = new AbortController();
 
     try {
       void logger.trace`NEG-OPEN for ${subId}`;
@@ -342,7 +363,10 @@ export class NostrMessageHandler {
       const result = await neg.reconcile(initialMessage);
       const outputMessage = result[0];
 
-      ws.data.negSubscriptions.set(subId, neg);
+      ws.data.negSubscriptions.set(subId, {
+        instance: neg,
+        abortController,
+      });
 
       if (outputMessage) {
         ws.send(JSON.stringify(["NEG-MSG", subId, outputMessage]));
@@ -363,16 +387,16 @@ export class NostrMessageHandler {
    */
   private async handleNegMsg(ws: ServerWebSocket<ClientData>, args: any[]) {
     const [subId, message] = args;
-    const neg = ws.data.negSubscriptions.get(subId);
+    const negSub = ws.data.negSubscriptions.get(subId);
 
-    if (!neg) {
+    if (!negSub) {
       void logger.debug`NEG-MSG for unknown subscription: ${subId}`;
       ws.send(JSON.stringify(["NEG-ERR", subId, "closed: subscription not found"]));
       return;
     }
 
     try {
-      const result = await neg.reconcile(message);
+      const result = await negSub.instance.reconcile(message);
       const outputMessage = result[0];
       if (outputMessage) {
         ws.send(JSON.stringify(["NEG-MSG", subId, outputMessage]));
@@ -390,7 +414,11 @@ export class NostrMessageHandler {
    */
   private handleNegClose(ws: ServerWebSocket<ClientData>, args: any[]) {
     const [subId] = args;
-    ws.data.negSubscriptions.delete(subId);
-    void logger.trace`NEG-CLOSE for ${subId}`;
+    const negSub = ws.data.negSubscriptions.get(subId);
+    if (negSub) {
+      negSub.abortController.abort();
+      ws.data.negSubscriptions.delete(subId);
+      void logger.trace`NEG-CLOSE for ${subId}`;
+    }
   }
 }

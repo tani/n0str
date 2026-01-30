@@ -44,6 +44,7 @@ describe("Broadcast Stress Test", () => {
           filters: [{ authors: [author] }],
           bloom,
           subIdJson: JSON.stringify(subId),
+          abortController: new AbortController(),
         });
       }
       manager.addClient(ws);
@@ -93,6 +94,7 @@ describe("Broadcast Stress Test", () => {
         ws.data.subscriptions.set(subId, {
           filters: [{ kinds: [1] }],
           subIdJson: JSON.stringify(subId),
+          abortController: new AbortController(),
         });
       }
       manager.addClient(ws);

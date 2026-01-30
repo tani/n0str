@@ -73,7 +73,11 @@ describe.each(engines)("Engine: %s > relay coverage", () => {
     expect(html).toMatch(/<span[^>]*id="total-events"[^>]*>\s*1\s*<\/span>/);
 
     const closeSubId = "sub-close";
-    ws.data.subscriptions.set(closeSubId, []);
+    ws.data.subscriptions.set(closeSubId, {
+      filters: [],
+      subIdJson: JSON.stringify(closeSubId),
+      abortController: new AbortController(),
+    });
     await relay.websocket.message(ws, JSON.stringify(["CLOSE", closeSubId]));
     expect(ws.data.subscriptions.has(closeSubId)).toBe(false);
 

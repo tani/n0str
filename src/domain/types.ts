@@ -40,13 +40,16 @@ export interface IEventRepository {
   [Symbol.asyncDispose](): Promise<void>;
 }
 
-/**
- * Metadata for a single subscription, including its filters and a Bloom Filter for optimization.
- */
 export type SubscriptionData = {
   filters: Filter[];
   bloom?: SimpleBloomFilter;
   subIdJson: string; // Pre-serialized subId for broadcast speed
+  abortController: AbortController;
+};
+
+export type NegentropySubscription = {
+  instance: any; // Negentropy instance
+  abortController: AbortController;
 };
 
 /**
@@ -57,5 +60,5 @@ export type ClientData = {
   challenge: string;
   relayUrl: string;
   pubkey?: string;
-  negSubscriptions: Map<string, any>;
+  negSubscriptions: Map<string, NegentropySubscription>;
 };
