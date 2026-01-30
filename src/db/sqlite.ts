@@ -5,19 +5,7 @@ import { logger } from "../utils/logger.ts";
 import { segmentForFts, segmentSearchQuery } from "./fts.ts";
 import type { IEventRepository, ExistingRow } from "../domain/types.ts";
 
-type EventRow = {
-  id: string;
-  pubkey: string;
-  created_at: number;
-  kind: number;
-  content: string;
-  sig: string;
-};
-
-// Removed TagRow type to avoid allocations in saveEvent
-
-type SqlCondition = { sql: string; params: unknown[] };
-type FilterCondition = SqlCondition | { col: string; val: unknown; op?: string };
+// Redundant types removed for simplification
 
 /**
  * SqliteEventRepository implements IEventRepository using Bun's native SQLite (bun:sqlite).
@@ -284,64 +272,61 @@ export class SqliteEventRepository implements IEventRepository {
     }
   }
 
-  private toSqlCondition(c: FilterCondition): SqlCondition[] {
-    if ("sql" in c) return c.params.length > 0 || c.sql.includes("expiration") ? [c] : [];
-    if (c.val === undefined || (Array.isArray(c.val) && c.val.length === 0)) return [];
-    if (Array.isArray(c.val)) {
-      return [
-        {
-          sql: `events.${c.col} IN (SELECT value FROM json_each(?))`,
-          params: [JSON.stringify(c.val)],
-        },
-      ];
-    }
-    return [{ sql: `events.${c.col} ${c.op ?? "="} ?`, params: [c.val] }];
-  }
+  // --- Private Helper Methods ---
 
-  private finalizeConditions(conditions: SqlCondition[]) {
+  private buildWhereClause(filter: Filter) {
+    const clauses: string[] = [];
     const params: unknown[] = [];
-    const clauses = conditions.map(({ sql, params: p }) => {
-      params.push(...p);
-      return sql;
-    });
+
+    // NIP-40: Expiration
+    clauses.push(
+      "events.id NOT IN (SELECT event_id FROM tags WHERE name = 'expiration' AND CAST(value AS INTEGER) < ?)",
+    );
+    params.push(Math.floor(Date.now() / 1000));
+
+    if (filter.ids?.length) {
+      clauses.push(`events.id IN (SELECT value FROM json_each(?))`);
+      params.push(JSON.stringify(filter.ids));
+    }
+    if (filter.authors?.length) {
+      clauses.push(`events.pubkey IN (SELECT value FROM json_each(?))`);
+      params.push(JSON.stringify(filter.authors));
+    }
+    if (filter.kinds?.length) {
+      clauses.push(`events.kind IN (SELECT value FROM json_each(?))`);
+      params.push(JSON.stringify(filter.kinds));
+    }
+    if (filter.since !== undefined) {
+      clauses.push("events.created_at >= ?");
+      params.push(filter.since);
+    }
+    if (filter.until !== undefined) {
+      clauses.push("events.created_at <= ?");
+      params.push(filter.until);
+    }
+
+    // NIP-12: Tag Queries
+    for (const [key, values] of Object.entries(filter)) {
+      if (key.startsWith("#") && Array.isArray(values) && values.length > 0) {
+        clauses.push(
+          `events.id IN (SELECT event_id FROM tags WHERE name = ? AND value IN (SELECT value FROM json_each(?)))`,
+        );
+        params.push(key.slice(1), JSON.stringify(values));
+      }
+    }
+
+    // NIP-50: Search
+    if (filter.search) {
+      const searchQuery = segmentSearchQuery(filter.search);
+      if (searchQuery) {
+        clauses.push("events.id IN (SELECT id FROM events_fts WHERE events_fts MATCH ?)");
+        params.push(searchQuery);
+      }
+    }
+
     return {
       clause: clauses.length > 0 ? `WHERE ${clauses.join(" AND ")}` : "",
       params,
     };
-  }
-
-  private buildWhereClause(filter: Filter) {
-    const now = Math.floor(Date.now() / 1000);
-    const searchQuery = filter.search ? segmentSearchQuery(filter.search) : "";
-
-    const rawConditions: FilterCondition[] = [
-      {
-        sql: "events.id NOT IN (SELECT event_id FROM tags WHERE name = 'expiration' AND CAST(value AS INTEGER) < ?)",
-        params: [now],
-      },
-      { col: "id", val: filter.ids },
-      { col: "pubkey", val: filter.authors },
-      { col: "kind", val: filter.kinds },
-      { col: "created_at", op: ">=", val: filter.since },
-      { col: "created_at", op: "<=", val: filter.until },
-      ...Object.entries(filter).flatMap(([k, v]): FilterCondition[] => {
-        if (!k.startsWith("#") || !Array.isArray(v) || v.length === 0) return [];
-        return [
-          {
-            sql: `events.id IN (SELECT event_id FROM tags WHERE name = ? AND value IN (SELECT value FROM json_each(?)))`,
-            params: [k.slice(1), JSON.stringify(v)],
-          },
-        ];
-      }),
-    ];
-
-    if (searchQuery) {
-      rawConditions.push({
-        sql: "events.id IN (SELECT id FROM events_fts WHERE events_fts MATCH ?)",
-        params: [searchQuery],
-      });
-    }
-
-    return this.finalizeConditions(rawConditions.flatMap((c) => this.toSqlCondition(c)));
   }
 }
