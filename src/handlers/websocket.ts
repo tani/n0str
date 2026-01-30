@@ -88,4 +88,22 @@ export class WebSocketManager {
   public send(ws: ServerWebSocket<ClientData>, message: unknown[]): void {
     ws.send(JSON.stringify(message));
   }
+
+  /**
+   * Returns statistics about current WebSocket connections and subscriptions.
+   * @returns An object containing client and subscription counts.
+   */
+  public getStats() {
+    let totalSubscriptions = 0;
+    let totalNegSubscriptions = 0;
+    for (const client of this.clients) {
+      totalSubscriptions += client.data.subscriptions.size;
+      totalNegSubscriptions += client.data.negSubscriptions.size;
+    }
+    return {
+      clients: this.clients.size,
+      subscriptions: totalSubscriptions,
+      negSubscriptions: totalNegSubscriptions,
+    };
+  }
 }

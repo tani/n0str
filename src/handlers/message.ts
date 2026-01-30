@@ -206,6 +206,7 @@ export class NostrMessageHandler {
       bloom,
       subIdJson: JSON.stringify(subId),
     });
+    void logger.trace`Subscription created: ${subId} (Bloom: ${!!bloom})`;
 
     // Send historical events
     const useSet = filters.length > 1;

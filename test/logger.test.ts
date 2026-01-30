@@ -127,6 +127,6 @@ describe.each(engines)("Engine: %s > logger", () => {
 
   test("handles direct log calls", () => {
     logger.info("direct log", { foo: "bar" });
-    expect(infoSpy).toHaveBeenCalledWith("direct log", { foo: "bar" });
+    expect(infoSpy).toHaveBeenCalledWith('[INFO] direct log {"foo":"bar"}');
   });
 });

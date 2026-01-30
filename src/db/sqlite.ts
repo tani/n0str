@@ -107,6 +107,7 @@ export class SqliteEventRepository implements IEventRepository {
    * @param event - The Nostr event to save.
    */
   async saveEvent(event: Event): Promise<void> {
+    void logger.trace`Saving event ${event.id} (kind: ${event.kind})`;
     this.db.transaction(() => {
       // Logic for replaceable and addressable events
       if (isReplaceable(event.kind)) {
@@ -298,6 +299,7 @@ export class SqliteEventRepository implements IEventRepository {
    */
   async *queryEvents(filter: Filter): AsyncIterableIterator<Event> {
     const { clause, params } = this.buildWhereClause(filter);
+    void logger.trace`Querying events: ${clause} (params: ${JSON.stringify(params)})`;
     let baseQuery = `SELECT id, pubkey, created_at, kind, content, sig FROM events ${clause} ORDER BY created_at DESC`;
     if (filter.limit !== undefined) {
       baseQuery += ` LIMIT ?`;

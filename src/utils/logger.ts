@@ -45,9 +45,9 @@ function createLogFn(level: LogLevel): LogFn {
       return;
     }
 
+    let result = "";
     if (Array.isArray(msg) && (msg as any).raw) {
       const strings = msg as TemplateStringsArray;
-      let result = "";
       for (let i = 0; i < strings.length; i++) {
         result += strings[i];
         if (i < args.length) {
@@ -65,10 +65,23 @@ function createLogFn(level: LogLevel): LogFn {
           }
         }
       }
-      console[consoleMethod](result);
     } else {
-      console[consoleMethod](msg as string, ...args);
+      result = msg as string;
+      for (const arg of args) {
+        if (arg instanceof Error) {
+          result += " " + (arg.stack || arg.message);
+        } else if (typeof arg === "object" && arg !== null) {
+          try {
+            result += " " + JSON.stringify(arg);
+          } catch {
+            result += " " + String(arg);
+          }
+        } else {
+          result += " " + String(arg);
+        }
+      }
     }
+    console[consoleMethod](`[${level.toUpperCase()}] ${result}`);
   };
 }
 
@@ -82,3 +95,14 @@ export const logger = {
   error: createLogFn("error"),
   trace: createLogFn("trace"),
 };
+
+/**
+ * Logs the current memory usage of the process.
+ */
+export function logMemoryUsage(context: string = "") {
+  const used = process.memoryUsage();
+  const format = (bytes: number) => `${Math.round((bytes / 1024 / 1024) * 100) / 100} MB`;
+  void logger.debug`Memory Usage ${context}: RSS=${format(used.rss)}, HeapTotal=${format(
+    used.heapTotal,
+  )}, HeapUsed=${format(used.heapUsed)}, External=${format(used.external)}`;
+}

@@ -1,6 +1,6 @@
 import type { ServerWebSocket } from "bun";
 import { relayInfo } from "../config/config.ts";
-import { logger } from "../utils/logger.ts";
+import { logger, logMemoryUsage } from "../utils/logger.ts";
 import type { ClientData } from "../domain/types.ts";
 import type { IEventRepository } from "../domain/types.ts";
 import { WebSocketManager } from "../handlers/websocket.ts";
@@ -16,6 +16,7 @@ export class NostrRelay {
   private wsManager: WebSocketManager;
   private messageHandler: NostrMessageHandler;
   private cleanupInterval: ReturnType<typeof setInterval> | null = null;
+  private healthInterval: ReturnType<typeof setInterval> | null = null;
   private _port: number;
 
   /**
@@ -45,6 +46,7 @@ export class NostrRelay {
   public async init() {
     await this.repository.init();
     this.startCleanupTask();
+    this.startHealthTask();
   }
 
   /**
@@ -62,12 +64,28 @@ export class NostrRelay {
   }
 
   /**
-   * Stops the periodic cleanup task.
+   * Starts periodic memory and health status logging.
+   */
+  private startHealthTask() {
+    this.healthInterval = setInterval(() => {
+      const stats = this.wsManager.getStats();
+      logMemoryUsage(
+        `Clients=${stats.clients}, Subs=${stats.subscriptions}, NegSubs=${stats.negSubscriptions}`,
+      );
+    }, 60 * 1000); // Every minute
+  }
+
+  /**
+   * Stops the periodic cleanup and health tasks.
    */
   public stop() {
     if (this.cleanupInterval) {
       clearInterval(this.cleanupInterval);
       this.cleanupInterval = null;
+    }
+    if (this.healthInterval) {
+      clearInterval(this.healthInterval);
+      this.healthInterval = null;
     }
   }
 
