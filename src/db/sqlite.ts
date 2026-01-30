@@ -373,8 +373,8 @@ export class SqliteEventRepository implements IEventRepository {
     if (Array.isArray(c.val)) {
       return [
         {
-          sql: `${c.col} IN (${c.val.map(() => "?").join(", ")})`,
-          params: c.val,
+          sql: `${c.col} IN (SELECT value FROM json_each(?))`,
+          params: [JSON.stringify(c.val)],
         },
       ];
     }
@@ -407,16 +407,15 @@ export class SqliteEventRepository implements IEventRepository {
       { col: "events.kind", val: filter.kinds },
       { col: "events.created_at", op: ">=", val: filter.since },
       { col: "events.created_at", op: "<=", val: filter.until },
-      ...Object.entries(filter).flatMap(([k, v]): FilterCondition[] =>
-        k.startsWith("#") && Array.isArray(v) && v.length > 0
-          ? [
-              {
-                sql: `events.id IN (SELECT event_id FROM tags WHERE name = ? AND value IN (${v.map(() => "?").join(", ")}))`,
-                params: [k.slice(1), ...v],
-              },
-            ]
-          : [],
-      ),
+      ...Object.entries(filter).flatMap(([k, v]): FilterCondition[] => {
+        if (!k.startsWith("#") || !Array.isArray(v) || v.length === 0) return [];
+        return [
+          {
+            sql: `events.id IN (SELECT event_id FROM tags WHERE name = ? AND value IN (SELECT value FROM json_each(?)))`,
+            params: [k.slice(1), JSON.stringify(v)],
+          },
+        ];
+      }),
     ];
 
     if (searchQuery) {
