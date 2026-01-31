@@ -1,4 +1,4 @@
-import { Database } from "bun:sqlite";
+import { Database, Statement, type SQLQueryBindings } from "bun:sqlite";
 import type { Event, Filter } from "nostr-tools";
 import { isAddressable, isReplaceable } from "../domain/nostr.ts";
 import { logger } from "../utils/logger.ts";
@@ -16,6 +16,16 @@ export class SqliteEventRepository implements IEventRepository {
   public db: Database;
   private closed = false;
 
+  // Cached statements for performance and memory optimization
+  private stmtReplaceableDelete!: Statement;
+  private stmtReplaceableExists!: Statement;
+  private stmtAddressableDelete!: Statement;
+  private stmtAddressableExists!: Statement;
+  private stmtInsertEvent!: Statement;
+  private stmtInsertFts!: Statement;
+  private stmtDeleteByIds!: Statement;
+  private stmtDeleteByIdentifier!: Statement;
+
   constructor(dbPath: string) {
     this.db = new Database(dbPath);
   }
@@ -23,6 +33,17 @@ export class SqliteEventRepository implements IEventRepository {
   async close(): Promise<void> {
     if (this.closed) return;
     this.closed = true;
+
+    // Finalize cached statements
+    this.stmtReplaceableDelete?.finalize();
+    this.stmtReplaceableExists?.finalize();
+    this.stmtAddressableDelete?.finalize();
+    this.stmtAddressableExists?.finalize();
+    this.stmtInsertEvent?.finalize();
+    this.stmtInsertFts?.finalize();
+    this.stmtDeleteByIds?.finalize();
+    this.stmtDeleteByIdentifier?.finalize();
+
     this.db.close();
   }
 
@@ -33,6 +54,9 @@ export class SqliteEventRepository implements IEventRepository {
   async init(): Promise<void> {
     this.db.run("PRAGMA journal_mode = WAL");
     this.db.run("PRAGMA foreign_keys = ON");
+    this.db.run("PRAGMA synchronous = NORMAL");
+    this.db.run("PRAGMA cache_size = -2000"); // Standard cache limit (~2MB)
+    this.db.run("PRAGMA mmap_size = 0"); // Disable mmap to keep RSS stable
 
     // Maximize JSON features: Use GENERATED columns and STRICT mode
     this.db.run(`
@@ -87,62 +111,92 @@ export class SqliteEventRepository implements IEventRepository {
         DELETE FROM events_fts WHERE id = old.id;
       END;
     `);
+
+    // Pre-prepare statements
+    this.stmtReplaceableDelete = this.db.prepare(
+      `DELETE FROM events WHERE kind = ? AND pubkey = ? AND (created_at < ? OR (created_at = ? AND id > ?))`,
+    );
+    this.stmtReplaceableExists = this.db.prepare(
+      `SELECT 1 FROM events WHERE kind = ? AND pubkey = ? AND (created_at > ? OR (created_at = ? AND id < ?)) LIMIT 1`,
+    );
+    this.stmtAddressableDelete = this.db.prepare(`
+      DELETE FROM events 
+      WHERE kind = ? 
+        AND pubkey = ? 
+        AND id IN (SELECT event_id FROM tags WHERE name = 'd' AND value = ?)
+        AND (created_at < ? OR (created_at = ? AND id > ?))
+    `);
+    this.stmtAddressableExists = this.db.prepare(`
+      SELECT 1 FROM events 
+      WHERE kind = ? 
+        AND pubkey = ? 
+        AND id IN (SELECT event_id FROM tags WHERE name = 'd' AND value = ?)
+        AND (created_at > ? OR (created_at = ? AND id < ?))
+      LIMIT 1
+    `);
+    this.stmtInsertEvent = this.db.prepare(
+      "INSERT INTO events (id, event_json) VALUES (?, ?) ON CONFLICT DO NOTHING",
+    );
+    this.stmtInsertFts = this.db.prepare("INSERT INTO events_fts(id, content) VALUES (?, ?)");
+    this.stmtDeleteByIds = this.db.prepare(
+      `DELETE FROM events WHERE pubkey = ? AND id IN (SELECT value FROM json_each(?))`,
+    );
+    this.stmtDeleteByIdentifier = this.db.prepare(`
+      DELETE FROM events
+      WHERE kind = ?
+        AND pubkey = ?
+        AND created_at <= ?
+        AND id IN (SELECT event_id FROM tags WHERE name = 'd' AND value = ?)
+    `);
   }
 
   async saveEvent(event: Event): Promise<void> {
     void logger.trace`Saving event ${event.id} (kind: ${event.kind})`;
     this.db.transaction(() => {
       if (isReplaceable(event.kind)) {
-        this.db
-          .prepare(
-            `DELETE FROM events WHERE kind = ? AND pubkey = ? AND (created_at < ? OR (created_at = ? AND id > ?))`,
-          )
-          .run(event.kind, event.pubkey, event.created_at, event.created_at, event.id);
+        this.stmtReplaceableDelete.run(
+          event.kind,
+          event.pubkey,
+          event.created_at,
+          event.created_at,
+          event.id,
+        );
 
-        const newerExists = this.db
-          .prepare(
-            `SELECT 1 FROM events WHERE kind = ? AND pubkey = ? AND (created_at > ? OR (created_at = ? AND id < ?)) LIMIT 1`,
-          )
-          .get(event.kind, event.pubkey, event.created_at, event.created_at, event.id);
+        const newerExists = this.stmtReplaceableExists.get(
+          event.kind,
+          event.pubkey,
+          event.created_at,
+          event.created_at,
+          event.id,
+        );
         if (newerExists) return;
       } else if (isAddressable(event.kind)) {
         const dTag = event.tags.find((t) => t[0] === "d")?.[1] || "";
-        this.db
-          .prepare(
-            `
-          DELETE FROM events 
-          WHERE kind = ? 
-            AND pubkey = ? 
-            AND id IN (SELECT event_id FROM tags WHERE name = 'd' AND value = ?)
-            AND (created_at < ? OR (created_at = ? AND id > ?))
-        `,
-          )
-          .run(event.kind, event.pubkey, dTag, event.created_at, event.created_at, event.id);
+        this.stmtAddressableDelete.run(
+          event.kind,
+          event.pubkey,
+          dTag,
+          event.created_at,
+          event.created_at,
+          event.id,
+        );
 
-        const newerExists = this.db
-          .prepare(
-            `
-          SELECT 1 FROM events 
-          WHERE kind = ? 
-            AND pubkey = ? 
-            AND id IN (SELECT event_id FROM tags WHERE name = 'd' AND value = ?)
-            AND (created_at > ? OR (created_at = ? AND id < ?))
-          LIMIT 1
-        `,
-          )
-          .get(event.kind, event.pubkey, dTag, event.created_at, event.created_at, event.id);
+        const newerExists = this.stmtAddressableExists.get(
+          event.kind,
+          event.pubkey,
+          dTag,
+          event.created_at,
+          event.created_at,
+          event.id,
+        );
         if (newerExists) return;
       }
 
-      const insertResult = this.db
-        .prepare("INSERT INTO events (id, event_json) VALUES (?, ?) ON CONFLICT DO NOTHING")
-        .run(event.id, JSON.stringify(event));
+      const insertResult = this.stmtInsertEvent.run(event.id, JSON.stringify(event));
 
       if (insertResult.changes > 0) {
         // FTS still needs manual segmenting for now
-        this.db
-          .prepare("INSERT INTO events_fts(id, content) VALUES (?, ?)")
-          .run(event.id, segmentForFts(event.content));
+        this.stmtInsertFts.run(event.id, segmentForFts(event.content));
       }
     })();
     void logger.trace`Saved event ${event.id}`;
@@ -164,9 +218,7 @@ export class SqliteEventRepository implements IEventRepository {
   ): Promise<void> {
     this.db.transaction(() => {
       if (eventIds.length > 0) {
-        this.db
-          .prepare(`DELETE FROM events WHERE pubkey = ? AND id IN (SELECT value FROM json_each(?))`)
-          .run(pubkey, JSON.stringify(eventIds));
+        this.stmtDeleteByIds.run(pubkey, JSON.stringify(eventIds));
       }
 
       for (const addr of identifiers) {
@@ -175,17 +227,7 @@ export class SqliteEventRepository implements IEventRepository {
         const kind = parseInt(parts[0]!);
         const dTag = parts[2]!;
 
-        this.db
-          .prepare(
-            `
-          DELETE FROM events
-          WHERE kind = ?
-            AND pubkey = ?
-            AND created_at <= ?
-            AND id IN (SELECT event_id FROM tags WHERE name = 'd' AND value = ?)
-        `,
-          )
-          .run(kind, pubkey, until, dTag);
+        this.stmtDeleteByIdentifier.run(kind, pubkey, until, dTag);
       }
     })();
   }
@@ -215,7 +257,7 @@ export class SqliteEventRepository implements IEventRepository {
   async countEvents(filters: Filter[]): Promise<number> {
     if (filters.length === 0) return 0;
     const queries: string[] = [];
-    const allParams: unknown[] = [];
+    const allParams: SQLQueryBindings[] = [];
 
     for (const filter of filters) {
       const { clause, params } = this.buildWhereClause(filter);
@@ -224,7 +266,7 @@ export class SqliteEventRepository implements IEventRepository {
     }
 
     const queryStr = `SELECT COUNT(*) as count FROM ( ${queries.join(" UNION ")} )`;
-    const result = this.db.prepare(queryStr).get(...(allParams as any[])) as {
+    const result = this.db.prepare(queryStr).get(...allParams) as {
       count: number;
     };
     return result?.count ?? 0;
@@ -240,7 +282,7 @@ export class SqliteEventRepository implements IEventRepository {
 
     const stmt = this.db.prepare(baseQuery);
     try {
-      for (const row of stmt.iterate(...(params as any[])) as IterableIterator<{
+      for (const row of stmt.iterate(...params) as IterableIterator<{
         event_json: string;
       }>) {
         yield JSON.parse(row.event_json);
@@ -264,7 +306,7 @@ export class SqliteEventRepository implements IEventRepository {
     }
     const stmt = this.db.prepare(queryStr);
     try {
-      for (const row of stmt.iterate(...(params as any[])) as IterableIterator<ExistingRow>) {
+      for (const row of stmt.iterate(...params) as IterableIterator<ExistingRow>) {
         yield row;
       }
     } finally {
@@ -276,7 +318,7 @@ export class SqliteEventRepository implements IEventRepository {
 
   private buildWhereClause(filter: Filter) {
     const clauses: string[] = [];
-    const params: unknown[] = [];
+    const params: SQLQueryBindings[] = [];
 
     // NIP-40: Expiration
     clauses.push(
