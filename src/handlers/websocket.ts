@@ -28,14 +28,17 @@ export class WebSocketManager {
    * @param ws - The server WebSocket connection.
    */
   public removeClient(ws: ServerWebSocket<ClientData>): void {
-    // Abort all active regular subscriptions
+    // Abort and clear all active regular subscriptions
     for (const sub of ws.data.subscriptions.values()) {
       sub.abortController.abort();
     }
-    // Abort all active negentropy subscriptions
+    ws.data.subscriptions.clear();
+
+    // Abort and clear all active negentropy subscriptions
     for (const negSub of ws.data.negSubscriptions.values()) {
       negSub.abortController.abort();
     }
+    ws.data.negSubscriptions.clear();
 
     this.clients.delete(ws);
     void logger.debug`Client disconnected. Total clients: ${this.clients.size}`;

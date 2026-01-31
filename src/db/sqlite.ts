@@ -235,9 +235,8 @@ export class SqliteEventRepository implements IEventRepository {
   async cleanupExpiredEvents(): Promise<void> {
     const now = Math.floor(Date.now() / 1000);
     this.db.transaction(() => {
-      const result = this.db
-        .prepare(
-          `
+      const stmt = this.db.prepare(
+        `
         DELETE FROM events
         WHERE id IN (
           SELECT event_id
@@ -246,10 +245,14 @@ export class SqliteEventRepository implements IEventRepository {
           AND CAST(value AS INTEGER) < ?
         )
       `,
-        )
-        .run(now);
-      if (result.changes > 0) {
-        void logger.info`Cleaned up ${result.changes} expired events`;
+      );
+      try {
+        const result = stmt.run(now);
+        if (result.changes > 0) {
+          void logger.info`Cleaned up ${result.changes} expired events`;
+        }
+      } finally {
+        stmt.finalize();
       }
     })();
   }
@@ -266,10 +269,15 @@ export class SqliteEventRepository implements IEventRepository {
     }
 
     const queryStr = `SELECT COUNT(*) as count FROM ( ${queries.join(" UNION ")} )`;
-    const result = this.db.prepare(queryStr).get(...allParams) as {
-      count: number;
-    };
-    return result?.count ?? 0;
+    const stmt = this.db.prepare(queryStr);
+    try {
+      const result = stmt.get(...allParams) as {
+        count: number;
+      };
+      return result?.count ?? 0;
+    } finally {
+      stmt.finalize();
+    }
   }
 
   async *queryEvents(filter: Filter): AsyncIterableIterator<Event> {
