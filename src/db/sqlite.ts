@@ -80,19 +80,11 @@ export class SqliteEventRepository implements IEventRepository {
       ) STRICT;
     `);
 
-    this.db.run(
-      "CREATE INDEX IF NOT EXISTS idx_events_pubkey ON events(pubkey);",
-    );
-    this.db.run(
-      "CREATE INDEX IF NOT EXISTS idx_events_created_at ON events(created_at);",
-    );
+    this.db.run("CREATE INDEX IF NOT EXISTS idx_events_pubkey ON events(pubkey);");
+    this.db.run("CREATE INDEX IF NOT EXISTS idx_events_created_at ON events(created_at);");
     this.db.run("CREATE INDEX IF NOT EXISTS idx_events_kind ON events(kind);");
-    this.db.run(
-      "CREATE INDEX IF NOT EXISTS idx_tags_event_id ON tags(event_id);",
-    );
-    this.db.run(
-      "CREATE INDEX IF NOT EXISTS idx_tags_name_value ON tags(name, value);",
-    );
+    this.db.run("CREATE INDEX IF NOT EXISTS idx_tags_event_id ON tags(event_id);");
+    this.db.run("CREATE INDEX IF NOT EXISTS idx_tags_name_value ON tags(name, value);");
 
     // NIP-50: FTS5 Search Capability
     this.db.run(`
@@ -145,9 +137,7 @@ export class SqliteEventRepository implements IEventRepository {
     this.stmtInsertEvent = this.db.prepare(
       "INSERT INTO events (id, event_json) VALUES (?, ?) ON CONFLICT DO NOTHING",
     );
-    this.stmtInsertFts = this.db.prepare(
-      "INSERT INTO events_fts(id, content) VALUES (?, ?)",
-    );
+    this.stmtInsertFts = this.db.prepare("INSERT INTO events_fts(id, content) VALUES (?, ?)");
     this.stmtDeleteByIds = this.db.prepare(
       `DELETE FROM events WHERE pubkey = ? AND id IN (SELECT value FROM json_each(?))`,
     );
@@ -202,10 +192,7 @@ export class SqliteEventRepository implements IEventRepository {
         if (newerExists) return;
       }
 
-      const insertResult = this.stmtInsertEvent.run(
-        event.id,
-        JSON.stringify(event),
-      );
+      const insertResult = this.stmtInsertEvent.run(event.id, JSON.stringify(event));
 
       if (insertResult.changes > 0) {
         // FTS still needs manual segmenting for now
@@ -313,9 +300,7 @@ export class SqliteEventRepository implements IEventRepository {
     }
   }
 
-  async *queryEventsForSync(
-    filter: Filter,
-  ): AsyncIterableIterator<ExistingRow> {
+  async *queryEventsForSync(filter: Filter): AsyncIterableIterator<ExistingRow> {
     const { clause, params } = this.buildWhereClause(filter);
     const queryStr = `
       SELECT id, created_at
@@ -329,9 +314,7 @@ export class SqliteEventRepository implements IEventRepository {
     }
     const stmt = this.db.prepare(queryStr);
     try {
-      for (const row of stmt.iterate(
-        ...params,
-      ) as IterableIterator<ExistingRow>) {
+      for (const row of stmt.iterate(...params) as IterableIterator<ExistingRow>) {
         yield row;
       }
     } finally {
@@ -386,9 +369,7 @@ export class SqliteEventRepository implements IEventRepository {
     if (filter.search) {
       const searchQuery = segmentSearchQuery(filter.search);
       if (searchQuery) {
-        clauses.push(
-          "events.id IN (SELECT id FROM events_fts WHERE events_fts MATCH ?)",
-        );
+        clauses.push("events.id IN (SELECT id FROM events_fts WHERE events_fts MATCH ?)");
         params.push(searchQuery);
       }
     }
