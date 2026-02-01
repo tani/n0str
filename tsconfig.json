@@ -9,6 +9,7 @@
     "jsxFactory": "h",
     "jsxFragmentFactory": "Fragment",
     "allowJs": true,
+    "types": ["bun"],
 
     // Bundler mode
     "moduleResolution": "bundler",

@@ -37,6 +37,60 @@ function EventCard({ event }: { event: Event }) {
 }
 
 /**
+ * Renders a system monitor widget with an SVG graph.
+ */
+function SystemMonitor({
+  title,
+  id,
+  color,
+  unit = "",
+}: {
+  title: string;
+  id: string;
+  color: string;
+  unit?: string;
+}) {
+  return (
+    <div
+      className="bg-white p-3 shadow-sm rounded-3 mb-3 border-start border-4"
+      style={`border-color: ${color} !important`}
+    >
+      <div className="d-flex justify-content-between align-items-center mb-1">
+        <small
+          className="text-secondary fw-bold text-uppercase"
+          style="font-size: 0.7rem; letter-spacing: 0.05rem;"
+        >
+          {title}
+        </small>
+        <div>
+          <span className="fw-bold fs-5" id={`${id}-value`}>
+            0
+          </span>
+          <small className="text-secondary ms-1 fw-bold">{unit}</small>
+        </div>
+      </div>
+      <div className="mt-1" style="height: 30px;">
+        <svg
+          viewBox="0 0 100 30"
+          preserveAspectRatio="none"
+          style="width: 100%; height: 100%; display: block; overflow: visible;"
+        >
+          <path
+            id={`${id}-path`}
+            d="M0 30 L100 30"
+            fill="none"
+            stroke={color}
+            stroke-width="2"
+            stroke-linecap="round"
+            stroke-linejoin="round"
+          />
+        </svg>
+      </div>
+    </div>
+  );
+}
+
+/**
  * Renders the welcome page HTML.
  */
 export function renderWelcomePage(
@@ -44,6 +98,8 @@ export function renderWelcomePage(
   info: RelayInfo,
   relayUrl: string,
   totalEvents: number = 0,
+  connectedClients: number = 0,
+  initialHeap: number = 0,
 ): string {
   const title = info.name || "n0str Relay";
   const description = info.description || "A simple, reliable Nostr relay.";
@@ -65,6 +121,8 @@ export function renderWelcomePage(
             .event-content { white-space: pre-wrap; word-break: break-word; font-size: 0.95rem; }
             .animate-fade-in { animation: fadeIn 0.4s ease-out; }
             @keyframes fadeIn { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: translateY(0); } }
+            #feed::-webkit-scrollbar { width: 4px; }
+            #feed::-webkit-scrollbar-thumb { background: #ccc; border-radius: 4px; }
           `}
           </style>
         </head>
@@ -77,11 +135,11 @@ export function renderWelcomePage(
                   <p className="lead text-secondary mb-0">{description}</p>
                 </div>
                 <div className="col-md-4 text-md-end text-center mt-3 mt-md-0">
-                  <div className="d-inline-flex align-items-center p-2 bg-light rounded-3 border">
-                    <code id="relay-url" className="me-2 text-primary">
+                  <div className="d-inline-flex align-items-center p-2 bg-light rounded-3 border shadow-sm">
+                    <code id="relay-url" className="me-2 text-primary" style="font-size: 1.1rem;">
                       {relayUrl}
                     </code>
-                    <button className="btn btn-sm btn-primary px-3" onclick="copyUrl()">
+                    <button className="btn btn-sm btn-primary px-3 fw-bold" onclick="copyUrl()">
                       Copy
                     </button>
                   </div>
@@ -102,7 +160,19 @@ export function renderWelcomePage(
                 )}
               </section>
               <aside className="col-lg-4">
-                <div className="bg-white p-4 shadow-sm rounded-3 mb-4">
+                <div className="mb-4">
+                  <h6
+                    className="text-secondary fw-bold text-uppercase mb-3"
+                    style="font-size: 0.75rem;"
+                  >
+                    System Monitor
+                  </h6>
+                  <SystemMonitor title="Active Connections" id="connections" color="#0d6efd" />
+                  <SystemMonitor title="Heap Memory" id="memory" color="#6f42c1" unit="MB" />
+                  <SystemMonitor title="Events / sec" id="ingest" color="#198754" />
+                </div>
+
+                <div className="bg-white p-4 shadow-sm rounded-3 mb-4 border-top border-4 border-primary">
                   <h5 className="fw-bold mb-3">Relay Status</h5>
                   <div className="d-flex justify-content-between mb-2">
                     <span>Total Events</span>
@@ -112,13 +182,16 @@ export function renderWelcomePage(
                   </div>
                   <div className="d-flex justify-content-between mb-2">
                     <span>Software</span>
-                    <small className="text-secondary">{info.version || "0.1.0"}</small>
+                    <small className="text-secondary">n0str v{info.version || "0.1.0"}</small>
                   </div>
                   <hr className="text-secondary opacity-25" />
                   <h5 className="fw-bold mb-3">Supported NIPs</h5>
                   <div className="d-flex flex-wrap gap-1">
                     {(info.supported_nips || []).map((nip) => (
-                      <span className="badge rounded-pill text-secondary border bg-light">
+                      <span
+                        className="badge rounded-pill text-secondary border bg-light px-2 py-1"
+                        style="font-size: 0.7rem;"
+                      >
                         NIP-{nip}
                       </span>
                     ))}
@@ -128,7 +201,7 @@ export function renderWelcomePage(
                 {info.pubkey &&
                   info.pubkey !==
                     "0000000000000000000000000000000000000000000000000000000000000000" && (
-                    <div className="bg-white p-4 shadow-sm rounded-3">
+                    <div className="bg-white p-4 shadow-sm rounded-3 border-top border-4 border-info">
                       <h5 className="fw-bold mb-3">Operator</h5>
                       <div className="text-truncate">
                         <small className="text-secondary">
@@ -148,6 +221,26 @@ export function renderWelcomePage(
             const relayUrl = "${relayUrl}";
             let ws;
             let totalCount = ${totalEvents};
+            let ingestCounter = 0;
+            
+            const stats = {
+              connections: { 
+                values: new Array(30).fill(${connectedClients}), 
+                elValue: document.getElementById('connections-value'), 
+                elPath: document.getElementById('connections-path'),
+                current: ${connectedClients}
+              },
+              memory: { 
+                values: new Array(30).fill(${initialHeap}), 
+                elValue: document.getElementById('memory-value'), 
+                elPath: document.getElementById('memory-path') 
+              },
+              ingest: { 
+                values: new Array(30).fill(0), 
+                elValue: document.getElementById('ingest-value'), 
+                elPath: document.getElementById('ingest-path') 
+              }
+            };
 
             function copyUrl() {
               navigator.clipboard.writeText(relayUrl).then(() => {
@@ -162,14 +255,50 @@ export function renderWelcomePage(
               });
             }
 
+            function updateGraph(stat, nextValue) {
+              stat.values.push(nextValue);
+              stat.values.shift();
+              if (stat.elValue) stat.elValue.innerText = nextValue;
+              
+              const minInValues = Math.min(...stat.values);
+              const maxInValues = Math.max(...stat.values);
+              const range = Math.max(maxInValues - minInValues, 1);
+              const padding = range * 0.2;
+              
+              const min = Math.max(0, minInValues - padding);
+              const max = maxInValues + padding;
+              const drawRange = max - min;
+
+              const points = stat.values.map((v, i) => \`\${(i / (stat.values.length-1)) * 100},\${30 - ((v - min) / drawRange) * 25}\`).join(' L ');
+              if (stat.elPath) stat.elPath.setAttribute('d', 'M ' + points);
+            }
+
+            async function pollStats() {
+              try {
+                const res = await fetch('/stats');
+                const data = await res.json();
+                stats.connections.current = data.clients;
+                updateGraph(stats.memory, data.heapUsed);
+              } catch (e) {
+                console.error('Failed to poll stats', e);
+              }
+            }
+
             function connect() {
               ws = new WebSocket(relayUrl);
-              ws.onopen = () => ws.send(JSON.stringify(["REQ", "live-feed", { kinds: [1], limit: 0 }]));
+              ws.onopen = () => {
+                ws.send(JSON.stringify(["REQ", "live-feed", { kinds: [1], limit: 0 }]));
+              };
               ws.onmessage = (msgEvent) => {
                 const msg = JSON.parse(msgEvent.data);
-                if (msg[0] === 'EVENT' && msg[2].kind === 1) addEvent(msg[2]);
+                if (msg[0] === 'EVENT') {
+                  ingestCounter++;
+                  if (msg[2].kind === 1) addEvent(msg[2]);
+                }
               };
-              ws.onclose = () => setTimeout(connect, 5000);
+              ws.onclose = () => {
+                setTimeout(connect, 5000);
+              };
             }
 
             function addEvent(e) {
@@ -203,6 +332,19 @@ export function renderWelcomePage(
               if (totalEventsEl) totalEventsEl.innerText = totalCount;
               if (feed.children.length > 200) feed.lastElementChild.remove();
             }
+
+            // Initialization
+            updateGraph(stats.connections, stats.connections.current);
+            updateGraph(stats.ingest, 0);
+            updateGraph(stats.memory, ${initialHeap});
+
+            setInterval(() => {
+              updateGraph(stats.ingest, ingestCounter);
+              ingestCounter = 0;
+              updateGraph(stats.connections, stats.connections.current);
+            }, 1000);
+
+            setInterval(pollStats, 2000);
 
             connect();
           `}

@@ -126,10 +126,31 @@ export class NostrRelay {
           Array.fromAsync(this.repository.queryEvents({ kinds: [1], limit: 100 })),
           this.repository.countEvents([{}]),
         ]);
-        const html = renderWelcomePage(events, relayInfo, getRelayUrl(req), totalEvents);
+        const mem = process.memoryUsage();
+        const stats = this.wsManager.getStats();
+        const html = renderWelcomePage(
+          events,
+          relayInfo,
+          getRelayUrl(req),
+          totalEvents,
+          stats.clients,
+          Math.floor(mem.heapUsed / 1024 / 1024),
+        );
         return new Response(html, {
           headers: { "Content-Type": "text/html" },
         });
+      }
+
+      if (url.pathname === "/stats") {
+        const mem = process.memoryUsage();
+        return new Response(
+          JSON.stringify({
+            clients: this.wsManager.getStats().clients,
+            heapUsed: Math.floor(mem.heapUsed / 1024 / 1024),
+            rss: Math.floor(mem.rss / 1024 / 1024),
+          }),
+          { headers: { "Content-Type": "application/json" } },
+        );
       }
 
       if (url.pathname === "/health") {
